@@ -121,7 +121,7 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 .legend{display:flex;flex-wrap:wrap;gap:12px;font-family:var(--f-ui);font-size:.85rem;color:var(--muted)}
 .legend span{display:inline-flex;align-items:center;gap:6px}
 .legend i{width:10px;height:10px;border-radius:50%;background:var(--c)}
-.paths{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.paths{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
 .path{display:flex;flex-direction:column;gap:8px;padding:18px;border-radius:var(--r);border:1px solid var(--line);background:var(--surface);text-decoration:none;color:var(--ink);transition:transform .2s, border-color .2s, box-shadow .2s}
 .path:hover{transform:translateY(-3px);border-color:var(--accent);box-shadow:0 10px 30px -18px var(--accent)}
 .path .n{font-family:var(--f-ref);font-size:.75rem;color:var(--accent2)}
@@ -279,6 +279,160 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 footer{position:relative;z-index:1;border-top:1px solid var(--line);padding-block:24px;font-family:var(--f-ui);font-size:.88rem;color:var(--muted)}
 footer .wrap{display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between}
 
+/* ===== v2: animation, diagrams, pictures ===== */
+.hero h1 span{background:linear-gradient(100deg,var(--accent) 38%,var(--accent2) 50%,var(--accent) 62%);background-size:260% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:sheen 7s ease-in-out infinite}
+@keyframes sheen{0%{background-position:110% 0}60%,100%{background-position:-60% 0}}
+.revealable{transition:opacity .7s ease, transform .7s cubic-bezier(.2,.8,.2,1), border-color .2s}
+.pre{opacity:.2;transform:translateY(28px) scale(.98)}
+.diagram{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:var(--r);background:var(--surface);border:1px solid var(--line);padding:12px}
+.diagram svg{display:block;width:100%;min-width:720px;height:auto}
+.diagram text{font-family:var(--f-ui)}
+.cap{font-family:var(--f-ui);font-size:.82rem;color:var(--muted);margin-top:8px}
+.note-tag{font-family:var(--f-ref);font-size:.7rem;color:var(--muted);border:1px dashed var(--line);padding:2px 8px;border-radius:999px}
+/* drawing paths */
+.draw{stroke-dasharray:1;stroke-dashoffset:1}
+.go .draw{animation:drawIn 2.6s cubic-bezier(.4,0,.2,1) forwards}
+.go .draw.d2{animation-delay:.6s} .go .draw.d3{animation-delay:2.2s;animation-duration:1.4s}
+@keyframes drawIn{to{stroke-dashoffset:0}}
+.go .fadein{animation:fadeIn 1s ease both} .go .fadein.l1{animation-delay:1.4s} .go .fadein.l2{animation-delay:2.6s} .go .fadein.l3{animation-delay:3.4s}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.flowdash{fill:none;stroke-dasharray:3 22;stroke-linecap:round;animation:flow2 1.6s linear infinite}
+@keyframes flow2{to{stroke-dashoffset:-25}}
+/* scene animations */
+.scene{grid-column:1/-1;border-radius:var(--r);overflow:hidden;border:1px solid var(--line);background:var(--surface)}
+.scene svg{display:block;width:100%;height:clamp(150px,26vw,250px)}
+.ink{fill:color-mix(in srgb,var(--ink) 72%,transparent)}
+.lit{fill:var(--accent2)}
+.a-sway{transform-box:fill-box;transform-origin:50% 100%;animation:sway 4s ease-in-out infinite alternate}
+@keyframes sway{from{transform:rotate(-3deg)}to{transform:rotate(3deg)}}
+.a-twinkle{animation:twinkle 2.4s ease-in-out infinite alternate}
+@keyframes twinkle{from{opacity:.15}to{opacity:1}}
+.a-flicker{transform-box:fill-box;transform-origin:50% 100%;animation:flicker .55s ease-in-out infinite alternate}
+@keyframes flicker{from{transform:scale(.9,.82)}to{transform:scale(1.05,1.12)}}
+.a-float{animation:float 4.5s ease-in-out infinite alternate}
+@keyframes float{from{transform:translateY(4px)}to{transform:translateY(-10px)}}
+.a-spin{transform-box:fill-box;transform-origin:center;animation:spin 50s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.a-partL{animation:partL 3s cubic-bezier(.3,.7,.2,1) .4s both}
+.a-partR{animation:partR 3s cubic-bezier(.3,.7,.2,1) .4s both}
+@keyframes partL{from{transform:translateX(150px)}to{transform:none}}
+@keyframes partR{from{transform:translateX(-150px)}to{transform:none}}
+.a-walk{animation:walk 9s linear infinite}
+@keyframes walk{from{transform:translateY(60px);opacity:0}15%{opacity:1}85%{opacity:1}to{transform:translateY(-40px);opacity:0}}
+.a-roll{transform-box:fill-box;transform-origin:center;animation:roll 3s cubic-bezier(.3,.7,.2,1) .6s both}
+@keyframes roll{from{transform:translateX(-82px) rotate(-220deg)}to{transform:none}}
+.a-beat{transform-box:fill-box;transform-origin:center;animation:beat 1.3s ease-in-out infinite}
+@keyframes beat{0%,100%{transform:scale(1)}15%{transform:scale(1.15)}30%{transform:scale(1)}45%{transform:scale(1.1)}}
+.a-fall{animation:fallA 3.4s ease-in infinite}
+@keyframes fallA{0%{transform:translateY(0);opacity:1}80%{opacity:1}100%{transform:translateY(70px);opacity:0}}
+.a-rise{animation:riseA 6s ease-out both}
+@keyframes riseA{from{transform:translateY(60px)}to{transform:none}}
+.a-wave{animation:waveA 3s ease-in-out infinite alternate}
+@keyframes waveA{from{transform:translateX(-14px)}to{transform:translateX(14px)}}
+.a-glow{animation:glowA 2.6s ease-in-out infinite alternate}
+@keyframes glowA{from{opacity:.35}to{opacity:1}}
+.a-flash{animation:flash 4s steps(1) infinite}
+@keyframes flash{0%,8%,14%{opacity:1}4%,10%,18%,100%{opacity:0}}
+.a-write{stroke-dasharray:1;stroke-dashoffset:1;animation:drawIn 2s ease forwards}
+/* story play */
+.story-ctl{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.progress{flex:1 1 200px;height:4px;border-radius:4px;background:var(--surface2);overflow:hidden}
+.progress i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2))}
+.progress.run i{animation:prog var(--dur,7s) linear forwards}
+@keyframes prog{to{width:100%}}
+.facet.today{--c:var(--accent2);grid-column:1/-1;background:color-mix(in srgb,var(--accent2) 9%,var(--surface))}
+/* bar chart */
+.bars{display:flex;flex-direction:column;gap:14px}
+.bar-row{display:grid;grid-template-columns:150px 1fr 48px;gap:12px;align-items:center;font-family:var(--f-ui)}
+.bar-track{height:26px;border-radius:6px;background:var(--surface2);display:flex;overflow:hidden}
+.bar-track i{display:block;height:100%;width:0;transition:width 1.2s cubic-bezier(.2,.8,.2,1)}
+.bar-track i.nt{opacity:.55}
+.bar-row b{font-variant-numeric:tabular-nums;text-align:right}
+.sph-today{display:flex;flex-direction:column;gap:6px;margin:0;padding-left:1.1em}
+/* sankey */
+.sk-band{fill:none;opacity:.28;transition:opacity .3s}
+.sk-row{cursor:pointer}
+.sk-row.on .sk-band{opacity:.6}
+.sk-dim .sk-row:not(.on) .sk-band{opacity:.1}
+.sk-dim .sk-row:not(.on) .flowdash{opacity:.15}
+.sk-row text{font-size:15px}
+/* quiz + gauge */
+.quiz{display:grid;grid-template-columns:1fr minmax(0,340px);gap:22px;align-items:start}
+.quiz > *{min-width:0}
+.q-item{display:flex;flex-direction:column;gap:8px;padding:14px;border-radius:var(--r);background:var(--surface);border:1px solid var(--line)}
+.q-item .opts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.q-item button{text-align:left;padding:10px 12px;border-radius:8px;border:1px solid var(--line);background:var(--bg);cursor:pointer;font-size:.95rem;line-height:1.35;transition:background .2s,border-color .2s,transform .15s}
+.q-item button:hover{transform:translateY(-1px)}
+.q-item button[aria-pressed="true"].a{background:color-mix(in srgb,var(--legal) 18%,var(--surface));border-color:var(--legal)}
+.q-item button[aria-pressed="true"].b{background:color-mix(in srgb,var(--accent) 18%,var(--surface));border-color:var(--accent)}
+.gauge-box{position:sticky;top:90px;display:flex;flex-direction:column;gap:10px;align-items:center;text-align:center}
+#gauge{width:100%;max-width:320px;height:auto}
+#needle{transform-origin:160px 160px;transition:transform 1.2s cubic-bezier(.3,1.4,.4,1)}
+/* today: day scrubber */
+.day-head{display:flex;flex-wrap:wrap;gap:12px;align-items:end;justify-content:space-between;margin-bottom:10px}
+.clock{font-family:var(--f-display);font-size:2.4rem;line-height:1;font-variant-numeric:tabular-nums}
+#dayScene{display:block;width:100%;height:clamp(170px,30vw,300px);border-radius:var(--r);border:1px solid var(--line)}
+.day-ticks{position:relative;height:22px;margin-top:4px}
+.day-ticks button{position:absolute;transform:translateX(-50%);top:0;border:0;background:none;cursor:pointer;padding:0;display:flex;flex-direction:column;align-items:center;font-family:var(--f-ref);font-size:.68rem;color:var(--muted)}
+.day-ticks button::before{content:"";width:9px;height:9px;border-radius:50%;background:var(--c);margin-bottom:2px}
+.day-ticks button.on{color:var(--ink);font-weight:500}
+.moment{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
+.moment > *{min-width:0}
+.moment .head{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.moment .lens{animation:pop .5s cubic-bezier(.2,.8,.2,1) both}
+.moment .lens.rel{animation-delay:.12s}
+@keyframes pop{from{opacity:.0001;transform:translateY(12px) scale(.98)}to{opacity:1;transform:none}}
+.moment .do{grid-column:1/-1}
+/* scenarios */
+.scen-pick{display:grid;grid-template-columns:repeat(9,1fr);gap:8px}
+.scen-pick button{display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 6px;border-radius:var(--r);border:1px solid var(--line);background:var(--surface);cursor:pointer;font-family:var(--f-ui);font-size:.8rem;line-height:1.2;text-align:center;transition:transform .2s,background .2s}
+.scen-pick button:hover{transform:translateY(-3px)}
+.scen-pick svg{width:30px;height:30px;stroke:var(--accent);fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.scen-pick button[aria-pressed="true"]{background:var(--accent);color:var(--onaccent);border-color:var(--accent)}
+.scen-pick button[aria-pressed="true"] svg{stroke:var(--onaccent)}
+.scen-out{display:grid;grid-template-columns:1fr auto 1fr;gap:14px;align-items:stretch;margin-top:16px}
+.scen-out > *{min-width:0}
+.scen-arrow{display:grid;place-items:center}
+.scen-arrow svg{width:46px;height:46px}
+.scen-arrow .flowdash{stroke:var(--accent2);stroke-width:3}
+.scen-out .lens.leg p{text-decoration:line-through;text-decoration-color:color-mix(in srgb,var(--legal) 60%,transparent);text-decoration-thickness:1.5px}
+.scen-extra{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
+.scen-extra > *{min-width:0}
+/* ripple */
+.ripple-wrap{display:grid;grid-template-columns:minmax(0,520px) 1fr;gap:24px;align-items:center}
+.ripple-wrap > *{min-width:0}
+#rippleSvg{width:100%;max-width:520px;height:auto;display:block;margin:0 auto}
+#rippleSvg .rp-dot circle{fill:var(--surface);stroke:var(--c);stroke-width:2;transition:fill .4s, r .4s}
+#rippleSvg .rp-dot.lit circle{fill:var(--c)}
+#rippleSvg .rp-dot text{font-size:12px;fill:var(--ink);text-anchor:middle;font-family:var(--f-ui)}
+#rippleSvg .rp-ring{fill:none;stroke:var(--line);stroke-dasharray:3 5}
+#rippleSvg .rp-lbl{font-size:11px;fill:var(--muted);font-family:var(--f-ref);letter-spacing:.06em}
+/* already / not yet */
+.ant-cols{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
+.ant-cols ul{margin:0;padding-left:1.1em;display:flex;flex-direction:column;gap:6px}
+.pulse-dot{transform-box:fill-box;transform-origin:center;animation:pd 1.8s ease-out infinite}
+@keyframes pd{from{transform:scale(1);opacity:.7}to{transform:scale(3.2);opacity:0}}
+@media (max-width: 980px){
+  .scen-pick{grid-template-columns:repeat(5,1fr)}
+}
+@media (max-width: 760px){
+  .quiz,.ripple-wrap,.moment,.scen-extra,.ant-cols{grid-template-columns:1fr}
+  .scen-out{grid-template-columns:1fr}
+  .scen-arrow{transform:rotate(90deg)}
+  .q-item .opts{grid-template-columns:1fr}
+  .bar-row{grid-template-columns:100px 1fr 36px}
+  .gauge-box{position:static}
+  .scen-pick{grid-template-columns:repeat(3,1fr)}
+  .day-ticks button{font-size:0}
+  .day-ticks button.on{font-size:.68rem}
+}
+@media (prefers-reduced-motion: reduce){
+  .draw,.a-write{stroke-dashoffset:0!important}
+  .pre{opacity:1!important;transform:none!important}
+}
+.sph-rip{transform-box:fill-box;transform-origin:center;animation:sphr 3.9s ease-out infinite;pointer-events:none;stroke-width:2}
+@keyframes sphr{from{transform:scale(.15);opacity:.9}to{transform:scale(1);opacity:0}}
+@media (prefers-reduced-motion: reduce){.sph-rip{opacity:0}}
 @media (max-width: 980px){
   .paths{grid-template-columns:repeat(2,1fr)}
   .grid{grid-template-columns:repeat(2,1fr)}
@@ -321,6 +475,7 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between}
       <a href="#lens">Two Lenses</a>
       <a href="#body">The Body</a>
       <a href="#library">Narratives</a>
+      <a href="#today">Life Today</a>
       <a href="#journey">My Journey</a>
     </nav>
     <button class="iconbtn" id="surprise" title="Show a random restoration story" aria-label="Show a random restoration story">
@@ -373,7 +528,17 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between}
     </section>
 
     <section class="sec">
-      <div class="sec-head"><span class="eyebrow">Eight paths through the material</span><h2>Choose where to begin</h2></div>
+      <div class="sec-head">
+        <span class="eyebrow">Philippians 2:6-11 · the shape of the gospel</span>
+        <h2>The shape of the story</h2>
+        <p class="prose muted">Humanity's line falls and struggles. God's line keeps coming down to meet it, until the two meet at the lowest point, the cross. From there they rise together, as one, into a new creation greater than Eden. Hover the points to see each movement.</p>
+      </div>
+      <div class="diagram" id="shapeBox"><svg id="shapeSvg" viewBox="0 0 1000 400" role="img" aria-label="Diagram: humanity's line falling and God's line descending, meeting at the cross and rising together"></svg></div>
+      <div class="row" style="justify-content:space-between;margin-top:8px"><div class="legend"><span style="--c:var(--legal)"><i></i>Humanity's condition</span><span style="--c:var(--accent2)"><i></i>God coming down</span><span style="--c:var(--accent)"><i></i>United in Christ</span></div><span class="note-tag">Illustrative shape, not measured data</span></div>
+    </section>
+
+    <section class="sec">
+      <div class="sec-head"><span class="eyebrow">Nine paths through the material</span><h2>Choose where to begin</h2></div>
       <div class="paths">
         <a class="path" href="#story"><span class="n">Genesis → Revelation</span><h3>The Story</h3><p>Thirteen movements of the one restoration arc.</p></a>
         <a class="path" href="#stoop"><span class="n">Philippians 2:7</span><h3>God Stoops</h3><p>How God accommodates to every culture He enters.</p></a>
@@ -382,6 +547,7 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between}
         <a class="path" href="#lens"><span class="n">2 Corinthians 5:19</span><h3>Two Lenses</h3><p>The relational gospel of union beside the legal frame.</p></a>
         <a class="path" href="#body"><span class="n">1 Corinthians 12</span><h3>The Body</h3><p>How restoration continues through Christ's people now.</p></a>
         <a class="path" href="#library"><span class="n" id="libCountHome">Narratives</span><h3>Narrative Library</h3><p>Search every restoration story by sphere and testament.</p></a>
+        <a class="path" href="#today"><span class="n">2 Corinthians 5:17</span><h3>Life Today</h3><p>A restored day, real situations, and the ripple of one life.</p></a>
         <a class="path" href="#journey"><span class="n">Romans 12:2</span><h3>My Journey</h3><p>Practices of restoration you can track in your own life.</p></a>
       </div>
     </section>
@@ -397,6 +563,7 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between}
         <h2>One story of restoration in thirteen movements</h2>
         <p class="prose muted">Select a movement, or use the arrow keys. Each one shows what was broken, how God came down into that situation, what He restored, and how it points to Christ.</p>
       </div>
+      <div class="story-ctl"><button class="btn" id="playStory" aria-pressed="false"><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path id="playIco" d="M3 1.5v11l9-5.5z" fill="currentColor"/></svg><span>Play the story</span></button><div class="progress" id="storyProg"><i></i></div></div>
       <div class="tl-track" id="tlTrack" role="tablist" aria-label="Movements of the story"></div>
       <div class="tl-detail" id="tlDetail" aria-live="polite"></div>
     </section>
@@ -445,6 +612,10 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between}
       <div class="row" style="justify-content:space-between;margin-bottom:14px"><h3 id="sphereListTitle">Narratives</h3><div class="row" id="sphereTest"></div></div>
       <div class="grid" id="sphereGrid"></div>
     </section>
+    <section class="sec">
+      <div class="sec-head"><span class="eyebrow">From the narrative library</span><h3>Where the stories land</h3><p class="muted prose">How many of the library's narratives touch each sphere, split by testament. Many stories touch more than one sphere, which is the point: restoration rarely stays in one ring.</p></div>
+      <div class="panel"><div class="bars" id="sphBars"></div><div class="legend" style="margin-top:12px"><span style="--c:var(--ink)"><i></i>Solid: Old Testament</span><span style="--c:color-mix(in srgb,var(--ink) 50%,transparent)"><i></i>Faded: New Testament</span></div></div>
+    </section>
   </div>
 </div>
 
@@ -463,6 +634,11 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between}
     <section class="sec">
       <div class="sec-head"><span class="eyebrow">Shadow and substance · Colossians 2:17</span><h3>Every thread meets in Him</h3><p class="muted">Tap a card to turn the shadow into its substance.</p></div>
       <div class="flips" id="flips"></div>
+    </section>
+    <section class="sec">
+      <div class="sec-head"><span class="eyebrow">Colossians 1:19-20 · flow diagram</span><h3>Every fracture flows into Him; every restoration flows out of Him</h3><p class="muted">Tap a row to follow one fracture through the cross to its restoration and what it means for you now.</p></div>
+      <div class="diagram"><svg id="sankey" viewBox="0 0 1000 440" role="group" aria-label="Flow from five fractures through Christ to five restorations"></svg></div>
+      <div class="twist" id="skInfo" style="margin-top:12px" aria-live="polite"></div>
     </section>
   </div>
 </div>
@@ -502,6 +678,25 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between}
           <li><b>Penal formulations</b> (16th–17th c.): the cross explained primarily as the Father punishing the Son to satisfy justice.</li>
           <li><b>Revival preaching</b>: sinners in the hands of an angry judge; conversion as escaping a sentence more than coming home.</li>
         </ol></div>
+      </div>
+    </section>
+    <section class="sec">
+      <div class="sec-head"><span class="eyebrow">A gentle self-check</span><h3>Which lens is shaping your heart today?</h3><p class="muted prose">For each pair, pick the sentence that sounds more like your honest inner voice. The needle shows which picture of God you are living from. Nothing is saved or sent anywhere.</p></div>
+      <div class="quiz">
+        <div class="stack" id="quizList"></div>
+        <div class="panel gauge-box">
+          <svg id="gauge" viewBox="0 0 320 190" role="img" aria-label="Gauge from legal frame to relational union">
+            <defs><linearGradient id="gGrad" x1="0" x2="1"><stop offset="0" style="stop-color:var(--legal)"/><stop offset="1" style="stop-color:var(--accent)"/></linearGradient></defs>
+            <path d="M30 160 A130 130 0 0 1 290 160" style="fill:none;stroke:url(#gGrad)" stroke-width="22" stroke-linecap="round"/>
+            <g id="needle" style="transform:rotate(-90deg)"><line x1="160" y1="160" x2="160" y2="52" style="stroke:var(--ink)" stroke-width="4" stroke-linecap="round"/></g>
+            <circle cx="160" cy="160" r="10" style="fill:var(--ink)"/>
+            <text x="30" y="186" style="fill:var(--muted);font-family:var(--f-ui);font-size:12px">Legal frame</text>
+            <text x="290" y="186" text-anchor="end" style="fill:var(--muted);font-family:var(--f-ui);font-size:12px">Union</text>
+          </svg>
+          <b id="gaugeScore" style="font-family:var(--f-display);font-size:1.4rem;font-weight:400">Answer a few pairs</b>
+          <p id="gaugeNote" class="muted"></p>
+          <button class="chip" id="quizReset">Start again</button>
+        </div>
       </div>
     </section>
   </div>
@@ -548,6 +743,61 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between}
   </div>
 </div>
 
+<!-- TODAY -->
+<div class="view" id="v-today" data-view="today" hidden>
+  <div class="wrap">
+    <section class="sec">
+      <div class="sec-head">
+        <span class="eyebrow">2 Corinthians 5:17 · present tense</span>
+        <h2>How restoration shapes life today</h2>
+        <p class="prose">"If anyone is in Christ, he <i>is</i> a new creation." Restoration is not only past history or future hope. It reshapes Monday mornings, family dinners, work mistakes, newsfeeds and the way we treat the ground under our feet. Below, the same day is lived through two lenses.</p>
+      </div>
+      <div class="panel">
+        <div class="day-head">
+          <div class="stack" style="gap:4px"><span class="eyebrow">A restored day</span><span class="clock" id="clock">06:30</span></div>
+          <div class="row"><button class="btn" id="playDay"><span>Play the day</span></button></div>
+        </div>
+        <canvas id="dayScene" aria-label="Illustration of a town through a day, sky changing from dawn to night" role="img"></canvas>
+        <label for="dayRange" class="cap" style="display:block">Drag through the day</label>
+        <input type="range" id="dayRange" min="360" max="1380" value="390" step="5">
+        <div class="day-ticks" id="dayTicks"></div>
+        <div class="moment" id="moment" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <section class="sec">
+      <div class="sec-head"><span class="eyebrow">Real situations</span><h3>When life breaks, which script runs?</h3><p class="muted">Choose a situation to see the legal script rewritten by the union script, the Bible story it mirrors, and one practice for this week.</p></div>
+      <div class="scen-pick" id="scenPick"></div>
+      <div id="scenOut" aria-live="polite"></div>
+    </section>
+
+    <section class="sec">
+      <div class="sec-head"><span class="eyebrow">Acts 1:8 · the ripple</span><h3>One restored life sends ripples outward</h3></div>
+      <div class="ripple-wrap">
+        <svg id="rippleSvg" viewBox="0 0 600 600" role="img" aria-label="Ripple diagram: restoration spreading from you to household, community, culture and creation"></svg>
+        <div class="stack">
+          <p>Jesus sent His followers to "Jerusalem, all Judea and Samaria, and to the uttermost parts of the earth." The pattern repeats in every restored life: what God heals in one person spreads to a household, a community, even to the people we were taught to avoid, and out into creation.</p>
+          <div class="four" style="grid-template-columns:1fr 1fr">
+            <div class="facet sp-f" style="--c:var(--sf)"><span class="eyebrow">Jerusalem</span><p>Home and household</p></div>
+            <div class="facet sp-p" style="--c:var(--sp)"><span class="eyebrow">Judea</span><p>Your community and church</p></div>
+            <div class="facet sp-c" style="--c:var(--sc)"><span class="eyebrow">Samaria</span><p>The "other": rivals and outsiders</p></div>
+            <div class="facet sp-e" style="--c:var(--se)"><span class="eyebrow">Ends of the earth</span><p>Every nation and the land itself</p></div>
+          </div>
+          <div class="row"><button class="btn" id="sendRipple">Send a ripple</button><button class="chip" id="clearRipple">Reset</button></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="sec">
+      <div class="sec-head"><span class="eyebrow">Already and not yet</span><h3>We live in the overlap of the ages</h3><p class="muted prose">The age to come broke in at the resurrection, but this present age has not yet ended. That is why we taste real restoration now and still groan for the rest (Romans 8:23).</p></div>
+      <div class="diagram" id="antBox"><svg id="antSvg" viewBox="0 0 1000 230" role="img" aria-label="Timeline: this present age and the age to come overlap between the resurrection and Christ's return"></svg></div>
+      <div class="ant-cols">
+        <div class="facet rest"><span class="eyebrow">Already true of you</span><ul><li>Forgiven and reconciled (Colossians 1:21-22)</li><li>Adopted: the Spirit cries "Abba" in you (Galatians 4:6)</li><li>A new creation (2 Corinthians 5:17)</li><li>Seated with Christ (Ephesians 2:6)</li><li>Part of one body across every culture (Ephesians 2:14)</li></ul></div>
+        <div class="facet stoop"><span class="eyebrow">Not yet, but coming</span><ul><li>No more tears, death or pain (Revelation 21:4)</li><li>Resurrection bodies (1 Corinthians 15:42-44)</li><li>Creation freed from decay (Romans 8:21)</li><li>Every nation healed (Revelation 22:2)</li><li>God all in all (1 Corinthians 15:28)</li></ul></div>
+      </div>
+    </section>
+  </div>
+</div>
 <!-- JOURNEY -->
 <div class="view" id="v-journey" data-view="journey" hidden>
   <div class="wrap">
@@ -874,8 +1124,95 @@ f:[['Make a reconciling call or visit','Matthew 5:23-24'],['Share a meal with so
 c:[['Learn a neighbour\'s culture and story','Acts 17:26-27'],['Give toward someone\'s debt or need','Deuteronomy 15:7-8'],['Speak up for someone treated unjustly','Proverbs 31:8-9'],['Support local work that brings shalom to your city','Jeremiah 29:7']],
 e:[['Plant or tend something living','Genesis 2:15'],['Keep a weekly Sabbath from buying','Exodus 20:8-11'],['Reduce waste in one specific way','Psalm 24:1'],['Spend time in creation giving thanks','Psalm 19:1']]};
 
+var ENTER={};
+/* ================= v2: PRESENT-LIFE DATA ================= */
+const TODAY_E=[
+'You were made for union, not performance. Your worth was spoken before you did anything ("very good", Genesis 1:31). Work, rest and creativity are part of bearing His image.',
+'When you hide, blame or numb, recognise the Genesis 3 pattern. The God who asked "Where are you?" still comes looking, to cover you, not to shame you.',
+'Your faith is meant to bless the families around you, not only yourself. God builds on His promise, not on your strength (Romans 4:19-21).',
+'Whatever enslaves you (addiction, debt, fear, oppression), God has "come down to deliver" (Exodus 3:8). Liberation is His character.',
+'God\'s instructions are given to people already rescued. Read Scripture as a Father\'s guidance for free people, and keep Sabbath as a weekly declaration of freedom.',
+'Ordinary faithfulness (loyalty, kindness, showing up) becomes part of a bigger redemption story. Your small acts of hesed matter.',
+'Bring every emotion to God the way the Psalms do. Lament and praise are both honest worship.',
+'Let God\'s heart for justice and for the poor shape how you spend, vote and serve. He promises a new heart, not only better behaviour.',
+'In a culture that feels foreign or hostile, seek the welfare of your city (Jeremiah 29:7). God is in the fire with you.',
+'God enters ordinary life: kitchens, workshops, commutes. Go to people the way He came to us: low, near, and in their language.',
+'Your past cannot cancel God\'s verdict of love. Forgive because you are forgiven, and face death with hope.',
+'You belong to a family bigger than your culture. Make room at your table for someone unlike you.',
+'Nothing you do in the Lord is wasted (1 Corinthians 15:58). Care for bodies, cities and creation, because God is renewing them, not discarding them.'];
+const SPH_TODAY={p:['Freedom from a shame-based identity: you are a beloved child (1 John 3:1).','Healing of memories and trauma through presence, not performance.','A calling restored: your gifts matter in God\'s renewal.'],
+f:['Marriages and friendships rebuilt on mutual self-giving (Ephesians 5:21).','Generational wounds addressed as hearts of parents and children turn (Malachi 4:6).','Families that adopt, foster and open their tables (Psalm 68:6).'],
+c:['Churches where dividing lines are crossed (Galatians 3:28).','Economic mercy: fair wages, debt relief, generosity (Acts 4:34).','Culture-making: arts, schools and businesses that bring shalom to cities.'],
+e:['Stewardship as worship: working and keeping the garden (Genesis 2:15).','Simpler living and Sabbath rest that let the land breathe.','Hope that resists despair: creation will be set free (Romans 8:21).']};
+const SK=[
+{l:'Hiding from God',lr:'Genesis 3:8',r:'Union with the Father',rr:'John 14:20',c:'--accent2',t:'Prayer becomes conversation with a Father who already embraces you.'},
+{l:'Shame of self',lr:'Genesis 3:10',r:'A new identity',rr:'2 Corinthians 5:17',c:'--sp',t:'You can face your story without hiding. Your identity is "in Christ", not in your record.'},
+{l:'Blame and violence',lr:'Genesis 3:12; 4:8',r:'Reconciled households',rr:'Colossians 3:13',c:'--sf',t:'Forgiveness can break the cycles that run down your family line.'},
+{l:'Babel\'s scattering',lr:'Genesis 11:9',r:'One new humanity',rr:'Ephesians 2:15',c:'--sc',t:'Friendship across race, class and culture becomes normal church life.'},
+{l:'Thorns in the ground',lr:'Genesis 3:17-18',r:'New creation',rr:'Romans 8:21',c:'--se',t:'Work and creation care become hopeful instead of futile.'}];
+const DAY=[
+{m:390,lab:'6:30',t:'Waking up',s:'p',L:'Replay yesterday\'s failures and resolve to do better so God will be pleased.',U:'Wake as a beloved child. "His mercies are new every morning" (Lamentations 3:22-23).',d:'Before you reach for your phone, say: "Father, I am yours, and you are with me."'},
+{m:480,lab:'8:00',t:'Tension at breakfast',s:'f',L:'Keep score. Wait for them to apologise first.',U:'Move first, the way the father ran to his son (Luke 15:20). Speak a blessing over the people at your table.',d:'Say one sentence of honour to each person before they leave the house.'},
+{m:630,lab:'10:30',t:'A mistake at work',s:'p',L:'Hide it like Adam, or blame someone else. Your value just dropped.',U:'Bring it into the light (1 John 1:7). Your identity is not your output; you can own the mistake without being destroyed by it.',d:'Tell the person affected, plainly, and offer to make it right.'},
+{m:780,lab:'13:00',t:'Lunch with someone different',s:'c',L:'Stay with people like you. Difference feels like a threat.',U:'Ask for their story. At Pentecost God honoured every language (Acts 2:8); their culture can reveal something of Him.',d:'Ask one question about a colleague\'s background, and listen to the answer.'},
+{m:960,lab:'16:00',t:'Scrolling and comparing',s:'p',L:'Compare and condemn: either yourself ("not enough") or others ("too much").',U:'You are a child of God through faith (Galatians 3:26). Bless instead of judging.',d:'For each post that triggers comparison, pray a blessing for that person.'},
+{m:1110,lab:'18:30',t:'Groceries and the garden',s:'e',L:'The earth is disposable; it is all going to burn anyway.',U:'Creation waits for God\'s children to be revealed (Romans 8:19). Tend what you have been given.',d:'Waste less in one specific way this week, or plant something.'},
+{m:1260,lab:'21:00',t:'An open table',s:'c',L:'Home is a fortress for my own family.',U:'"Show hospitality to strangers" (Hebrews 13:2). Jesus\' table had room for outsiders.',d:'Invite a neighbour, a single friend or an international student for a meal.'},
+{m:1350,lab:'22:30',t:'Lying awake',s:'p',L:'Audit the day: did I do enough to stay right with God?',U:'"He gives to his beloved sleep" (Psalm 127:2). Rest is an act of trust in finished work.',d:'Hand the day back: "Into your hands I commit my spirit" (Psalm 31:5).'}];
+const ICON={
+fail:'<path d="M12 20s-7-4.4-9.2-8.8A4.8 4.8 0 0 1 12 6.5a4.8 4.8 0 0 1 9.2 4.7C19 15.6 12 20 12 20z"/><path d="M12 6.5l-1.6 3.8 3 1.8-2.2 3.9"/>',
+family:'<circle cx="8" cy="7" r="3"/><circle cx="17" cy="9" r="2.4"/><path d="M2.5 20c.6-4 2.8-6 5.5-6s4.9 2 5.5 6M13.5 17c.5-2.3 1.8-3.6 3.5-3.6s3 1.3 3.6 3.6"/>',
+anx:'<path d="M7 15a4 4 0 0 1 .5-8 5.5 5.5 0 0 1 10.3 1.6A3.6 3.6 0 0 1 17.5 15z"/><path d="M8 18l-1 2.5M12 18l-1 2.5M16 18l-1 2.5"/>',
+ident:'<rect x="5" y="2.5" width="14" height="19" rx="7"/><circle cx="12" cy="10" r="2.6"/><path d="M8 17c.8-2 2.2-3 4-3s3.2 1 4 3"/>',
+shame:'<rect x="2.5" y="8" width="10" height="7" rx="3.5"/><rect x="11.5" y="9" width="10" height="7" rx="3.5"/>',
+justice:'<path d="M12 3v18M7 21h10M4 7h16M4 7l-2.5 6a3 3 0 0 0 5 0zM20 7l-2.5 6a3 3 0 0 0 5 0z"/>',
+divide:'<path d="M2 17c3 0 4-6 10-6s7 6 10 6"/><path d="M6 15.5V21M12 11v10M18 15.5V21"/>',
+earth:'<path d="M5 19c0-8 5-14 15-15-1 10-7 15-15 15z"/><path d="M5 19c3-4 6-7 10-9"/>',
+grief:'<path d="M12 3s-6 7-6 11a6 6 0 0 0 12 0c0-4-6-11-6-11z"/>'};
+const SCEN=[
+{i:'fail',n:'Failure & guilt',L:'I have disqualified myself. I need to earn my way back, on probation.',U:'Jesus cooked breakfast for the man who denied Him and recommissioned him on the spot. Failure is met with a meal and a calling.',mir:'Peter restored by the charcoal fire',mr:'John 21:1-19',d:'Name the failure honestly to God and to one trusted friend, then do the next loving thing Jesus asks.'},
+{i:'family',n:'Family rift',L:'They wronged me. Until they pay or apologise, the door stays shut.',U:'Esau ran to meet the brother who cheated him; the father ran to the son who shamed him. Grace often moves first.',mir:'Jacob and Esau; the prodigal son',mr:'Genesis 33; Luke 15',d:'Write the first sentence of a reconciling message, even if you are not ready to send it.'},
+{i:'anx',n:'Anxiety & burnout',L:'If I stop, everything collapses. God needs me to try harder.',U:'With Elijah, God first gave sleep, bread and water, then a gentle whisper. Your body\'s needs are part of His care.',mir:'Elijah under the broom tree',mr:'1 Kings 19:1-18',d:'This week: sleep, eat a real meal slowly, then sit in silence for ten minutes and listen.'},
+{i:'ident',n:'Identity & comparison',L:'I am what I achieve, own, or how many people approve of me.',U:'The Father called Jesus "my beloved Son" before He had done a single miracle. Gideon was named "mighty warrior" while hiding.',mir:'The baptism of Jesus; Gideon',mr:'Mark 1:11; Judges 6:12',d:'Write "Beloved before doing" somewhere you will see it each morning.'},
+{i:'shame',n:'Addiction & shame',L:'Clean up first, then come to God.',U:'Jesus went to Zacchaeus\'s house before Zacchaeus changed anything. Acceptance came first and freedom followed.',mir:'Zacchaeus; the woman at the well',mr:'Luke 19:1-10; John 4',d:'Tell one safe person the truth, and look for a recovery community that practises grace.'},
+{i:'justice',n:'Injustice nearby',L:'That is political, not spiritual. Just save souls.',U:'Nehemiah stopped building to cancel the debts of the poor. The Jubilee was God\'s economics for a restored people.',mir:'Nehemiah 5; the Jubilee',mr:'Nehemiah 5; Leviticus 25',d:'Find one local group working for debt relief, housing or fair work, and give time or money.'},
+{i:'divide',n:'Cultural division',L:'Those people are the problem. God is on our side.',U:'God sent Peter to a Roman soldier\'s home and broke down the dividing wall. There is one new humanity in Christ.',mir:'Peter and Cornelius',mr:'Acts 10; Ephesians 2:14-16',d:'Share a meal across a dividing line in your town: race, class, politics or religion.'},
+{i:'earth',n:'Creation & consumption',L:'It is all going to burn, so it does not matter how we treat it.',U:'God gave the land its own Sabbath and promises to free creation from decay. Care for the earth anticipates its renewal.',mir:'Sabbath for the land',mr:'Leviticus 25:1-7; Romans 8:19-22',d:'Keep one day a week free from buying, and notice what you actually need.'},
+{i:'grief',n:'Grief & loss',L:'Good Christians should not grieve; tears show weak faith.',U:'Jesus wept at Lazarus\'s tomb, minutes before raising him. God grieves with you and promises to wipe away every tear.',mir:'Lazarus, Martha and Mary',mr:'John 11; Revelation 21:4',d:'Give yourself permission to lament. Pray a Psalm of lament (Psalm 13 or 88) out loud.'}];
+const QUIZ=[
+['When I fail, I feel God\'s disappointment and try harder to make it up.','When I fail, I run to the Father, knowing His embrace comes before my apology.'],
+['Prayer feels like reporting in to a supervisor.','Prayer feels like talking with Someone who enjoys me.'],
+['God tolerates me because of Jesus.','God delights in me in Jesus.'],
+['I obey so I won\'t be punished.','I obey because I am learning to live as a loved child.'],
+['When others sin, part of me wants them to get what they deserve.','When others sin, I want them to come home.'],
+['Church is mainly where I am evaluated.','Church is mainly where I am family.'],
+['The world is a sinking ship to escape.','The world is a garden God is renewing, and I get to help.'],
+['My suffering probably means God is punishing me.','In my suffering, God is in the fire with me.']];
+
+/* ================= SCENES (pictures for each movement) ================= */
+function fig(x,y,s,cls){s=s||1;return `<g class="${cls||''}" transform="translate(${x} ${y}) scale(${s})"><circle cx="0" cy="-34" r="7" class="ink"/><path d="M-8 0 L-6 -24 Q0 -28 6 -24 L8 0Z" class="ink"/></g>`}
+function treeS(x,y,s,col,cls){return `<g class="${cls||'a-sway'}" transform="translate(${x} ${y}) scale(${s})"><rect x="-5" y="-60" width="10" height="60" class="ink"/><circle cx="0" cy="-78" r="34" style="fill:${col}"/><circle cx="-24" cy="-62" r="22" style="fill:${col}"/><circle cx="24" cy="-62" r="22" style="fill:${col}"/></g>`}
+const seeded=i=>{const x=Math.sin(i*99.13)*43758.5453;return x-Math.floor(x)};
+const GROUND='<path d="M0 190 Q250 170 500 186 T1000 182 V240 H0Z" class="gnd"/>';
+const SCENES=[
+()=>`<g class="a-spin"><g transform="translate(820 70)">${Array.from({length:12},(_,i)=>`<line x1="0" y1="-50" x2="0" y2="-74" transform="rotate(${i*30})" style="stroke:var(--accent2)" stroke-width="4" stroke-linecap="round"/>`).join('')}</g></g><circle cx="820" cy="70" r="36" class="lit a-glow"/>${GROUND}<path d="M0 214 Q120 200 250 214 T500 214 T750 214 T1000 214" class="a-wave" style="fill:none;stroke:var(--sc)" stroke-width="6"/>${treeS(320,192,1.1,'var(--se)')}${treeS(560,190,.8,'color-mix(in srgb,var(--se) 70%,var(--accent2))')}${[0,1,2].map(i=>`<path class="a-float" style="animation-delay:${i*.7}s;fill:none;stroke:var(--ink)" stroke-width="2" d="M${120+i*60} ${60+i*14} q8 -8 16 0 q8 -8 16 0"/>`).join('')}${fig(440,196,.9)}${fig(470,196,.85)}`,
+()=>`${GROUND}<path d="M80 205 L520 196 L560 212 L900 200" pathLength="1" class="a-write" style="fill:none;stroke:color-mix(in srgb,var(--ink) 60%,transparent)" stroke-width="2"/>${treeS(360,190,1,'color-mix(in srgb,var(--se) 45%,var(--legal))','')}${[0,1,2].map(i=>`<circle cx="${330+i*28}" cy="${100+i*10}" r="7" class="a-fall" style="fill:var(--sf);animation-delay:${i*1.1}s"/>`).join('')}${Array.from({length:9},(_,i)=>`<path d="M${600+i*36} 196 l6 -16 l6 12 l6 -18 l6 22" style="fill:none;stroke:color-mix(in srgb,var(--ink) 70%,transparent)" stroke-width="2"/>`).join('')}<ellipse cx="180" cy="190" rx="60" ry="26" style="fill:color-mix(in srgb,var(--se) 60%,var(--surface))"/>${fig(160,186,.7)}${fig(190,186,.7)}<text x="560" y="80" class="a-float" style="fill:var(--accent);font-family:var(--f-display);font-size:30px">"Where are you?"</text>`,
+()=>`<rect width="1000" height="240" style="fill:color-mix(in srgb,#0b1030 55%,transparent)"/>${Array.from({length:70},(_,i)=>`<circle cx="${(seeded(i)*1000).toFixed(0)}" cy="${(seeded(i+300)*150).toFixed(0)}" r="${(seeded(i+600)*1.8+.6).toFixed(1)}" class="a-twinkle" style="fill:#fff6d8;animation-delay:${(seeded(i+9)*2.4).toFixed(2)}s"/>`).join('')}${GROUND}<path d="M560 192 L640 120 L720 192Z" class="ink"/><path d="M630 192 L640 150 L650 192Z" class="lit a-glow"/><g transform="translate(420 194)"><circle cx="0" cy="-34" r="7" class="ink"/><path d="M-8 0 L-6 -24 Q0 -28 6 -24 L8 0Z" class="ink"/><path d="M4 -24 L22 -52" style="stroke:color-mix(in srgb,var(--ink) 72%,transparent)" stroke-width="5" stroke-linecap="round"/></g>`,
+()=>`${GROUND}<g class="a-partL"><path d="M0 60 Q60 40 120 60 T240 60 T380 60 V240 H0Z" style="fill:color-mix(in srgb,var(--sc) 55%,var(--surface))"/></g><g class="a-partR"><path d="M620 60 Q680 40 740 60 T860 60 T1000 60 V240 H620Z" style="fill:color-mix(in srgb,var(--sc) 55%,var(--surface))"/></g><path d="M380 240 L470 120 L530 120 L620 240Z" style="fill:color-mix(in srgb,var(--accent2) 30%,var(--surface2))"/>${[0,1,2,3,4].map(i=>`<g class="a-walk" style="animation-delay:${i*1.6}s">${fig(480+i*10,230,.5)}</g>`).join('')}<path d="M500 30 Q520 70 500 110" class="a-flicker" style="fill:none;stroke:var(--accent2)" stroke-width="14" stroke-linecap="round"/>`,
+()=>`<path d="M280 190 L480 50 L700 190Z" class="ink"/><g class="a-float"><ellipse cx="480" cy="54" rx="110" ry="26" style="fill:color-mix(in srgb,var(--surface) 80%,var(--legal))"/><ellipse cx="420" cy="62" rx="60" ry="18" style="fill:color-mix(in srgb,var(--surface) 70%,var(--legal))"/></g><path d="M500 40 L470 100 L496 100 L470 160" class="a-flash" style="fill:none;stroke:var(--accent2)" stroke-width="5"/>${GROUND}${[120,200,800,880].map(x=>`<path d="M${x-26} 200 L${x} 176 L${x+26} 200Z" class="ink" style="opacity:.6"/>`).join('')}<rect x="420" y="168" width="160" height="40" class="ink"/><rect x="480" y="176" width="40" height="32" class="lit a-glow"/>`,
+()=>`<circle cx="160" cy="120" r="40" class="lit a-glow" style="opacity:.8"/>${GROUND}${Array.from({length:26},(_,i)=>`<g class="a-sway" style="animation-delay:${(i%5)*.3}s"><path d="M${380+i*22} 200 V${150+(i%3)*8}" style="stroke:color-mix(in srgb,var(--accent2) 80%,var(--ink))" stroke-width="2.5"/><ellipse cx="${380+i*22}" cy="${146+(i%3)*8}" rx="4" ry="10" style="fill:var(--accent2)"/></g>`).join('')}<g transform="translate(300 200)"><circle cx="-6" cy="-26" r="7" class="ink"/><path d="M-18 0 L-10 -20 Q0 -22 10 -14 L4 0Z" class="ink"/></g><path d="M220 200 l10 -40 l10 40Z M236 200 l8 -36 l8 36Z" style="fill:var(--sf)"/>`,
+()=>`${GROUND}<path d="M180 190 V120 h30 v-16 h20 v16 h80 v-16 h20 v16 h60 V190Z" class="ink"/><path d="M430 190 V110 L520 70 L610 110 V190Z" class="ink"/><rect x="505" y="140" width="30" height="50" class="lit a-glow"/><path d="M640 190 V120 h30 v-16 h20 v16 h100 v-16 h20 v16 h30 V190Z" class="ink"/><g transform="translate(860 80)"><path d="M0 0 Q40 -20 50 30 L10 100 Z" style="fill:none;stroke:var(--accent2)" stroke-width="5"/>${[0,1,2,3,4].map(i=>`<line class="a-wave" style="animation-duration:${.3+i*.07}s;stroke:var(--accent2)" x1="${10+i*7}" y1="${4+i*4}" x2="${12+i*6}" y2="${90-i*12}" stroke-width="1.5"/>`).join('')}</g><path d="M490 40 l10 -14 l10 10 l10 -14 l10 14 l10 -10 l10 14 v10 h-60z" class="lit a-float"/>`,
+()=>`${GROUND}<g transform="translate(220 70)"><rect x="0" y="0" width="300" height="110" rx="6" style="fill:color-mix(in srgb,var(--accent2) 18%,var(--surface))"/><rect x="-14" y="-6" width="18" height="122" rx="9" class="ink"/><rect x="296" y="-6" width="18" height="122" rx="9" class="ink"/>${[0,1,2,3,4].map(i=>`<path pathLength="1" class="a-write" style="animation-delay:${i*.4}s;fill:none;stroke:color-mix(in srgb,var(--ink) 60%,transparent)" stroke-width="3" d="M${24} ${22+i*18} q60 -6 120 0 t130 0"/>`).join('')}</g><g transform="translate(720 120)"><path class="a-beat" d="M0 40 C-70 -10 -40 -60 0 -30 C40 -60 70 -10 0 40Z" style="fill:var(--sp)"/></g><text x="720" y="200" text-anchor="middle" style="fill:var(--ink);font-family:var(--f-display);font-size:22px">"A new heart I will give you"</text>`,
+()=>`${GROUND}<path d="M0 212 Q200 200 400 214 T800 210 T1000 214" class="a-wave" style="fill:none;stroke:var(--sc)" stroke-width="5"/>${treeS(160,196,1,'color-mix(in srgb,var(--se) 55%,var(--surface))')}<path d="M520 192 V110 Q600 50 680 110 V192Z" class="ink"/><path d="M545 192 V120 Q600 76 655 120 V192Z" style="fill:#2a0a02"/>${[0,1,2,3,4,5].map(i=>`<path class="a-flicker" style="animation-delay:${i*.09}s;fill:${i%2?'var(--accent2)':'var(--sf)'}" d="M${555+i*18} 192 q-10 -30 8 -56 q4 26 12 30 q4 -14 -2 -24 q22 22 2 50z"/>`).join('')}${[0,1,2].map(i=>fig(570+i*22,190,.55)).join('')}<g transform="translate(636 190) scale(.55)"><circle cx="0" cy="-34" r="9" class="lit a-glow"/><path d="M-9 0 L-7 -24 Q0 -28 7 -24 L9 0Z" class="lit a-glow"/></g>`,
+()=>`<polygon points="640,40 560,200 720,200" class="a-glow" style="fill:color-mix(in srgb,var(--accent2) 22%,transparent)"/><g transform="translate(640 40)" class="a-twinkle"><path d="M0 -22 L5 -5 L22 0 L5 5 L0 22 L-5 5 L-22 0 L-5 -5Z" class="lit"/></g>${GROUND}<path d="M540 196 V140 L640 100 L740 140 V196" style="fill:none;stroke:color-mix(in srgb,var(--ink) 75%,transparent)" stroke-width="6"/><path d="M610 196 L620 176 H660 L670 196Z" class="ink"/><ellipse cx="640" cy="174" rx="14" ry="7" class="lit a-glow"/>${[0,1,2].map(i=>`<ellipse cx="${280+i*50}" cy="${192-i*3}" rx="18" ry="11" style="fill:color-mix(in srgb,var(--surface) 70%,var(--ink))"/>`).join('')}${fig(220,196,.85)}`,
+()=>`<circle cx="900" cy="196" r="70" class="lit a-rise" style="opacity:.85"/>${GROUND}<path d="M80 196 Q220 90 380 196Z" class="ink"/><path d="M230 70 V150 M206 92 H254" style="stroke:color-mix(in srgb,var(--ink) 80%,transparent)" stroke-width="8" stroke-linecap="round"/><path d="M560 196 Q620 110 720 130 Q780 150 800 196Z" class="ink"/><circle cx="650" cy="176" r="20" style="fill:#120806"/><circle cx="732" cy="176" r="22" class="a-roll" style="fill:color-mix(in srgb,var(--ink) 50%,var(--surface2))"/>${[0,1,2,3,4].map(i=>`<line x1="650" y1="176" x2="${600+i*25}" y2="110" class="a-glow" style="stroke:var(--accent2);animation-delay:${i*.3}s" stroke-width="2"/>`).join('')}`,
+()=>`${GROUND}${[0,1,2,3,4,5,6].map(i=>`<g>${fig(220+i*90,200,1)}<path class="a-flicker" style="animation-delay:${i*.07}s;fill:${i%2?'var(--accent2)':'var(--sf)'}" d="M${220+i*90} 150 q-9 -16 0 -30 q9 14 0 30z"/></g>`).join('')}${['Α','א','字','ب','Ж','ñ','क'].map((c,i)=>`<text x="${200+i*100}" y="${60+(i%2)*26}" class="a-float" style="animation-delay:${i*.4}s;fill:var(--accent);font-size:26px;font-family:var(--f-body)">${c}</text>`).join('')}${[0,1,2].map(i=>`<path pathLength="1" class="a-write" style="animation-delay:${i*.5}s;fill:none;stroke:color-mix(in srgb,var(--sc) 70%,transparent)" stroke-width="3" d="M${20} ${40+i*30} q200 -30 400 0 t500 0"/>`).join('')}`,
+()=>`<circle cx="500" cy="80" r="120" class="lit a-glow" style="opacity:.3"/><path d="M120 180 V120 h40 v-30 h30 v30 h40 V60 h50 v60 h50 v-40 h40 v40 h260 v-50 h40 v50 h40 v-30 h50 v70Z" style="fill:color-mix(in srgb,var(--accent2) 55%,var(--surface))"/>${GROUND}<path d="M0 216 Q250 204 500 216 T1000 214" class="a-wave" style="fill:none;stroke:var(--accent)" stroke-width="8"/>${treeS(500,200,1.2,'var(--se)','a-sway')}${Array.from({length:7},(_,i)=>`<circle cx="${470+(i%4)*18}" cy="${100+Math.floor(i/4)*24}" r="5" class="a-twinkle" style="fill:var(--sf);animation-delay:${i*.3}s"/>`).join('')}${Array.from({length:6},(_,i)=>`<ellipse cx="${200+i*120}" cy="${110+(i%3)*20}" rx="6" ry="3" class="a-float" style="fill:var(--se);animation-delay:${i*.5}s"/>`).join('')}`];
+function scene(i){const h=EPOCHS[i].hue;return `<svg viewBox="0 0 1000 240" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Illustration: ${esc(EPOCHS[i].name)}"><defs><linearGradient id="sky${i}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:color-mix(in srgb,hsl(${h} 70% 55%) 38%,var(--surface))"/><stop offset="1" style="stop-color:var(--surface)"/></linearGradient></defs><rect width="1000" height="240" style="fill:url(#sky${i})"/><style>.gnd{fill:color-mix(in srgb,hsl(${h} 35% 40%) 30%,var(--surface2))}</style>${SCENES[i]()}</svg>`}
+
+
 /* ================= ROUTER ================= */
-const VIEWS=['home','story','stoop','spheres','jesus','lens','body','library','journey'];
+const VIEWS=['home','story','stoop','spheres','jesus','lens','body','library','today','journey'];
 function route(){
   let v=(location.hash||'#home').slice(1); if(!VIEWS.includes(v))v='home';
   $$('.view').forEach(el=>el.hidden=el.dataset.view!==v);
@@ -885,6 +1222,10 @@ function route(){
   if(v!=='story')setTint(null); else selectEpoch(curEpoch,false);
   window.scrollTo({top:0});
   if(v==='home')startGather();
+  if(v!=='story'&&playT)stopPlay();
+  if(v!=='today'&&dayTimer)stopDay();
+  ENTER[v]&&ENTER[v]();
+  arm($('#v-'+v));
 }
 addEventListener('hashchange',route);
 
@@ -905,18 +1246,19 @@ $('#libCountHome').textContent=N.length+' stories';
 let curEpoch=0;
 const track=$('#tlTrack');
 track.innerHTML=EPOCHS.map((e,i)=>`<button class="tl-stop" role="tab" id="tl${i}" aria-selected="false" aria-controls="tlDetail"><span class="knot"></span><span>${e.name}</span></button>`).join('');
-$$('.tl-stop',track).forEach((b,i)=>b.addEventListener('click',()=>selectEpoch(i,true)));
+$$('.tl-stop',track).forEach((b,i)=>b.addEventListener('click',()=>{if(playT)stopPlay();selectEpoch(i,true)}));
 track.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){selectEpoch(Math.min(EPOCHS.length-1,curEpoch+1),true);e.preventDefault()}if(e.key==='ArrowLeft'){selectEpoch(Math.max(0,curEpoch-1),true);e.preventDefault()}});
 function selectEpoch(i,focus){
   curEpoch=i; const e=EPOCHS[i];
   $$('.tl-stop',track).forEach((b,j)=>{b.setAttribute('aria-selected',j===i);b.tabIndex=j===i?0:-1});
   const b=$('#tl'+i); focus&&b.focus({preventScroll:true}); track.scrollTo({left:b.offsetLeft-track.clientWidth/2+b.offsetWidth/2,behavior:reduce?'auto':'smooth'});
-  $('#tlDetail').innerHTML=`<div class="head"><div class="stack" style="gap:4px"><span class="eyebrow">Movement ${i+1} of ${EPOCHS.length}</span><h2>${e.name}</h2><span class="ref">${e.ref}</span></div>
+  $('#tlDetail').innerHTML=`<div class="scene">${scene(i)}</div><div class="head"><div class="stack" style="gap:4px"><span class="eyebrow">Movement ${i+1} of ${EPOCHS.length}</span><h2>${e.name}</h2><span class="ref">${e.ref}</span></div>
     <div class="pager"><button class="chip" data-d="-1" ${i===0?'disabled':''}>← Previous</button><button class="chip" data-d="1" ${i===EPOCHS.length-1?'disabled':''}>Next →</button></div></div>
     <div class="facet need"><span class="eyebrow">The brokenness</span><p>${esc(e.need)}</p></div>
     <div class="facet stoop"><span class="eyebrow">How God came down</span><p>${esc(e.stoop)}</p></div>
     <div class="facet rest"><span class="eyebrow">What He restored</span><p>${esc(e.rest)}</p></div>
-    <div class="facet christ"><span class="eyebrow">Pointing to Christ</span><p>${esc(e.christ)}</p></div>`;
+    <div class="facet christ"><span class="eyebrow">Pointing to Christ</span><p>${esc(e.christ)}</p></div>
+    <div class="facet today"><span class="eyebrow">What it means for you today</span><p>${esc(TODAY_E[i])}</p></div>`;
   $$('#tlDetail .pager button').forEach(bt=>bt.addEventListener('click',()=>selectEpoch(curEpoch+ +bt.dataset.d,false)));
   if(!$('#v-story').hidden)setTint(`hsl(${e.hue} 70% 50%)`);
 }
@@ -950,6 +1292,7 @@ var drawSpheres=function(){
     const on=k===curSph;
     h+=`<circle class="ring" data-k="${k}" cx="210" cy="210" r="${r}" style="fill:color-mix(in srgb, var(${SPH[k].var}) ${on?30:12}%, var(--surface));stroke:var(${SPH[k].var})" stroke-width="${on?4:1.5}" tabindex="0" role="button" aria-label="${SPH[k].name}" aria-pressed="${on}"></circle>`;
   });
+  h+=[0,1,2].map(j=>`<circle cx="210" cy="210" r="195" class="sph-rip" style="fill:none;stroke:var(${SPH[curSph].var});animation-delay:${j*1.3}s"/>`).join('');
   RINGS.forEach(([k,r],i)=>{ const y= k==='p'?246:210-r+24; h+=`<text x="210" y="${y}" text-anchor="middle" style="fill:var(${SPH[k].var})">${SPH[k].name.split(' ')[0]}</text>`; });
   h+=`<path d="M210 168v44M193 183h34" style="fill:none;stroke:var(--accent2)" stroke-width="6" stroke-linecap="round"/>`;
   svg.innerHTML=h;
@@ -962,6 +1305,7 @@ function renderSphere(){
     <p>${esc(s.text)}</p>
     <div class="facet need"><span class="eyebrow">Where it broke</span><p>${esc(s.broke)}</p></div>
     <blockquote class="scripture" style="border-color:var(${s.var})">${esc(s.verse)}</blockquote>
+    <div class="facet today" style="grid-column:auto"><span class="eyebrow">What it looks like today</span><ul class="sph-today">${SPH_TODAY[curSph].map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>
     <div class="row">${Object.values(SPH).map(o=>`<button class="chip ${o.cls}" data-k="${o.key}" aria-pressed="${o.key===curSph}"><span class="dot"></span>${o.name}</button>`).join('')}</div>`;
   $$('#sphereInfo .chip').forEach(c=>c.addEventListener('click',()=>{curSph=c.dataset.k;renderSphere()}));
   $('#sphereTest').innerHTML=['all','OT','NT'].map(t=>`<button class="chip" data-t="${t}" aria-pressed="${sphT===t}">${t==='all'?'Both':t}</button>`).join('');
@@ -1143,6 +1487,193 @@ function ambLoop(t){ax.clearRect(0,0,innerWidth,innerHeight);const c=cssVars.acc
 function startAmbient(){if(reduce)return;stopAmbient();sizeAmb();ac.hidden=false;aRAF=requestAnimationFrame(ambLoop)}
 function stopAmbient(){cancelAnimationFrame(aRAF);ax.clearRect(0,0,innerWidth,innerHeight);ac.hidden=true}
 addEventListener('resize',()=>{if(state.ambient&&!reduce)sizeAmb()});
+
+/* ================= STORY PLAY ================= */
+let playT=null;
+function stopPlay(){clearTimeout(playT);playT=null;$('#playStory').setAttribute('aria-pressed','false');$('#playStory span').textContent='Play the story';$('#playIco').setAttribute('d','M3 1.5v11l9-5.5z');$('#storyProg').classList.remove('run')}
+function stepPlay(){const p=$('#storyProg');p.classList.remove('run');void p.offsetWidth;p.classList.add('run');playT=setTimeout(()=>{if(curEpoch>=EPOCHS.length-1){stopPlay();return}selectEpoch(curEpoch+1,false);stepPlay()},7000)}
+$('#playStory').addEventListener('click',()=>{if(playT){stopPlay();return}if(curEpoch>=EPOCHS.length-1)selectEpoch(0,false);$('#playStory').setAttribute('aria-pressed','true');$('#playStory span').textContent='Pause';$('#playIco').setAttribute('d','M3 2h3v10H3zM8 2h3v10H8z');stepPlay()});
+
+/* ================= SHAPE OF THE STORY ================= */
+function smooth(p){let d=`M${p[0][0]},${p[0][1]}`;for(let i=0;i<p.length-1;i++){const p0=p[i-1]||p[i],p1=p[i],p2=p[i+1],p3=p[i+2]||p2;d+=` C${(p1[0]+(p2[0]-p0[0])/6).toFixed(1)},${(p1[1]+(p2[1]-p0[1])/6).toFixed(1)} ${(p2[0]-(p3[0]-p1[0])/6).toFixed(1)},${(p2[1]-(p3[1]-p1[1])/6).toFixed(1)} ${p2[0]},${p2[1]}`}return d}
+function drawShape(){
+  const svg=$('#shapeSvg'),X=i=>70+i*72;
+  const hum=[70,250,215,190,180,236,184,242,292,280,330],god=[30,64,92,118,140,160,182,206,240,282,330],uni=[[X(10),330],[X(11),170],[X(12),40]];
+  const H=hum.map((y,i)=>[X(i),y]),G=god.map((y,i)=>[X(i),y]);
+  const SH=['Creation','Fall','Abraham','Exodus','Sinai','Judges','Kings','Prophets','Exile','Incarnation','Cross','Pentecost','New creation'];
+  const all=[...H,...uni.slice(1)];
+  let h=`<defs><linearGradient id="uniG" x1="0" x2="0" y1="1" y2="0"><stop offset="0" style="stop-color:var(--accent)"/><stop offset="1" style="stop-color:var(--accent2)"/></linearGradient><filter id="glow"><feGaussianBlur stdDeviation="4"/></filter></defs>`;
+  for(let y=60;y<=340;y+=70)h+=`<line x1="40" x2="980" y1="${y}" y2="${y}" style="stroke:var(--line)" stroke-dasharray="2 6"/>`;
+  h+=`<text x="40" y="22" style="fill:var(--muted);font-size:12px">Nearer union ↑</text><text x="40" y="376" style="fill:var(--muted);font-size:12px">Deeper brokenness ↓</text>`;
+  h+=`<path class="draw" pathLength="1" d="${smooth(H)}" style="fill:none;stroke:var(--legal)" stroke-width="3"/>`;
+  h+=`<path class="draw d2" pathLength="1" d="${smooth(G)}" style="fill:none;stroke:var(--accent2)" stroke-width="3" stroke-dasharray="1"/>`;
+  h+=`<path class="draw d3" pathLength="1" d="${smooth(uni)}" style="fill:none;stroke:url(#uniG)" stroke-width="7" stroke-linecap="round"/>`;
+  h+=`<path class="draw d3" pathLength="1" d="${smooth(uni)}" style="fill:none;stroke:var(--accent)" stroke-width="14" opacity=".35" filter="url(#glow)"/>`;
+  h+=`<g class="fadein l2"><circle cx="${X(10)}" cy="330" r="12" style="fill:var(--accent)"/><path d="M${X(10)} 318v24M${X(10)-8} 326h16" style="stroke:var(--onaccent)" stroke-width="3"/><text x="${X(10)-14}" y="362" text-anchor="end" style="fill:var(--ink);font-size:13px">Phil 2:8 "obedient to death"</text></g>`;
+  h+=`<g class="fadein l1"><text x="${X(1)+10}" y="282" style="fill:var(--muted);font-size:12px">Genesis 3: the fracture</text><text x="${X(4)}" y="128" style="fill:var(--accent2);font-size:12px">"I have come down" Ex 3:8</text><text x="${X(9)-40}" y="250" style="fill:var(--accent2);font-size:12px" text-anchor="end">"emptied himself" Phil 2:7</text></g>`;
+  h+=`<g class="fadein l3"><text x="${X(12)-10}" y="30" text-anchor="end" style="fill:var(--accent);font-size:13px">Rev 21:5 "all things new" · higher than Eden</text><text x="${X(11)+12}" y="200" style="fill:var(--accent);font-size:12px">Eph 2:6 raised with Him</text></g>`;
+  all.forEach(([x,y],i)=>{h+=`<g class="fadein l1"><circle cx="${x}" cy="${y}" r="6" style="fill:var(--surface);stroke:${i>=10?'var(--accent)':'var(--legal)'}" stroke-width="2.5"><title>${SH[i]}</title></circle><text x="${x}" y="396" text-anchor="middle" style="fill:var(--muted);font-size:11px">${SH[i]}</text></g>`});
+  const motion=smooth([...G,...uni.slice(1)]);
+  if(!reduce)h+=`<circle r="6" style="fill:var(--accent2)" filter="url(#glow)"><animateMotion dur="9s" repeatCount="indefinite" path="${motion}"/></circle><circle r="4" style="fill:var(--accent2)"><animateMotion dur="9s" repeatCount="indefinite" path="${motion}"/></circle>`;
+  svg.innerHTML=h; replay(svg);
+}
+function replay(el){el.classList.remove('go');void el.getBoundingClientRect();el.classList.add('go')}
+
+/* ================= SPHERE BAR CHART ================= */
+function drawBars(){
+  const rows=Object.values(SPH).map(s=>({s,ot:N.filter(n=>n.s.includes(s.key)&&n.T==='OT').length,nt:N.filter(n=>n.s.includes(s.key)&&n.T==='NT').length}));
+  const max=Math.max(...rows.map(r=>r.ot+r.nt));
+  $('#sphBars').innerHTML=rows.map(r=>`<div class="bar-row"><span>${r.s.name}</span><div class="bar-track" title="${r.ot} Old Testament, ${r.nt} New Testament"><i data-w="${(r.ot/max*100).toFixed(1)}" style="background:var(${r.s.var})"></i><i class="nt" data-w="${(r.nt/max*100).toFixed(1)}" style="background:var(${r.s.var})"></i></div><b>${r.ot+r.nt}</b></div>`).join('');
+  requestAnimationFrame(()=>requestAnimationFrame(()=>$$('#sphBars i').forEach(i=>i.style.width=i.dataset.w+'%')));
+}
+
+/* ================= SANKEY ================= */
+let skOn=-1;
+function drawSankey(){
+  const svg=$('#sankey'),cy=220,ys=[50,135,220,305,390];let h='';
+  SK.forEach((r,i)=>{const y=ys[i],c=`var(${r.c})`;
+    const a=`M250 ${y} C370 ${y} 380 ${cy+(i-2)*14} 450 ${cy+(i-2)*14}`,b=`M550 ${cy+(i-2)*14} C620 ${cy+(i-2)*14} 630 ${y} 750 ${y}`;
+    h+=`<g class="sk-row${i===skOn?' on':''}" data-i="${i}" tabindex="0" role="button" aria-label="${esc(r.l)} to ${esc(r.r)}">
+    <path class="sk-band" d="${a}" style="stroke:${c}" stroke-width="30"/><path class="sk-band" d="${b}" style="stroke:${c}" stroke-width="30"/>
+    <path class="flowdash" d="${a}" style="stroke:${c};animation-delay:${i*.2}s" stroke-width="4"/><path class="flowdash" d="${b}" style="stroke:${c};animation-delay:${i*.2+.8}s" stroke-width="4"/>
+    <circle cx="250" cy="${y}" r="8" style="fill:${c}"/><circle cx="750" cy="${y}" r="8" style="fill:${c}"/>
+    <text x="236" y="${y-2}" text-anchor="end" style="fill:var(--ink)">${esc(r.l)}</text><text x="236" y="${y+16}" text-anchor="end" style="fill:var(--muted);font-size:12px;font-family:var(--f-ref)">${esc(r.lr)}</text>
+    <text x="764" y="${y-2}" style="fill:var(--ink)">${esc(r.r)}</text><text x="764" y="${y+16}" style="fill:var(--muted);font-size:12px;font-family:var(--f-ref)">${esc(r.rr)}</text></g>`});
+  h+=`<g style="pointer-events:none"><circle cx="500" cy="${cy}" r="68" style="fill:var(--accent)"/><circle cx="500" cy="${cy}" r="68" class="pulse-dot" style="fill:none;stroke:var(--accent)" stroke-width="2"/><path d="M500 180v58M478 200h44" style="stroke:var(--onaccent)" stroke-width="6" stroke-linecap="round"/><text x="500" y="262" text-anchor="middle" style="fill:var(--onaccent);font-family:var(--f-display);font-size:15px">Christ</text></g>`;
+  h+=`<text x="40" y="430" style="fill:var(--muted);font-size:12px;letter-spacing:.1em">THE FALL · GENESIS 3–11</text><text x="960" y="430" text-anchor="end" style="fill:var(--muted);font-size:12px;letter-spacing:.1em">RESTORED · NOW AND COMING</text>`;
+  svg.innerHTML=h; svg.classList.toggle('sk-dim',skOn>=0);
+  $$('.sk-row',svg).forEach(g=>{const go=()=>{skOn=+g.dataset.i===skOn?-1:+g.dataset.i;drawSankey()};g.addEventListener('click',go);g.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();go()}})});
+  const r=SK[skOn];
+  $('#skInfo').innerHTML=r?`<svg viewBox="0 0 24 24" style="fill:none;stroke:var(${r.c})" stroke-width="1.8"><path d="M4 12h14M13 6l6 6-6 6"/></svg><div class="stack" style="gap:6px"><span class="eyebrow">${esc(r.l)} → ${esc(r.r)}</span><p><b>For your life now:</b> ${esc(r.t)}</p><span class="ref">${esc(r.lr)} → ${esc(r.rr)}</span></div>`
+   :`<svg viewBox="0 0 24 24" style="fill:none;stroke:var(--accent2)" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16v.5"/></svg><div class="stack" style="gap:6px"><span class="eyebrow">Colossians 1:20</span><p>"Through him to reconcile all things to himself… having made peace through the blood of his cross." Choose a row to see what it changes today.</p></div>`;
+}
+
+/* ================= QUIZ ================= */
+let qa=[];
+function renderQuiz(){
+  $('#quizList').innerHTML=QUIZ.map((q,i)=>`<div class="q-item"><span class="eyebrow">${i+1} of ${QUIZ.length}</span><div class="opts"><button class="a" data-i="${i}" data-v="0" aria-pressed="${qa[i]===0}">${esc(q[0])}</button><button class="b" data-i="${i}" data-v="1" aria-pressed="${qa[i]===1}">${esc(q[1])}</button></div></div>`).join('');
+  $$('#quizList button').forEach(b=>b.addEventListener('click',()=>{qa[+b.dataset.i]=+b.dataset.v;renderQuiz();updateGauge()}));
+}
+function updateGauge(){
+  const n=qa.filter(v=>v!==undefined).length, u=qa.filter(v=>v===1).length;
+  const f=n?u/n:.5; $('#needle').style.transform=`rotate(${(-90+f*180).toFixed(1)}deg)`;
+  if(!n){$('#gaugeScore').textContent='Answer a few pairs';$('#gaugeNote').textContent='The needle will move as you choose.';return}
+  $('#gaugeScore').textContent=`${u} of ${n} from union`;
+  $('#gaugeNote').textContent=f>=.75?'You are living largely from the Father\'s embrace. Keep receiving it; it is the soil of everything else.':f>=.4?'Both pictures are at work in you, as in most of us. Notice which situations pull you back into the courtroom.':'The courtroom voice is loud right now. Hear this: the Father\'s posture toward you does not change with your score. He is already running toward you (Luke 15:20).';
+}
+$('#quizReset').addEventListener('click',()=>{qa=[];renderQuiz();updateGauge()});
+
+/* ================= DAY SCENE ================= */
+const dc=$('#dayScene'),dx=dc.getContext('2d');let dayMin=390,dayRAF=0,dayPlaying=false;
+const SKY=[[300,'#0b1028','#1b1f45'],[360,'#2a2350','#7b5b86'],[400,'#f2a07b','#fbd9b0'],[540,'#7fb6ec','#cfe6fb'],[960,'#6aa8e6','#d6ebfb'],[1140,'#e5774f','#f6c08a'],[1230,'#2a2a5e','#7a4c79'],[1380,'#0b1028','#1c1f45']];
+const hx=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16)),mix=(a,b,t)=>`rgb(${a.map((v,i)=>Math.round(v+(b[i]-v)*t)).join(',')})`;
+function skyAt(m){for(let i=0;i<SKY.length-1;i++){const[a,t1,b1]=SKY[i],[c,t2,b2]=SKY[i+1];if(m>=a&&m<=c){const t=(m-a)/(c-a);return[mix(hx(t1),hx(t2),t),mix(hx(b1),hx(b2),t)]}}return['#0b1028','#1c1f45']}
+function drawDay(){
+  const r=dc.getBoundingClientRect(),dpr=Math.min(2,devicePixelRatio||1);if(!r.width)return;
+  if(dc.width!==Math.round(r.width*dpr)){dc.width=Math.round(r.width*dpr);dc.height=Math.round(r.height*dpr)}
+  dx.setTransform(dpr,0,0,dpr,0,0);const W=r.width,H=r.height,m=dayMin,[top,bot]=skyAt(m);
+  const g=dx.createLinearGradient(0,0,0,H);g.addColorStop(0,top);g.addColorStop(1,bot);dx.fillStyle=g;dx.fillRect(0,0,W,H);
+  const night=m<380||m>1220?1:m>1140?(m-1140)/80:m<420?(420-m)/40:0;
+  if(night>0){for(let i=0;i<80;i++){dx.globalAlpha=night*(.4+.6*seeded(i+40));dx.fillStyle='#fff8e0';dx.fillRect(seeded(i)*W,seeded(i+200)*H*.6,1.6,1.6)}dx.globalAlpha=1}
+  const sunT=(m-370)/(1200-370);
+  if(sunT>0&&sunT<1){const sx=W*.06+sunT*W*.88,sy=H*.82-Math.sin(sunT*Math.PI)*H*.62;const sg=dx.createRadialGradient(sx,sy,0,sx,sy,60);sg.addColorStop(0,'rgba(255,236,170,.95)');sg.addColorStop(1,'rgba(255,236,170,0)');dx.fillStyle=sg;dx.beginPath();dx.arc(sx,sy,60,0,7);dx.fill();dx.fillStyle='#ffe28a';dx.beginPath();dx.arc(sx,sy,18,0,7);dx.fill()}
+  if(m>1180){const mt=(m-1180)/200;dx.fillStyle='#f3f0dc';dx.beginPath();dx.arc(W*.15+mt*W*.6,H*.5-mt*H*.3,13,0,7);dx.fill();dx.fillStyle=top;dx.beginPath();dx.arc(W*.15+mt*W*.6+6,H*.5-mt*H*.3-3,11,0,7);dx.fill()}
+  const dark=.25+night*.55, sil=`rgba(${Math.round(30-night*20)},${Math.round(40-night*25)},${Math.round(45-night*20)},${(.55+night*.35).toFixed(2)})`;
+  dx.fillStyle=`rgba(40,70,60,${dark})`;dx.beginPath();dx.moveTo(0,H*.72);for(let x=0;x<=W;x+=20)dx.lineTo(x,H*.72-Math.sin(x/W*6)*H*.05);dx.lineTo(W,H);dx.lineTo(0,H);dx.fill();
+  dx.fillStyle=sil;
+  const base=H*.86;
+  const house=(x,w,h)=>{dx.fillRect(x,base-h,w,h);dx.beginPath();dx.moveTo(x-6,base-h);dx.lineTo(x+w/2,base-h-h*.5);dx.lineTo(x+w+6,base-h);dx.fill()};
+  house(W*.06,W*.1,H*.16);house(W*.2,W*.08,H*.12);
+  dx.fillRect(W*.45,base-H*.42,W*.07,H*.42);dx.fillRect(W*.53,base-H*.3,W*.06,H*.3);dx.fillRect(W*.38,base-H*.24,W*.06,H*.24);
+  dx.fillRect(W*.72,base-H*.08,W*.004,H*.08);dx.beginPath();dx.arc(W*.73,base-H*.14,H*.08,0,7);dx.fill();dx.beginPath();dx.arc(W*.8,base-H*.12,H*.06,0,7);dx.fill();
+  dx.fillRect(0,base,W,H-base);
+  const lit=night>.2||m<450;dx.fillStyle=lit?'rgba(255,214,120,.95)':'rgba(255,255,255,.18)';
+  [[.08,.1],[.12,.1],[.22,.08]].forEach(([x,y])=>dx.fillRect(W*x,base-H*y,W*.018,H*.04));
+  for(let i=0;i<10;i++)if(lit?seeded(i+Math.floor(m/60))>.4:true)dx.fillRect(W*(.46+(i%3)*.02),base-H*(.38-Math.floor(i/3)*.08),W*.01,H*.03);
+  const cur=DAY.reduce((a,d)=>m>=d.m-25?d:a,DAY[0]);
+  const px=cur.s==='e'?W*.76:cur.s==='c'?W*.36:cur.s==='f'?W*.17:W*.28;
+  dx.fillStyle='rgba(255,236,170,.25)';dx.beginPath();dx.arc(px,base-H*.05,H*.12+Math.sin(performance.now()/400)*4,0,7);dx.fill();
+  dx.fillStyle=sil;dx.beginPath();dx.arc(px,base-H*.13,H*.025,0,7);dx.fill();dx.fillRect(px-H*.02,base-H*.1,H*.04,H*.1);
+  if(!reduce&&!$('#v-today').hidden)dayRAF=requestAnimationFrame(drawDay);else dayRAF=0;
+}
+function setDay(m){dayMin=m;$('#dayRange').value=m;const hh=Math.floor(m/60),mm=m%60;$('#clock').textContent=`${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}`;
+  const cur=DAY.reduce((a,d)=>m>=d.m-25?d:a,DAY[0]);
+  $$('#dayTicks button').forEach(b=>b.classList.toggle('on',+b.dataset.m===cur.m));
+  if($('#moment').dataset.m!=String(cur.m)){$('#moment').dataset.m=cur.m;const S=SPH[cur.s];
+    $('#moment').innerHTML=`<div class="head"><span class="tag ${S.cls}">${S.name}</span><h3>${cur.lab} · ${esc(cur.t)}</h3></div>
+    <div class="lens leg"><span class="eyebrow">Legal reflex</span><p>${esc(cur.L)}</p></div><div class="lens rel"><span class="eyebrow">Living from union</span><p>${esc(cur.U)}</p></div>
+    <div class="facet today do"><span class="eyebrow">Try it today</span><p>${esc(cur.d)}</p></div>`}
+  if(!dayRAF)drawDay();}
+$('#dayTicks').innerHTML=DAY.map(d=>`<button data-m="${d.m}" style="left:${((d.m-360)/1020*100).toFixed(1)}%;--c:var(${SPH[d.s].var})" aria-label="${d.lab} ${esc(d.t)}">${d.lab}</button>`).join('');
+$$('#dayTicks button').forEach(b=>b.addEventListener('click',()=>setDay(+b.dataset.m)));
+$('#dayRange').addEventListener('input',e=>{stopDay();setDay(+e.target.value)});
+let dayTimer=null;function stopDay(){clearInterval(dayTimer);dayTimer=null;$('#playDay span').textContent='Play the day'}
+$('#playDay').addEventListener('click',()=>{if(dayTimer){stopDay();return}if(dayMin>=1375)setDay(360);$('#playDay span').textContent='Pause';dayTimer=setInterval(()=>{if(dayMin>=1380){stopDay();return}setDay(Math.min(1380,dayMin+5))},90)});
+addEventListener('resize',()=>{if(!$('#v-today').hidden)drawDay()});
+
+/* ================= SCENARIOS ================= */
+let curScen=0;
+$('#scenPick').innerHTML=SCEN.map((s,i)=>`<button data-i="${i}" aria-pressed="${i===0}"><svg viewBox="0 0 24 24" aria-hidden="true">${ICON[s.i]}</svg>${esc(s.n)}</button>`).join('');
+$$('#scenPick button').forEach(b=>b.addEventListener('click',()=>{curScen=+b.dataset.i;renderScen()}));
+function renderScen(){
+  $$('#scenPick button').forEach((b,i)=>b.setAttribute('aria-pressed',i===curScen));
+  const s=SCEN[curScen];
+  $('#scenOut').innerHTML=`<div class="scen-out"><div class="lens leg" style="animation:pop .5s both"><span class="eyebrow">The legal script</span><h3>${esc(s.n)}</h3><p>${esc(s.L)}</p></div>
+  <div class="scen-arrow"><svg viewBox="0 0 46 46" aria-hidden="true"><path class="flowdash" d="M4 23h34"/><path d="M30 14l10 9-10 9" style="fill:none;stroke:var(--accent2)" stroke-width="3" stroke-linecap="round"/></svg></div>
+  <div class="lens rel" style="animation:pop .5s .2s both"><span class="eyebrow">Rewritten by union</span><h3>What the Father does</h3><p>${esc(s.U)}</p></div></div>
+  <div class="scen-extra"><div class="facet christ" style="animation:pop .5s .35s both"><span class="eyebrow">The story it mirrors</span><p><b>${esc(s.mir)}</b></p><span class="ref">${esc(s.mr)}</span></div><div class="facet today" style="grid-column:auto;animation:pop .5s .45s both"><span class="eyebrow">Practice this week</span><p>${esc(s.d)}</p></div></div>`;
+}
+
+/* ================= RIPPLE ================= */
+const RP=[{r:0,s:'p',items:['You']},{r:95,s:'f',lbl:'HOUSEHOLD',items:['Spouse','Children','Parents','Friend']},{r:165,s:'p',lbl:'COMMUNITY',items:['Neighbour','Colleague','Church','School','Team']},{r:230,s:'c',lbl:'THE "OTHER"',items:['Stranger','Rival group','Refugee','City hall','Enemy','Market']},{r:285,s:'e',lbl:'CREATION',items:['Land','Rivers','Creatures','Air','Forests','Fields','Seas']}];
+let rpAnim=0;
+function drawRipple(){
+  let h='';RP.forEach((ring,ri)=>{if(ring.r)h+=`<circle class="rp-ring" cx="300" cy="300" r="${ring.r}"/><text class="rp-lbl" x="300" y="${300-ring.r-6}" text-anchor="middle">${ring.lbl}</text>`});
+  h+=`<circle id="wave" cx="300" cy="300" r="0" style="fill:none;stroke:var(--accent2)" stroke-width="3" opacity="0"/><circle id="wave2" cx="300" cy="300" r="0" style="fill:color-mix(in srgb,var(--accent2) 12%,transparent)" opacity="0"/>`;
+  RP.forEach((ring,ri)=>ring.items.forEach((t,i)=>{const a=-Math.PI/2+(i+.5)*2*Math.PI/ring.items.length+ri*.3,x=300+ring.r*Math.cos(a),y=300+ring.r*Math.sin(a);
+    h+=`<g class="rp-dot${ri===0?' lit':''}" data-r="${ring.r}" style="--c:var(${SPH[ring.s].var})"><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${ri===0?26:9}"/><text x="${x.toFixed(1)}" y="${(ri===0?y+5:y+24).toFixed(1)}" ${ri===0?'style="fill:var(--onaccent);font-family:var(--f-display);font-size:16px"':''}>${t}</text></g>`}));
+  $('#rippleSvg').innerHTML=h;
+}
+function sendRipple(){
+  cancelAnimationFrame(rpAnim);const w=$('#wave'),w2=$('#wave2'),t0=performance.now(),D=reduce?1:3600;
+  const tick=now=>{const t=Math.max(0,Math.min(1,(now-t0)/D)),r=t*300;w.setAttribute('r',r);w2.setAttribute('r',r);w.setAttribute('opacity',1-t*.7);w2.setAttribute('opacity',1-t);
+    $$('#rippleSvg .rp-dot').forEach(g=>{if(+g.dataset.r<=r+4)g.classList.add('lit')});
+    if(t<1)rpAnim=requestAnimationFrame(tick)};
+  rpAnim=requestAnimationFrame(tick);
+}
+$('#sendRipple').addEventListener('click',sendRipple);
+$('#clearRipple').addEventListener('click',()=>{cancelAnimationFrame(rpAnim);drawRipple()});
+
+/* ================= ALREADY / NOT YET ================= */
+function drawAnt(){
+  const h=`<defs><linearGradient id="ageA" x1="0" x2="1"><stop offset="0" style="stop-color:var(--legal);stop-opacity:.55"/><stop offset=".85" style="stop-color:var(--legal);stop-opacity:.35"/><stop offset="1" style="stop-color:var(--legal);stop-opacity:0"/></linearGradient><linearGradient id="ageB" x1="0" x2="1"><stop offset="0" style="stop-color:var(--accent);stop-opacity:.15"/><stop offset=".3" style="stop-color:var(--accent);stop-opacity:.55"/><stop offset="1" style="stop-color:var(--accent2);stop-opacity:.7"/></linearGradient></defs>
+  <rect x="40" y="40" width="0" height="46" rx="23" style="fill:url(#ageA)"><animate attributeName="width" from="0" to="720" dur="1.4s" fill="freeze"/></rect>
+  <text x="60" y="69" style="fill:var(--ink);font-size:15px">This present age: sin, death, groaning</text>
+  <rect x="420" y="100" width="0" height="46" rx="23" style="fill:url(#ageB)"><animate attributeName="width" from="0" to="560" dur="1.4s" begin=".6s" fill="freeze"/></rect>
+  <text x="440" y="129" style="fill:var(--ink);font-size:15px">The age to come: new creation, Spirit, life</text>
+  <rect x="420" y="30" width="340" height="126" rx="8" style="fill:none;stroke:var(--accent2)" stroke-dasharray="5 5"/>
+  <text x="590" y="178" text-anchor="middle" style="fill:var(--accent2);font-size:13px;font-weight:700;letter-spacing:.08em">NOW: THE OVERLAP</text>
+  <line x1="40" x2="980" y1="200" y2="200" style="stroke:var(--line)" stroke-width="2"/>
+  <circle cx="420" cy="200" r="7" style="fill:var(--accent)"/><text x="420" y="224" text-anchor="middle" style="fill:var(--muted);font-size:12px">Cross &amp; resurrection</text>
+  <circle cx="760" cy="200" r="7" style="fill:var(--accent2)"/><text x="760" y="224" text-anchor="middle" style="fill:var(--muted);font-size:12px">Christ returns</text>
+  <circle cx="600" cy="200" r="7" class="pulse-dot" style="fill:var(--sp)"/><circle cx="600" cy="200" r="7" style="fill:var(--sp)"/><text x="600" y="224" text-anchor="middle" style="fill:var(--ink);font-size:12px;font-weight:700">You are here</text>
+  <circle cx="60" cy="200" r="5" style="fill:var(--legal)"/><text x="60" y="224" style="fill:var(--muted);font-size:12px">Fall</text>`;
+  $('#antSvg').innerHTML=h;
+}
+
+/* ================= SCROLL REVEAL ================= */
+const RV='.card,.facet,.path,.flip,.panel,.lens,.q-item,.diagram,.scene';
+const io=('IntersectionObserver' in window)?new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.remove('pre');io.unobserve(e.target)}}),{rootMargin:'0px 0px -30px 0px'}):null;
+function arm(rootEl){if(reduce||!io)return;let k=0;$$(RV,rootEl).forEach(el=>{if(el.closest('.drawer,.modal')||el.classList.contains('revealable'))return;const r=el.getBoundingClientRect();if(r.top>innerHeight&&r.height){el.classList.add('revealable','pre');el.style.transitionDelay=((k++%3)*80)+'ms';io.observe(el)}})}
+new MutationObserver(ms=>{for(const m of ms)for(const n of m.addedNodes)if(n.nodeType===1){const v=n.closest&&n.closest('.view');if(v&&!v.hidden){arm(n.parentElement||n);}}}).observe($('#main'),{childList:true,subtree:true});
+
+/* ================= ENTER HOOKS ================= */
+ENTER.home=()=>drawShape();
+ENTER.spheres=()=>drawBars();
+ENTER.jesus=()=>drawSankey();
+ENTER.today=()=>{drawRipple();drawAnt();setDay(dayMin);if(!dayRAF)drawDay();setTimeout(sendRipple,900)};
+ENTER.story=()=>{};
+renderQuiz();updateGauge();renderScen();drawSankey();
 
 /* ================= BOOT ================= */
 applySize(); applyMode(); syncCycle();
