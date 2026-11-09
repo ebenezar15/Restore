@@ -1,0 +1,1154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Restoration of All Things</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="An interactive journey through Scripture: how God stoops into every culture to restore people, families, nations and the earth, with Jesus as the pinnacle and the Body of Christ as the ongoing work.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Marcellus&family=Alegreya:ital,wght@0,400;0,500;0,700;1,400&family=Alegreya+Sans:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout concept: a sticky "scroll-case" header with chapter tabs; each chapter is its own view.
+   The visual idea is gathering: scattered fragments drawn back into four concentric spheres around a cross. */
+:root{
+  /* Colour tokens (default scheme "Jordan", light). Schemes are swapped by script. */
+  --bg:#EBF1F0; --surface:#FAFCFC; --surface2:#DCE7E5; --ink:#0E2A2D; --muted:#4A6366; --line:#C3D4D2;
+  --accent:#0B7472; --accent2:#A87A12; --onaccent:#FFFFFF;
+  --sp:#0B7472; --sf:#A87A12; --sc:#4D5FC0; --se:#3C7F3F; --legal:#6A6F7A;
+  --tint:var(--accent);
+  /* Type tokens */
+  --f-display:"Marcellus","Trajan Pro","Cinzel",Georgia,serif;
+  --f-body:"Alegreya",Georgia,"Times New Roman",serif;
+  --f-ui:"Alegreya Sans","Segoe UI",system-ui,sans-serif;
+  --f-ref:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  --fs:1;
+  --r:10px;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#091719; --surface:#0F2326; --surface2:#163236; --ink:#E4EFED; --muted:#94AEAC; --line:#234247;
+    --accent:#47C6BF; --accent2:#E3B44A; --onaccent:#04201F;
+    --sp:#47C6BF; --sf:#E3B44A; --sc:#8F9DFF; --se:#74C77A; --legal:#9CA3AF; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#091719; --surface:#0F2326; --surface2:#163236; --ink:#E4EFED; --muted:#94AEAC; --line:#234247;
+  --accent:#47C6BF; --accent2:#E3B44A; --onaccent:#04201F;
+  --sp:#47C6BF; --sf:#E3B44A; --sc:#8F9DFF; --se:#74C77A; --legal:#9CA3AF; color-scheme:dark;
+}
+
+*{box-sizing:border-box}
+html{font-size:calc(16px * var(--fs))}
+body{
+  margin:0; min-height:100%;
+  background:
+    radial-gradient(1200px 600px at 85% -10%, color-mix(in srgb, var(--tint) 16%, transparent), transparent 70%),
+    radial-gradient(900px 500px at -10% 110%, color-mix(in srgb, var(--accent2) 10%, transparent), transparent 70%),
+    var(--bg);
+  background-attachment:fixed;
+  color:var(--ink); font-family:var(--f-body); font-size:1.06rem; line-height:1.6;
+  transition:background-color .5s ease, color .3s ease;
+}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
+#ambient{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:0;opacity:.55}
+.wrap{position:relative;z-index:1;max-width:1140px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1,h2,h3,h4{font-family:var(--f-display);font-weight:400;line-height:1.15;text-wrap:balance;margin:0}
+h1{font-size:clamp(2.2rem,5.6vw,4.2rem);letter-spacing:.01em}
+h2{font-size:clamp(1.7rem,3.6vw,2.6rem)}
+h3{font-size:1.35rem}
+h4{font-size:1.1rem}
+p{margin:0}
+a{color:var(--accent)}
+button{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--accent2);outline-offset:2px;border-radius:6px}
+.eyebrow{font-family:var(--f-ui);font-size:.78rem;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);font-weight:700}
+.ref{font-family:var(--f-ref);font-size:.78rem;color:var(--accent);letter-spacing:.02em}
+.muted{color:var(--muted)}
+.lede{font-size:1.2rem;max-width:62ch;color:var(--ink)}
+.prose{max-width:66ch}
+.stack{display:flex;flex-direction:column;gap:14px}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.sp-p{--c:var(--sp)} .sp-f{--c:var(--sf)} .sp-c{--c:var(--sc)} .sp-e{--c:var(--se)}
+
+/* Header */
+header.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:color-mix(in srgb, var(--surface) 88%, transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+header.bar .wrap{display:flex;align-items:center;gap:14px;padding-block:10px}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--ink);flex:none}
+.brand svg{width:30px;height:30px}
+.brand b{font-family:var(--f-display);font-weight:400;font-size:1.15rem;letter-spacing:.04em}
+nav.tabs{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;flex:1;min-width:0;mask-image:linear-gradient(90deg,#000 92%,transparent)}
+nav.tabs::-webkit-scrollbar{display:none}
+nav.tabs a{font-family:var(--f-ui);font-size:.92rem;white-space:nowrap;text-decoration:none;color:var(--muted);padding:7px 11px;border-radius:999px;transition:background .2s,color .2s}
+nav.tabs a:hover{color:var(--ink);background:var(--surface2)}
+nav.tabs a[aria-current="page"]{background:var(--accent);color:var(--onaccent)}
+.iconbtn{flex:none;display:inline-grid;place-items:center;width:40px;height:40px;border-radius:999px;border:1px solid var(--line);background:var(--surface);cursor:pointer;transition:transform .2s}
+.iconbtn:hover{transform:rotate(30deg)}
+.iconbtn svg{width:20px;height:20px}
+
+/* Buttons & chips */
+.btn{font-family:var(--f-ui);font-weight:700;font-size:.95rem;display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border-radius:999px;border:1px solid var(--accent);background:var(--accent);color:var(--onaccent);cursor:pointer;text-decoration:none;transition:filter .2s, transform .15s}
+.btn:hover{filter:brightness(1.08)} .btn:active{transform:translateY(1px)}
+.btn.ghost{background:transparent;color:var(--accent)}
+.chip{font-family:var(--f-ui);font-size:.88rem;padding:6px 12px;border-radius:999px;border:1px solid var(--line);background:var(--surface);cursor:pointer;color:var(--ink);display:inline-flex;align-items:center;gap:7px}
+.chip .dot{width:9px;height:9px;border-radius:50%;background:var(--c,var(--accent))}
+.chip[aria-pressed="true"]{background:var(--c,var(--accent));border-color:var(--c,var(--accent));color:var(--onaccent)}
+.chip[aria-pressed="true"] .dot{background:var(--onaccent)}
+.tag{font-family:var(--f-ui);font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;padding:2px 8px;border-radius:999px;color:var(--c,var(--accent));border:1px solid color-mix(in srgb, var(--c,var(--accent)) 50%, transparent)}
+
+/* Views */
+main{position:relative;z-index:1;padding-bottom:60px}
+.view{animation:rise .5s ease both}
+@keyframes rise{from{opacity:.0001;transform:translateY(10px)}to{opacity:1;transform:none}}
+section.sec{padding-block:36px}
+.sec-head{display:flex;flex-direction:column;gap:10px;margin-bottom:22px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:20px}
+
+/* Home hero */
+.hero{display:grid;grid-template-columns:1.05fr 1fr;gap:28px;align-items:center;padding-block:34px 10px}
+.hero > *{min-width:0}
+.hero-copy{display:flex;flex-direction:column;gap:18px}
+.hero h1 span{display:block;color:var(--accent)}
+blockquote.scripture{margin:0;padding:14px 18px;border-left:3px solid var(--accent2);background:color-mix(in srgb, var(--surface) 70%, transparent);font-style:italic;font-size:1.08rem;border-radius:0 var(--r) var(--r) 0}
+blockquote.scripture cite{display:block;font-style:normal;margin-top:6px}
+.canvas-box{position:relative;aspect-ratio:1/1;max-width:100%;width:100%;max-height:560px}
+#gather{width:100%;height:100%;display:block}
+.gather-ctl{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.gather-ctl label{display:flex;justify-content:space-between;font-family:var(--f-ui);font-size:.85rem;color:var(--muted)}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-family:var(--f-ui);font-size:.85rem;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:10px;height:10px;border-radius:50%;background:var(--c)}
+.paths{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.path{display:flex;flex-direction:column;gap:8px;padding:18px;border-radius:var(--r);border:1px solid var(--line);background:var(--surface);text-decoration:none;color:var(--ink);transition:transform .2s, border-color .2s, box-shadow .2s}
+.path:hover{transform:translateY(-3px);border-color:var(--accent);box-shadow:0 10px 30px -18px var(--accent)}
+.path .n{font-family:var(--f-ref);font-size:.75rem;color:var(--accent2)}
+.path h3{font-size:1.15rem}
+.path p{font-size:.95rem;color:var(--muted)}
+.thesis{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
+.thesis > div{display:flex;flex-direction:column;gap:8px;min-width:0}
+.thesis h3{color:var(--accent)}
+
+/* Timeline */
+.tl-track{display:flex;gap:0;overflow-x:auto;padding:26px 4px 14px;scroll-snap-type:x proximity;position:relative}
+.tl-track::before{content:"";position:absolute;left:0;right:0;top:37px;height:2px;background:linear-gradient(90deg,var(--line),var(--accent),var(--accent2),var(--line))}
+.tl-stop{flex:none;width:118px;display:flex;flex-direction:column;align-items:center;gap:10px;background:none;border:0;cursor:pointer;scroll-snap-align:center;padding:0 4px;color:var(--muted)}
+.tl-stop .knot{width:22px;height:22px;border-radius:50%;border:2px solid var(--accent);background:var(--surface);position:relative;z-index:1;transition:transform .25s, background .25s}
+.tl-stop span{font-family:var(--f-ui);font-size:.82rem;text-align:center;line-height:1.25}
+.tl-stop[aria-selected="true"]{color:var(--ink)}
+.tl-stop[aria-selected="true"] .knot{background:var(--accent);transform:scale(1.35);box-shadow:0 0 0 6px color-mix(in srgb, var(--accent) 20%, transparent)}
+.tl-detail{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:10px}
+.tl-detail > *{min-width:0}
+.tl-detail .head{grid-column:1/-1;display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;align-items:end}
+.facet{display:flex;flex-direction:column;gap:6px;padding:16px;border-radius:var(--r);background:var(--surface);border:1px solid var(--line)}
+.facet .eyebrow{color:var(--c,var(--muted))}
+.facet.need{--c:var(--legal)} .facet.stoop{--c:var(--accent2)} .facet.rest{--c:var(--accent)} .facet.christ{--c:var(--sc)}
+.facet{border-top:3px solid var(--c)}
+.pager{display:flex;gap:8px}
+
+/* Address of God (proximity) */
+.addr{display:flex;flex-direction:column;gap:8px}
+.addr-row{display:grid;grid-template-columns:150px 1fr;gap:14px;align-items:center;cursor:pointer;background:none;border:0;text-align:left;padding:6px 0;color:var(--ink)}
+.addr-row .lbl{font-family:var(--f-display);font-size:1.02rem}
+.addr-bar{height:30px;border-radius:999px;background:var(--surface2);position:relative;overflow:hidden}
+.addr-bar i{position:absolute;inset:0 auto 0 0;border-radius:999px;background:linear-gradient(90deg,color-mix(in srgb,var(--accent) 35%,transparent),var(--accent));display:flex;align-items:center;justify-content:flex-end;padding-right:10px;color:var(--onaccent);font-family:var(--f-ref);font-size:.72rem;font-style:normal;transition:width .8s cubic-bezier(.2,.8,.2,1)}
+.addr-note{min-height:3.2em}
+
+/* Cards grid */
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.card{display:flex;flex-direction:column;gap:10px;padding:18px;border-radius:var(--r);background:var(--surface);border:1px solid var(--line);min-width:0;transition:border-color .2s, transform .2s}
+.card:hover{border-color:var(--c,var(--accent))}
+.card .top{display:flex;justify-content:space-between;align-items:start;gap:10px}
+.card dl{margin:0;display:grid;gap:8px}
+.card dt{font-family:var(--f-ui);font-size:.74rem;text-transform:uppercase;letter-spacing:.1em;font-weight:700;color:var(--muted)}
+.card dd{margin:0;font-size:.98rem}
+.card .tags{display:flex;flex-wrap:wrap;gap:6px}
+.culture-arrow{display:flex;align-items:center;gap:8px;font-family:var(--f-ui);font-size:.9rem;color:var(--accent2);font-weight:700}
+
+/* Spheres */
+.spheres{display:grid;grid-template-columns:minmax(0,420px) 1fr;gap:28px;align-items:start}
+.spheres > *{min-width:0}
+#sphereSvg{width:100%;max-width:420px;height:auto;display:block;margin:0 auto}
+#sphereSvg .ring{cursor:pointer;transition:opacity .3s, stroke-width .3s}
+#sphereSvg .ring:hover{opacity:.9}
+#sphereSvg text{font-family:var(--f-ui);font-size:13px;font-weight:700;pointer-events:none;letter-spacing:.08em;text-transform:uppercase}
+.four{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.four .facet{padding:12px}
+
+/* Jesus */
+.arc{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
+.arc button{display:flex;flex-direction:column;gap:6px;align-items:flex-start;text-align:left;padding:14px;border-radius:var(--r);border:1px solid var(--line);background:var(--surface);cursor:pointer;min-width:0}
+.arc button .n{font-family:var(--f-ref);font-size:.72rem;color:var(--accent2)}
+.arc button b{font-family:var(--f-display);font-weight:400;font-size:1.05rem}
+.arc button[aria-selected="true"]{background:var(--accent);color:var(--onaccent);border-color:var(--accent)}
+.arc button[aria-selected="true"] .n{color:var(--onaccent)}
+.arc-detail{margin-top:14px;display:grid;grid-template-columns:1.3fr 1fr;gap:16px}
+.arc-detail > *{min-width:0}
+.flips{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.flip{perspective:900px;background:none;border:0;padding:0;cursor:pointer;text-align:left;min-height:168px}
+.flip .in{position:relative;width:100%;height:100%;min-height:168px;transition:transform .6s cubic-bezier(.2,.8,.2,1);transform-style:preserve-3d}
+.flip[aria-pressed="true"] .in{transform:rotateY(180deg)}
+.flip .face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:6px;border:1px solid var(--line);background:var(--surface);overflow:auto}
+.flip .back{transform:rotateY(180deg);background:var(--accent);color:var(--onaccent);border-color:var(--accent)}
+.flip .back .ref{color:var(--onaccent);opacity:.85}
+.flip .face b{font-family:var(--f-display);font-weight:400;font-size:1.12rem}
+.flip .hint{margin-top:auto;font-family:var(--f-ui);font-size:.78rem;color:var(--muted)}
+.flip .back .hint{color:var(--onaccent);opacity:.8}
+
+/* Lens */
+.lens-ctl{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;padding:3px;background:var(--surface)}
+.seg button{border:0;background:none;padding:7px 14px;border-radius:999px;cursor:pointer;font-family:var(--f-ui);font-size:.9rem;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.lens-topics{display:flex;flex-wrap:wrap;gap:8px;margin-block:16px}
+.compare{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.compare > *{min-width:0}
+.compare.only-l .rel, .compare.only-r .leg{display:none}
+.compare.only-l, .compare.only-r{grid-template-columns:1fr}
+.lens{padding:22px;border-radius:var(--r);display:flex;flex-direction:column;gap:12px;border:1px solid var(--line);position:relative;overflow:hidden}
+.lens.leg{background:color-mix(in srgb, var(--legal) 9%, var(--surface));border-color:color-mix(in srgb, var(--legal) 40%, transparent)}
+.lens.rel{background:color-mix(in srgb, var(--accent) 9%, var(--surface));border-color:color-mix(in srgb, var(--accent) 45%, transparent)}
+.lens .eyebrow{display:flex;align-items:center;gap:8px}
+.lens.leg .eyebrow{color:var(--legal)} .lens.rel .eyebrow{color:var(--accent)}
+.lens h3{font-size:1.5rem}
+.lens .pic{font-family:var(--f-ui);font-size:.92rem;padding:8px 12px;border-radius:8px;background:var(--surface);border:1px dashed var(--line)}
+.twist{margin-top:16px;display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:start;padding:16px;border-radius:var(--r);background:var(--surface2)}
+.twist svg{width:34px;height:34px}
+.history{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.history ol{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:8px}
+.history li::marker{font-family:var(--f-ref);color:var(--accent2)}
+
+/* Body */
+.body-wrap{display:grid;grid-template-columns:minmax(0,520px) 1fr;gap:26px;align-items:center}
+.body-wrap > *{min-width:0}
+#bodySvg{width:100%;height:auto;display:block;max-width:520px;margin:0 auto}
+#bodySvg .link{stroke:var(--line);stroke-width:1.5}
+#bodySvg .pulse{stroke:var(--accent);stroke-width:2.5;stroke-dasharray:6 160;animation:flow 3.2s linear infinite;fill:none}
+@keyframes flow{to{stroke-dashoffset:-166}}
+#bodySvg .node{cursor:pointer}
+#bodySvg .node circle{fill:var(--surface);stroke:var(--c);stroke-width:2.5;transition:r .25s}
+#bodySvg .node.on circle{fill:var(--c)}
+#bodySvg .node text{font-family:var(--f-ui);font-size:12px;fill:var(--ink);text-anchor:middle;pointer-events:none}
+#bodySvg .head circle{fill:var(--accent);stroke:var(--accent2);stroke-width:3}
+#bodySvg .head text{fill:var(--onaccent);font-family:var(--f-display);font-size:15px;text-anchor:middle}
+.now{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.now ul{margin:0;padding-left:1.1em;display:flex;flex-direction:column;gap:6px;font-size:.96rem}
+
+/* Library */
+.lib-ctl{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:16px}
+.search{flex:1 1 260px;display:flex;align-items:center;gap:8px;padding:9px 14px;border:1px solid var(--line);border-radius:999px;background:var(--surface)}
+.search input{border:0;outline:0;background:transparent;font:inherit;color:var(--ink);width:100%;font-family:var(--f-ui)}
+.count{font-family:var(--f-ref);font-size:.8rem;color:var(--muted)}
+.empty{padding:30px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:var(--r)}
+
+/* Journey */
+.journey{display:grid;grid-template-columns:minmax(0,320px) 1fr;gap:26px;align-items:start}
+.journey > *{min-width:0}
+#ringSvg{width:100%;max-width:300px;height:auto;display:block;margin:0 auto}
+.practice{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+.practice fieldset{margin:0;border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;background:var(--surface);display:flex;flex-direction:column;gap:8px;border-top:3px solid var(--c)}
+.practice legend{font-family:var(--f-display);font-size:1.1rem;padding:0 6px}
+.practice label{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start;font-size:.97rem;cursor:pointer}
+.practice input{accent-color:var(--c);width:18px;height:18px;margin-top:3px}
+.practice small{display:block;color:var(--muted);font-family:var(--f-ref);font-size:.72rem}
+
+/* Drawer */
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(380px,100%);z-index:40;background:var(--surface);border-left:1px solid var(--line);box-shadow:-20px 0 60px -30px rgba(0,0,0,.5);padding:calc(18px + env(safe-area-inset-top,0px)) calc(20px + env(safe-area-inset-right,0px)) calc(18px + env(safe-area-inset-bottom,0px)) 20px;overflow-y:auto;transform:translateX(102%);transition:transform .35s cubic-bezier(.2,.8,.2,1);display:flex;flex-direction:column;gap:20px}
+.drawer.open{transform:none}
+.scrim{position:fixed;inset:0;z-index:35;background:rgba(0,0,0,.35);opacity:0;pointer-events:none;transition:opacity .3s}
+.scrim.open{opacity:1;pointer-events:auto}
+.swatches{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.swatch{display:flex;flex-direction:column;gap:6px;padding:10px;border-radius:var(--r);border:2px solid var(--line);background:var(--bg);cursor:pointer;text-align:left}
+.swatch[aria-pressed="true"]{border-color:var(--accent)}
+.swatch .bars{display:flex;height:26px;border-radius:6px;overflow:hidden}
+.swatch .bars i{flex:1}
+.swatch b{font-family:var(--f-display);font-weight:400;font-size:1rem}
+.swatch small{font-family:var(--f-ref);font-size:.7rem;color:var(--muted)}
+.toggle{display:flex;justify-content:space-between;align-items:center;gap:12px;font-family:var(--f-ui)}
+.switch{width:46px;height:26px;border-radius:999px;border:1px solid var(--line);background:var(--surface2);position:relative;cursor:pointer;flex:none}
+.switch::after{content:"";position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:var(--muted);transition:transform .2s, background .2s}
+.switch[aria-checked="true"]{background:var(--accent);border-color:var(--accent)}
+.switch[aria-checked="true"]::after{transform:translateX(20px);background:var(--onaccent)}
+
+/* Modal */
+.modal{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:20px;background:rgba(0,0,0,.45)}
+.modal .card{max-width:560px;width:100%;max-height:85vh;overflow:auto;box-shadow:0 30px 80px -30px rgba(0,0,0,.6)}
+
+footer{position:relative;z-index:1;border-top:1px solid var(--line);padding-block:24px;font-family:var(--f-ui);font-size:.88rem;color:var(--muted)}
+footer .wrap{display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between}
+
+@media (max-width: 980px){
+  .paths{grid-template-columns:repeat(2,1fr)}
+  .grid{grid-template-columns:repeat(2,1fr)}
+  .flips{grid-template-columns:repeat(2,1fr)}
+  .arc{grid-template-columns:repeat(3,1fr)}
+  .now{grid-template-columns:repeat(2,1fr)}
+  .four{grid-template-columns:repeat(2,1fr)}
+}
+@media (max-width: 760px){
+  .hero,.spheres,.body-wrap,.journey,.arc-detail,.tl-detail,.thesis,.history{grid-template-columns:1fr}
+  .compare{grid-template-columns:1fr}
+  .practice{grid-template-columns:1fr}
+  .addr-row{grid-template-columns:1fr;gap:4px}
+  .brand b{display:none}
+}
+@media (max-width: 480px){
+  .paths,.grid,.flips,.now,.four{grid-template-columns:1fr}
+  .arc{grid-template-columns:repeat(2,1fr)}
+}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+</style>
+</head>
+<body>
+<canvas id="ambient" aria-hidden="true"></canvas>
+
+<header class="bar">
+  <div class="wrap">
+    <a class="brand" href="#home" aria-label="Home">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="14" style="fill:none;stroke:var(--se)" stroke-width="1.6"/><circle cx="16" cy="16" r="10.5" style="fill:none;stroke:var(--sc)" stroke-width="1.6"/><circle cx="16" cy="16" r="7" style="fill:none;stroke:var(--sf)" stroke-width="1.6"/><path d="M16 9.5v13M12 14h8" style="fill:none;stroke:var(--accent)" stroke-width="2.2" stroke-linecap="round"/></svg>
+      <b>Apokatastasis</b>
+    </a>
+    <nav class="tabs" id="tabs" aria-label="Chapters">
+      <a href="#home">Home</a>
+      <a href="#story">The Story</a>
+      <a href="#stoop">God Stoops</a>
+      <a href="#spheres">Four Spheres</a>
+      <a href="#jesus">Jesus</a>
+      <a href="#lens">Two Lenses</a>
+      <a href="#body">The Body</a>
+      <a href="#library">Narratives</a>
+      <a href="#journey">My Journey</a>
+    </nav>
+    <button class="iconbtn" id="surprise" title="Show a random restoration story" aria-label="Show a random restoration story">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/></svg>
+    </button>
+    <button class="iconbtn" id="openSettings" title="Colours and display" aria-label="Open colours and display settings" aria-controls="drawer" aria-expanded="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><circle cx="8.5" cy="9" r="1.4" fill="currentColor"/><circle cx="14" cy="7.6" r="1.4" fill="currentColor"/><circle cx="16.6" cy="12" r="1.4" fill="currentColor"/><path d="M12 21c-1.5 0-2-1.2-1.4-2.3.6-1 0-2.2-1.4-2.2H7"/></svg>
+    </button>
+  </div>
+</header>
+
+<main id="main">
+
+<!-- HOME -->
+<div class="view" id="v-home" data-view="home">
+  <div class="wrap">
+    <section class="hero">
+      <div class="hero-copy">
+        <span class="eyebrow">Acts 3:21 · ἀποκατάστασις πάντων</span>
+        <h1>The Restoration <span>of All Things</span></h1>
+        <p class="lede">From the garden question "Where are you?" to the throne's promise "I make all things new", Scripture tells one story. God keeps coming down into our condition, speaking our language and our culture, to bring people, families, nations and the earth itself back into union with Him.</p>
+        <blockquote class="scripture">"…whom heaven must receive until the times of restoration of all things, which God spoke long ago by the mouth of his holy prophets."<cite class="ref">Acts 3:21 (WEB)</cite></blockquote>
+        <div class="row">
+          <a class="btn" href="#story">Walk the story</a>
+          <a class="btn ghost" href="#lens">Compare the two lenses</a>
+        </div>
+      </div>
+      <div>
+        <div class="canvas-box"><canvas id="gather" aria-label="Animated fragments gathering into four rings around a cross" role="img"></canvas></div>
+        <div class="gather-ctl">
+          <label for="gatherRange"><span>Scattered</span><span id="gatherLbl">Restored</span></label>
+          <input type="range" id="gatherRange" min="0" max="100" value="100">
+          <div class="legend">
+            <span style="--c:var(--accent2)"><i></i>Christ at the centre</span>
+            <span style="--c:var(--sp)"><i></i>Personal</span>
+            <span style="--c:var(--sf)"><i></i>Family</span>
+            <span style="--c:var(--sc)"><i></i>Culture</span>
+            <span style="--c:var(--se)"><i></i>Earth</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="sec">
+      <div class="thesis">
+        <div><span class="eyebrow">1 · The movement</span><h3>God comes down</h3><p>Restoration in Scripture always begins with God moving toward people: walking in Eden, coming down to Egypt, pitching a tent among tents, becoming flesh. He never waits for us to climb up.</p></div>
+        <div><span class="eyebrow">2 · The method</span><h3>He speaks our culture</h3><p>Covenant rituals for nomads, dreams for Egyptians, a star for astrologers, parables of seed for farmers, a Greek poet for Athenians. God meets each person inside their own world and redeems it from within.</p></div>
+        <div><span class="eyebrow">3 · The goal</span><h3>Union, not just pardon</h3><p>The aim is the Father, Son and Spirit sharing their life with us. In Jesus that union is accomplished; through His Body it spreads to persons, households, peoples and the whole creation.</p></div>
+      </div>
+    </section>
+
+    <section class="sec">
+      <div class="sec-head"><span class="eyebrow">Eight paths through the material</span><h2>Choose where to begin</h2></div>
+      <div class="paths">
+        <a class="path" href="#story"><span class="n">Genesis → Revelation</span><h3>The Story</h3><p>Thirteen movements of the one restoration arc.</p></a>
+        <a class="path" href="#stoop"><span class="n">Philippians 2:7</span><h3>God Stoops</h3><p>How God accommodates to every culture He enters.</p></a>
+        <a class="path" href="#spheres"><span class="n">Colossians 1:20</span><h3>Four Spheres</h3><p>Personal, family, culture, earth: explore each ring.</p></a>
+        <a class="path" href="#jesus"><span class="n">Ephesians 1:10</span><h3>Jesus, the Pinnacle</h3><p>Every thread of restoration gathered in one Person.</p></a>
+        <a class="path" href="#lens"><span class="n">2 Corinthians 5:19</span><h3>Two Lenses</h3><p>The relational gospel of union beside the legal frame.</p></a>
+        <a class="path" href="#body"><span class="n">1 Corinthians 12</span><h3>The Body</h3><p>How restoration continues through Christ's people now.</p></a>
+        <a class="path" href="#library"><span class="n" id="libCountHome">Narratives</span><h3>Narrative Library</h3><p>Search every restoration story by sphere and testament.</p></a>
+        <a class="path" href="#journey"><span class="n">Romans 12:2</span><h3>My Journey</h3><p>Practices of restoration you can track in your own life.</p></a>
+      </div>
+    </section>
+  </div>
+</div>
+
+<!-- STORY -->
+<div class="view" id="v-story" data-view="story" hidden>
+  <div class="wrap">
+    <section class="sec">
+      <div class="sec-head">
+        <span class="eyebrow">The grand narrative</span>
+        <h2>One story of restoration in thirteen movements</h2>
+        <p class="prose muted">Select a movement, or use the arrow keys. Each one shows what was broken, how God came down into that situation, what He restored, and how it points to Christ.</p>
+      </div>
+      <div class="tl-track" id="tlTrack" role="tablist" aria-label="Movements of the story"></div>
+      <div class="tl-detail" id="tlDetail" aria-live="polite"></div>
+    </section>
+  </div>
+</div>
+
+<!-- STOOP -->
+<div class="view" id="v-stoop" data-view="stoop" hidden>
+  <div class="wrap">
+    <section class="sec">
+      <div class="sec-head">
+        <span class="eyebrow">Divine accommodation · condescension</span>
+        <h2>God gets down to our level</h2>
+        <p class="prose">"Long ago, at many times and in many ways, God spoke to our fathers by the prophets; in these last days he has spoken to us by his Son" (Hebrews 1:1-2). God does not shout across a distance. He kneels into the world of the people He loves: their rituals, stories, crafts, languages and even their limits.</p>
+      </div>
+      <div class="panel">
+        <div class="row" style="justify-content:space-between;margin-bottom:12px"><h3>God's changing address</h3><span class="muted" style="font-family:var(--f-ui);font-size:.9rem">How close God's dwelling comes across the canon</span></div>
+        <div class="addr" id="addr"></div>
+        <p class="addr-note muted" id="addrNote" aria-live="polite"></p>
+      </div>
+    </section>
+    <section class="sec">
+      <div class="lib-ctl" id="stoopFilter"></div>
+      <div class="grid" id="stoopGrid"></div>
+    </section>
+  </div>
+</div>
+
+<!-- SPHERES -->
+<div class="view" id="v-spheres" data-view="spheres" hidden>
+  <div class="wrap">
+    <section class="sec">
+      <div class="sec-head">
+        <span class="eyebrow">Shalom in four relationships</span>
+        <h2>Restoration widens like rings in water</h2>
+        <p class="prose muted">The fall fractured four relationships at once: with God and self (hiding and shame), with one another (blame, Cain and Abel), with the nations (Babel), and with the ground (thorns). Restoration reaches every one of them. Tap a ring.</p>
+      </div>
+      <div class="spheres">
+        <div>
+          <svg id="sphereSvg" viewBox="0 0 420 420" role="group" aria-label="Four spheres of restoration"></svg>
+        </div>
+        <div class="stack" id="sphereInfo" aria-live="polite"></div>
+      </div>
+    </section>
+    <section class="sec">
+      <div class="row" style="justify-content:space-between;margin-bottom:14px"><h3 id="sphereListTitle">Narratives</h3><div class="row" id="sphereTest"></div></div>
+      <div class="grid" id="sphereGrid"></div>
+    </section>
+  </div>
+</div>
+
+<!-- JESUS -->
+<div class="view" id="v-jesus" data-view="jesus" hidden>
+  <div class="wrap">
+    <section class="sec">
+      <div class="sec-head">
+        <span class="eyebrow">Recapitulation · Ephesians 1:10</span>
+        <h2>Jesus is the pinnacle of restoration</h2>
+        <p class="prose">God's purpose is "to sum up all things in Christ, the things in the heavens, and the things on the earth, in him" (Ephesians 1:10, WEB). In Jesus, God does not only send help to humanity. He becomes human, joins Himself to our nature, and heals it from the inside. Irenaeus called this recapitulation; Athanasius put it this way: "He became what we are, that He might make us what He is."</p>
+      </div>
+      <div class="arc" id="arc" role="tablist" aria-label="Arc of Christ's work"></div>
+      <div class="arc-detail" id="arcDetail" aria-live="polite"></div>
+    </section>
+    <section class="sec">
+      <div class="sec-head"><span class="eyebrow">Shadow and substance · Colossians 2:17</span><h3>Every thread meets in Him</h3><p class="muted">Tap a card to turn the shadow into its substance.</p></div>
+      <div class="flips" id="flips"></div>
+    </section>
+  </div>
+</div>
+
+<!-- LENS -->
+<div class="view" id="v-lens" data-view="lens" hidden>
+  <div class="wrap">
+    <section class="sec">
+      <div class="sec-head">
+        <span class="eyebrow">The relational gospel of union</span>
+        <h2>Same Bible, two lenses</h2>
+        <p class="prose">Many of us received the gospel mainly as a courtroom drama: a broken law, a guilty defendant and a sentence that must be paid. The relational reading starts somewhere older: the Father, Son and Spirit sharing love, and a God who in Christ comes to bring us into that life. Legal words like justification are biblical. The question is which frame holds the other. When law becomes the frame, relationship shrinks to a transaction.</p>
+      </div>
+      <div class="lens-ctl">
+        <div class="seg" role="group" aria-label="Show">
+          <button data-mode="both" aria-pressed="true">Side by side</button>
+          <button data-mode="l" aria-pressed="false">Legal frame</button>
+          <button data-mode="r" aria-pressed="false">Relational union</button>
+        </div>
+        <div class="pager"><button class="chip" id="lensPrev">← Previous</button><button class="chip" id="lensNext">Next →</button></div>
+      </div>
+      <div class="lens-topics" id="lensTopics"></div>
+      <div class="compare" id="compare" aria-live="polite"></div>
+    </section>
+    <section class="sec">
+      <div class="sec-head"><span class="eyebrow">Broad strokes</span><h3>How the frame shifted</h3><p class="muted prose">A simplified sketch. Each of these thinkers said more than one sentence can hold, and many in every tradition kept the relational heart alive.</p></div>
+      <div class="history">
+        <div class="panel stack"><h4 style="color:var(--accent)">The early relational emphasis</h4><ol>
+          <li><b>Irenaeus</b> (c. 180): Christ "recapitulates" Adam's story, living it rightly from within and healing humanity.</li>
+          <li><b>Athanasius</b> (c. 318): the Word took flesh to undo corruption and death, so that we might share the divine life.</li>
+          <li><b>Gregory of Nazianzus</b> (c. 380): "What is not assumed is not healed." Salvation is God uniting Himself to all that we are.</li>
+          <li><b>Eastern theosis</b>: salvation as participation in the life of God (2 Peter 1:4), never a mere change of legal status.</li>
+        </ol></div>
+        <div class="panel stack"><h4 style="color:var(--legal)">The growth of the legal frame</h4><ol>
+          <li><b>Latin vocabulary</b>: Western theology developed in the language of Roman law (merit, satisfaction, guilt, penalty).</li>
+          <li><b>Anselm</b> (1098): the cross as satisfaction of God's offended honour, shaped by feudal ideas of debt and honour.</li>
+          <li><b>Penal formulations</b> (16th–17th c.): the cross explained primarily as the Father punishing the Son to satisfy justice.</li>
+          <li><b>Revival preaching</b>: sinners in the hands of an angry judge; conversion as escaping a sentence more than coming home.</li>
+        </ol></div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<!-- BODY -->
+<div class="view" id="v-body" data-view="body" hidden>
+  <div class="wrap">
+    <section class="sec">
+      <div class="sec-head">
+        <span class="eyebrow">The ministry of reconciliation · 2 Corinthians 5:17-20</span>
+        <h2>Through His Body, restoration is happening now</h2>
+        <p class="prose">"If anyone is in Christ, he is a new creation… all things are of God, who reconciled us to himself through Jesus Christ, and gave to us the ministry of reconciliation" (2 Corinthians 5:17-18, WEB). Christ is the Head; His people are the hands, feet and voice through which restoration reaches every sphere. Tap a member of the body.</p>
+      </div>
+      <div class="body-wrap">
+        <svg id="bodySvg" viewBox="0 0 520 520" role="group" aria-label="The Body of Christ: members connected to Christ the Head"></svg>
+        <div class="stack" id="bodyInfo" aria-live="polite"></div>
+      </div>
+    </section>
+    <section class="sec">
+      <div class="sec-head"><span class="eyebrow">Romans 8:19-21</span><h3>What it looks like in each sphere today</h3></div>
+      <div class="now" id="now"></div>
+    </section>
+  </div>
+</div>
+
+<!-- LIBRARY -->
+<div class="view" id="v-library" data-view="library" hidden>
+  <div class="wrap">
+    <section class="sec">
+      <div class="sec-head">
+        <span class="eyebrow">Narrative library</span>
+        <h2>Restoration stories across the canon</h2>
+        <p class="prose muted">Each story shows what was broken, how God met the people in their own world, and what He restored. Filter by sphere or testament, or search by name, book or theme.</p>
+      </div>
+      <div class="lib-ctl">
+        <label class="search" for="q"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="q" type="search" placeholder="Search: Ruth, Jubilee, healing, Genesis…" autocomplete="off"></label>
+        <div class="row" id="libSph"></div>
+        <div class="row" id="libTest"></div>
+        <span class="count" id="libCount"></span>
+      </div>
+      <div class="grid" id="libGrid"></div>
+    </section>
+  </div>
+</div>
+
+<!-- JOURNEY -->
+<div class="view" id="v-journey" data-view="journey" hidden>
+  <div class="wrap">
+    <section class="sec">
+      <div class="sec-head">
+        <span class="eyebrow">Participating in the restoration</span>
+        <h2>My restoration journey</h2>
+        <p class="prose muted">We do not restore ourselves; we receive and join what the Father, Son and Spirit are already doing. Mark the practices you are walking in this season. Your choices are saved in this browser only.</p>
+      </div>
+      <div class="journey">
+        <div class="stack" style="align-items:center">
+          <svg id="ringSvg" viewBox="0 0 300 300" role="img" aria-label="Progress across the four spheres"></svg>
+          <p id="ringNote" class="muted" style="text-align:center;font-family:var(--f-ui)"></p>
+          <button class="chip" id="resetJourney">Clear my selections</button>
+        </div>
+        <div class="practice" id="practice"></div>
+      </div>
+    </section>
+  </div>
+</div>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>Scripture quotations marked WEB are from the World English Bible (public domain). Other references are summarised.</span>
+    <span>"Behold, I am making all things new." Revelation 21:5</span>
+  </div>
+</footer>
+
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer" aria-label="Colours and display" aria-hidden="true">
+  <div class="row" style="justify-content:space-between"><h3>Colours &amp; display</h3><button class="iconbtn" id="closeSettings" aria-label="Close settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+  <div class="stack"><span class="eyebrow">Colour scheme</span><div class="swatches" id="swatches"></div></div>
+  <div class="stack"><span class="eyebrow">Brightness</span>
+    <div class="seg" role="group" aria-label="Brightness" id="modeSeg">
+      <button data-v="system" aria-pressed="true">System</button><button data-v="light" aria-pressed="false">Light</button><button data-v="dark" aria-pressed="false">Dark</button>
+    </div>
+  </div>
+  <div class="stack"><span class="eyebrow">Text size</span>
+    <div class="seg" role="group" aria-label="Text size" id="sizeSeg">
+      <button data-v="0.9" aria-pressed="false">Small</button><button data-v="1" aria-pressed="true">Normal</button><button data-v="1.12" aria-pressed="false">Large</button>
+    </div>
+  </div>
+  <div class="stack">
+    <span class="eyebrow">Motion</span>
+    <div class="toggle"><span>Ambient light particles</span><button class="switch" role="switch" id="swAmbient" aria-checked="true" aria-label="Ambient light particles"></button></div>
+    <div class="toggle"><span>Tint the page as the story moves</span><button class="switch" role="switch" id="swTint" aria-checked="true" aria-label="Tint the page as the story moves"></button></div>
+    <div class="toggle"><span>Cycle schemes slowly (living palette)</span><button class="switch" role="switch" id="swCycle" aria-checked="false" aria-label="Cycle colour schemes slowly"></button></div>
+  </div>
+</aside>
+<div id="modalHost"></div>
+
+<script>
+(function(){
+"use strict";
+const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const root=document.documentElement;
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const store={get(k,d){try{const v=localStorage.getItem('restore:'+k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem('restore:'+k,JSON.stringify(v))}catch(e){}}};
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ================= COLOUR SCHEMES ================= */
+const K=['bg','surface','surface2','ink','muted','line','accent','accent2','onaccent','sp','sf','sc','se','legal'];
+const P=(a)=>Object.fromEntries(K.map((k,i)=>[k,a[i]]));
+const SCHEMES={
+  jordan:{name:'Jordan River',ref:'Joshua 3:17',
+    light:P(['#EBF1F0','#FAFCFC','#DCE7E5','#0E2A2D','#4A6366','#C3D4D2','#0B7472','#A87A12','#FFFFFF','#0B7472','#A87A12','#4D5FC0','#3C7F3F','#6A6F7A']),
+    dark:P(['#091719','#0F2326','#163236','#E4EFED','#94AEAC','#234247','#47C6BF','#E3B44A','#04201F','#47C6BF','#E3B44A','#8F9DFF','#74C77A','#9CA3AF'])},
+  eden:{name:'Eden Garden',ref:'Genesis 2:8',
+    light:P(['#EEF2E8','#FBFCF8','#E0E8D5','#1A2912','#546349','#CAD6BC','#3D7A1F','#8B4C9C','#FFFFFF','#8B4C9C','#A56F0E','#2F6FA8','#3D7A1F','#6E7166']),
+    dark:P(['#0D150A','#142010','#1C2D17','#E7EFDF','#A2B394','#2A3F22','#84C95A','#C68AD6','#0D1A06','#C68AD6','#E3B44A','#7FB4EA','#84C95A','#A3A69B'])},
+  dawn:{name:'Resurrection Dawn',ref:'Mark 16:2',
+    light:P(['#FAF0EF','#FFFAFA','#F2DFDD','#2D1820','#6C5460','#E8CDCA','#B83A62','#B76E0C','#FFFFFF','#B83A62','#B76E0C','#5A5BBF','#3F8255','#77707A']),
+    dark:P(['#180E13','#22151C','#2D1C25','#F6E6EA','#BFA1AC','#3F2733','#F27C9E','#F2B45B','#2A0714','#F27C9E','#F2B45B','#9C9DFF','#78C792','#A8A0AB'])},
+  pentecost:{name:'Pentecost Fire',ref:'Acts 2:3',
+    light:P(['#FFF3EC','#FFFBF8','#F5E2D6','#2A1209','#6F5246','#EACBB8','#C2410C','#9A6A0B','#FFFFFF','#C2410C','#9A6A0B','#4B5BC4','#3F7F3A','#74706D']),
+    dark:P(['#160A06','#21110A','#2D1910','#FBEADF','#C7A592','#42261A','#FF7A3D','#FFC247','#2A0D02','#FF7A3D','#FFC247','#9AA6FF','#7FCB6E','#A9A39F'])},
+  vine:{name:'True Vine',ref:'John 15:1',
+    light:P(['#F4EFF5','#FCFAFD','#E8DEEA','#26142A','#64516A','#D8C8DC','#74306F','#6E7F1E','#FFFFFF','#74306F','#A86B12','#3D63B0','#6E7F1E','#736D76']),
+    dark:P(['#140C16','#1D1220','#281A2C','#F1E6F3','#B8A2BE','#3A2840','#D08ACD','#BFD164','#250A24','#D08ACD','#E9B65A','#8FAEFF','#BFD164','#A7A0AA'])},
+  sapphire:{name:'Sapphire Throne',ref:'Exodus 24:10',
+    light:P(['#ECEFF8','#FAFBFE','#DDE2F2','#111A3A','#4D5775','#C8CFE6','#2943A8','#8E6F0A','#FFFFFF','#2943A8','#8E6F0A','#8A3C8E','#2F7D57','#6D7183']),
+    dark:P(['#080D20','#0E152E','#151E3E','#E6EAFB','#9DA6C8','#232E55','#8CA2FF','#E8C55C','#0A1240','#8CA2FF','#E8C55C','#DA8EDD','#6FCF9E','#A2A7BA'])}
+};
+const hostTheme=root.getAttribute('data-theme');
+const state={scheme:store.get('scheme','jordan'),mode:store.get('mode','system'),fs:store.get('fs',1),ambient:store.get('ambient',!reduce),tint:store.get('tint',true),cycle:store.get('cycle',false)};
+if(!SCHEMES[state.scheme])state.scheme='jordan';
+const mq=matchMedia('(prefers-color-scheme: dark)');
+function isDark(){const t=root.getAttribute('data-theme');if(t==='dark')return true;if(t==='light')return false;return mq.matches}
+let cssVars={};
+function applyScheme(){
+  const pal=SCHEMES[state.scheme][isDark()?'dark':'light'];
+  for(const k of K)root.style.setProperty('--'+k,pal[k]);
+  root.style.colorScheme=isDark()?'dark':'light';
+  cssVars=pal;
+  drawSpheres&&drawSpheres(); drawRing&&drawRing(); if($('#swatches'))renderSwatches();
+}
+function applyMode(){
+  if(state.mode==='system'){ if(hostTheme)root.setAttribute('data-theme',hostTheme); else root.removeAttribute('data-theme'); }
+  else root.setAttribute('data-theme',state.mode);
+  $$('#modeSeg button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===state.mode));
+  applyScheme();
+}
+mq.addEventListener?.('change',applyScheme);
+new MutationObserver(applyScheme).observe(root,{attributes:true,attributeFilter:['data-theme']});
+function setTint(c){ if(state.tint&&c)root.style.setProperty('--tint',c); else root.style.removeProperty('--tint'); }
+
+/* ================= DATA ================= */
+const SPH={p:{key:'p',name:'Personal',cls:'sp-p',var:'--sp',verse:'Psalm 23:3 "He restores my soul."',
+            text:'God restores the person: identity, shame, sickness, guilt, fear and calling. He names people again (Abram, Jacob, Simon), touches the untouchable and speaks to the hiding.',
+            broke:'Hiding and shame: "I was afraid, because I was naked; and I hid myself." Genesis 3:10'},
+         f:{key:'f',name:'Family',cls:'sp-f',var:'--sf',verse:'Malachi 4:6 "He will turn the hearts of the fathers to the children."',
+            text:'God restores households: brothers reconciled, widows provided for, sons and daughters given back, outsiders grafted into family lines, and a new family formed around Jesus.',
+            broke:'Blame and violence: Adam blames Eve, Cain kills Abel. Genesis 3:12; 4:8'},
+         c:{key:'c',name:'Culture & Nations',cls:'sp-c',var:'--sc',verse:'Revelation 22:2 "The leaves of the tree were for the healing of the nations."',
+            text:'God restores societies: freeing slaves, cancelling debts, protecting strangers, judging injustice, and gathering every tongue, tribe and nation without erasing their distinct glory.',
+            broke:'Pride and scattering at Babel: one people grasping heaven, then divided by language. Genesis 11:1-9'},
+         e:{key:'e',name:'Earth & Creation',cls:'sp-e',var:'--se',verse:'Romans 8:21 "Creation itself also will be delivered from the bondage of decay."',
+            text:'God restores the land and its creatures: Sabbath rest for the soil, covenant with every living thing, rivers that heal, deserts that bloom, and finally a renewed heaven and earth.',
+            broke:'Cursed ground and thorns: "Cursed is the ground for your sake." Genesis 3:17-18'}};
+
+/* Narratives: t title, r refs, s spheres, T testament, b broken, g how God met them (culture), x restored */
+const N=[
+// ---- PERSONAL
+{t:'Adam and Eve: "Where are you?"',r:'Genesis 3:8-21',s:'pe',T:'OT',b:'Fear, shame and hiding after grasping at what was already theirs as image-bearers.',g:'God walks in the garden "in the cool of the day" and asks a question instead of issuing a verdict. He sews garments of skin, a tender act in a world of nakedness.',x:'Covering, a promise (3:15) that the serpent will be crushed, and a God who keeps seeking.'},
+{t:'Cain marked for protection',r:'Genesis 4:9-16',s:'pf',T:'OT',b:'The first murder; a brother\'s blood crying from the ground.',g:'God questions Cain as He did Adam ("Where is Abel?") and, in a culture of blood vengeance, places a mark that stops the cycle of revenge.',x:'Mercy that limits violence; the start of a city and family line under God\'s protection.'},
+{t:'Hagar meets "the God who sees"',r:'Genesis 16:7-14; 21:14-21',s:'pc',T:'OT',b:'An Egyptian slave woman, used and then expelled, alone in the desert with her son.',g:'The angel finds her at a desert spring, calls her by name and asks her story. She becomes the only person in Scripture to give God a name: El Roi.',x:'Dignity, a future for Ishmael, and water in the wilderness.'},
+{t:'Jacob wrestles and is renamed',r:'Genesis 28:10-22; 32:22-32',s:'pf',T:'OT',b:'A grasper and deceiver running from his brother and from himself.',g:'God meets him through a stairway dream (ziggurat imagery) and later as a wrestler in the night, the language of a man who fought for everything.',x:'A new name, Israel, a limp that marks dependence, and the way opened to Esau.'},
+{t:'Moses at the burning bush',r:'Exodus 2:11-4:17',s:'pc',T:'OT',b:'A murderer and fugitive, forty years in exile, convinced he cannot speak.',g:'God appears in a common desert thorn bush to a shepherd, reveals His name YHWH, and gives him signs suited to Egypt: staff, serpent, leprous hand.',x:'Calling restored; the stammerer becomes the voice of liberation.'},
+{t:'Gideon called "mighty warrior"',r:'Judges 6-7',s:'pc',T:'OT',b:'A frightened farmer threshing wheat in a winepress to hide from raiders.',g:'God names him by his future, then patiently accepts his fleece tests, meeting his fear on its own terms.',x:'Courage, an idol altar torn down, and a people freed from Midian.'},
+{t:'Hannah\'s barrenness turned to song',r:'1 Samuel 1-2',s:'pf',T:'OT',b:'Childlessness in a culture where it meant shame, mocked yearly by a rival wife.',g:'God hears a silent prayer that even the priest misread as drunkenness.',x:'Samuel is born; Hannah\'s song (2:1-10) celebrates a God who lifts the poor from the dust.'},
+{t:'David confronted through a parable',r:'2 Samuel 11-12; Psalm 51',s:'pf',T:'OT',b:'Adultery, murder and a cover-up by the shepherd-king.',g:'Nathan tells a story about a poor man\'s pet lamb, speaking a shepherd\'s language so David convicts himself.',x:'Confession, "Create in me a clean heart", and a restored relationship though consequences remain.'},
+{t:'Mephibosheth at the king\'s table',r:'2 Samuel 9',s:'pf',T:'OT',b:'The disabled grandson of a fallen king, hiding in Lo-debar ("no pasture"), expecting execution.',g:'David acts with covenant kindness (hesed) in a culture where rival dynasties were wiped out.',x:'Land returned and a permanent seat "like one of the king\'s sons".'},
+{t:'Elijah under the broom tree',r:'1 Kings 19',s:'pe',T:'OT',b:'Burnout and despair after victory; he asks to die.',g:'God gives bread, water and sleep first, then speaks not in wind, earthquake or fire, but in "a still small voice".',x:'Strength, a new commission, and the reminder that he is not alone (7,000).'},
+{t:'Isaiah\'s lips touched with a coal',r:'Isaiah 6',s:'p',T:'OT',b:'"Woe is me! I am undone… a man of unclean lips."',g:'In the temple world of altars and incense, a seraph brings a coal from the altar to him.',x:'"Your guilt is taken away"; immediately he says, "Here I am. Send me."'},
+{t:'Job restored',r:'Job 38-42',s:'pfe',T:'OT',b:'Loss of children, health, wealth and reputation; friends who explain it with a rigid system of reward and punishment.',g:'God answers from the whirlwind with a tour of creation (stars, wild goats, Leviathan), speaking the poetry of the world Job knew.',x:'Job prays for his friends, his fortunes are restored double, and he names his daughters and gives them an inheritance.'},
+{t:'Nicodemus by night',r:'John 3:1-21; 19:39',s:'pc',T:'NT',b:'A respected teacher whose religious system could not give him new life.',g:'Jesus speaks in rabbinic idiom: wind and Spirit, Moses\' bronze serpent, a teacher\'s riddle about birth.',x:'Later Nicodemus comes openly with 75 pounds of spices for Jesus\' burial.'},
+{t:'The woman at the well',r:'John 4:1-42',s:'pc',T:'NT',b:'A Samaritan woman drawing water alone at noon, five husbands, outside every respectable circle.',g:'Jesus breaks custom by asking her for a drink first, then speaks of living water at a well tied to Jacob.',x:'The outcast becomes the first evangelist to her town; "this is indeed the Saviour of the world".'},
+{t:'The leper touched',r:'Mark 1:40-45',s:'pc',T:'NT',b:'Untouchable by law, cut off from worship and community.',g:'Jesus, "moved with compassion", touches him before healing him. Holiness flows outward instead of being contaminated.',x:'Cleansing and a path back into community through the priest.'},
+{t:'The paralysed man through the roof',r:'Mark 2:1-12',s:'pf',T:'NT',b:'Paralysis and the belief that suffering meant guilt.',g:'Jesus honours the faith of four friends who dig through a Galilean roof, and calls him "Son".',x:'Forgiveness first, then he walks home carrying his mat.'},
+{t:'Woman with the issue of blood',r:'Mark 5:25-34',s:'pc',T:'NT',b:'Twelve years of bleeding, ritual uncleanness, poverty from doctors\' fees.',g:'She touches the tassel of his garment (tzitzit, Numbers 15:38), and Jesus stops the crowd to find her face to face.',x:'He calls her "Daughter" in public: healing of body and restored social standing.'},
+{t:'The Gerasene man',r:'Mark 5:1-20',s:'pfc',T:'NT',b:'Living among tombs, chained, self-harming, in Gentile territory.',g:'Jesus crosses the lake into pig-herding Decapolis, a place no rabbi would go.',x:'"Clothed and in his right mind"; sent home: "Go to your house, to your friends, and tell them."'},
+{t:'Blind Bartimaeus',r:'Mark 10:46-52',s:'p',T:'NT',b:'A beggar silenced by the crowd.',g:'Jesus stops and asks, "What do you want me to do for you?", honouring his voice.',x:'Sight, and he follows Jesus on the road.'},
+{t:'Zacchaeus in the tree',r:'Luke 19:1-10',s:'pc',T:'NT',b:'A chief tax collector, wealthy, collaborating with Rome, despised.',g:'Jesus invites Himself to his house; in that culture, eating together meant acceptance.',x:'He gives half to the poor and repays fourfold: personal and economic restoration.'},
+{t:'The woman caught in adultery',r:'John 8:1-11',s:'p',T:'NT',b:'Dragged into public as a legal test case.',g:'Jesus writes on the ground and turns the courtroom: "Let him who is without sin throw the first stone."',x:'"Neither do I condemn you. Go, and sin no more."'},
+{t:'Mary Magdalene named in the garden',r:'John 20:11-18',s:'pe',T:'NT',b:'Grief, and a past of seven demons.',g:'In a garden (echoing Eden) the risen Jesus is mistaken for the gardener, and restores her with one word: "Mary".',x:'She becomes the apostle to the apostles: "I have seen the Lord."'},
+{t:'Thomas invited to touch',r:'John 20:24-29',s:'p',T:'NT',b:'Doubt and isolation after missing the first appearance.',g:'Jesus offers the evidence Thomas asked for, wounds and all.',x:'The strongest confession in the Gospels: "My Lord and my God!"'},
+{t:'Peter restored by the charcoal fire',r:'John 18:15-27; 21:1-19',s:'p',T:'NT',b:'Three denials beside a charcoal fire.',g:'Jesus cooks breakfast on a charcoal fire at the lakeshore where Peter was first called, and asks three times, "Do you love me?"',x:'Three affirmations answer three denials; "Feed my sheep."'},
+{t:'The thief on the cross',r:'Luke 23:39-43',s:'p',T:'NT',b:'A condemned criminal with no time left to earn anything.',g:'Jesus answers a dying man\'s request with a garden word: Paradise.',x:'"Today you will be with me in Paradise."'},
+{t:'Saul becomes "Brother Saul"',r:'Acts 9:1-19',s:'pc',T:'NT',b:'A violent persecutor of the church.',g:'Jesus identifies with His people ("Why do you persecute me?"), and sends Ananias, who greets his enemy as "Brother".',x:'Scales fall, he is baptised and becomes the apostle to the nations.'},
+// ---- FAMILY
+{t:'Noah\'s household carried through',r:'Genesis 6-9',s:'fe',T:'OT',b:'A world "filled with violence".',g:'God uses a craftsman\'s ark and the familiar sign of the rainbow (a warrior\'s bow hung up) to promise peace.',x:'A family preserved and a covenant with every living creature.'},
+{t:'Abraham: all families blessed',r:'Genesis 12:1-3; 15; 22',s:'fc',T:'OT',b:'After Babel, humanity scattered; Abram and Sarai are childless.',g:'God speaks a nomad\'s language: count the stars, walk the land, and a covenant ritual where God alone passes between the pieces.',x:'"In you all the families of the earth will be blessed."'},
+{t:'Jacob and Esau reconciled',r:'Genesis 33',s:'f',T:'OT',b:'Twenty years of estrangement after stolen blessing.',g:'Jacob comes with gifts and bows seven times, the court etiquette of the day.',x:'Esau runs, embraces and kisses him; Jacob says, "I have seen your face, as one sees the face of God."'},
+{t:'Joseph and his brothers',r:'Genesis 37-50',s:'fc',T:'OT',b:'Jealousy, a pit, slavery, false accusation, prison.',g:'God works through Egyptian dream culture: Pharaoh\'s cupbearer, baker and Pharaoh himself.',x:'"You meant evil against me, but God meant it for good" (50:20); a family and a famine-struck world saved.'},
+{t:'Rahab\'s household spared',r:'Joshua 2; 6:22-25; Matthew 1:5',s:'fc',T:'OT',b:'A Canaanite woman in a doomed city.',g:'A scarlet cord in her window becomes her sign, much like Passover blood on doorposts.',x:'Her whole family saved; she enters Israel and the line of Jesus.'},
+{t:'Ruth, Naomi and the kinsman-redeemer',r:'Ruth 1-4',s:'fc',T:'OT',b:'Famine, three funerals, a bitter widow and a Moabite foreigner.',g:'God works through Israel\'s gleaning law and the custom of the go\'el (kinsman-redeemer) at the city gate.',x:'Naomi holds a grandson; the Moabite becomes great-grandmother of David.'},
+{t:'The Shunammite\'s son',r:'2 Kings 4:8-37; 8:1-6',s:'f',T:'OT',b:'A long-awaited son dies on his mother\'s lap.',g:'Elisha stretches himself on the boy, eye to eye and hand to hand.',x:'Life restored, and later her land and income returned by the king.'},
+{t:'Hosea buys back Gomer',r:'Hosea 1-3; 11',s:'f',T:'OT',b:'An unfaithful wife sold into slavery.',g:'God makes the prophet\'s marriage a living parable that Israel could not miss.',x:'"I will betroth you to me forever" (2:19); love that redeems at a price.'},
+{t:'Hearts of fathers to children',r:'Malachi 4:5-6; Luke 1:17',s:'f',T:'OT',b:'Generations alienated at the close of the Old Testament.',g:'The last prophetic word points to an Elijah figure.',x:'Fulfilled in John the Baptist, preparing a people by turning families back to one another.'},
+{t:'The widow of Nain',r:'Luke 7:11-17',s:'f',T:'NT',b:'A widow burying her only son, losing her future and support.',g:'Jesus touches the funeral bier, stopping the procession.',x:'"He gave him to his mother." The people say, "God has visited his people!"'},
+{t:'Jairus\'s daughter',r:'Mark 5:21-43',s:'f',T:'NT',b:'A synagogue leader\'s twelve-year-old daughter dies.',g:'Jesus speaks in Aramaic, the language of the home: "Talitha koum."',x:'He tells them to give her something to eat: life returned to the family table.'},
+{t:'Peter\'s mother-in-law',r:'Mark 1:29-31',s:'f',T:'NT',b:'Fever in the household.',g:'Jesus takes her hand and lifts her up.',x:'She rises and serves: restored to her place and calling in the home.'},
+{t:'The prodigal son and the elder brother',r:'Luke 15:11-32',s:'f',T:'NT',b:'A son who treated his father as dead, and a son who served like a slave.',g:'In a culture where a patriarch never ran, the father runs, embraces and kisses his son before the speech is finished.',x:'Robe, ring, sandals and a feast, and an invitation to the elder brother too.'},
+{t:'Lazarus, Martha and Mary',r:'John 11',s:'f',T:'NT',b:'Death in a beloved family.',g:'Jesus enters their grief in the Jewish mourning customs; "Jesus wept."',x:'"Lazarus, come out!" and a family feast in John 12.'},
+{t:'"Behold, your mother"',r:'John 19:25-27',s:'f',T:'NT',b:'A widow about to lose her firstborn son.',g:'Even from the cross Jesus fulfils a son\'s duty of care.',x:'Mary and John become family: the first household of the new community.'},
+{t:'The Philippian jailer\'s household',r:'Acts 16:25-34',s:'fc',T:'NT',b:'A Roman jailer about to take his own life.',g:'Paul and Silas sing at midnight in his prison.',x:'Wounds washed, a meal shared, "he rejoiced greatly with all his household".'},
+{t:'Onesimus received as a brother',r:'Philemon',s:'fc',T:'NT',b:'A runaway slave and a wronged master.',g:'Paul writes within Roman household law but asks Philemon to receive him "no longer as a slave, but more than a slave, a beloved brother".',x:'A household transformed from master and slave to family.'},
+// ---- CULTURE & NATIONS
+{t:'From Babel to Pentecost',r:'Genesis 11:1-9; Acts 2:1-13',s:'c',T:'OT',b:'Humanity uniting to make a name for itself, then scattered and confused.',g:'At Pentecost the Spirit does not restore one language. Each hears "in our own language the mighty works of God".',x:'Unity with diversity: cultures honoured, not erased.'},
+{t:'The Exodus',r:'Exodus 1-15',s:'cf',T:'OT',b:'An entire people enslaved, sons thrown in the Nile.',g:'"I have surely seen the affliction… I have come down to deliver them" (3:7-8). The plagues confront Egypt\'s gods on their own ground (12:12).',x:'A freed nation; Passover kept by families as the memory of liberation.'},
+{t:'Jubilee',r:'Leviticus 25',s:'cfe',T:'OT',b:'Debt, landlessness and generational slavery.',g:'In an agrarian society, God sets a rhythm: every 50th year the trumpet sounds on the Day of Atonement.',x:'Land returns to families, slaves go free, debts are released, the soil rests.'},
+{t:'Gleaning and the stranger',r:'Leviticus 19:9-10, 33-34; Deuteronomy 24:19-22',s:'c',T:'OT',b:'The poor, the widow, the orphan and the foreigner left out of the harvest.',g:'God builds mercy into farming: leave the edges, do not go back for the forgotten sheaf.',x:'"You shall love the stranger as yourself, for you were strangers in Egypt."'},
+{t:'Cities of refuge',r:'Numbers 35; Joshua 20',s:'c',T:'OT',b:'Endless blood feud in a culture of avenger-of-blood justice.',g:'God works within the custom but limits it with six cities of refuge.',x:'Protection, fair trial, and release at the death of the high priest.'},
+{t:'Naaman the Syrian',r:'2 Kings 5; Luke 4:27',s:'pc',T:'OT',b:'An enemy general with leprosy.',g:'Healing comes through a captive Israelite girl and seven dips in the humble Jordan.',x:'Flesh "like a little child", and an outsider who worships Israel\'s God.'},
+{t:'Jonah and Nineveh',r:'Jonah 1-4',s:'pc',T:'OT',b:'A violent imperial capital and a prophet who would rather die than see it forgiven.',g:'God speaks to sailors through lots, to Nineveh through sackcloth customs, and to Jonah through a plant and a worm.',x:'A city spared; God\'s compassion reaches even "much cattle" (4:11).'},
+{t:'Seek the shalom of Babylon',r:'Jeremiah 29:4-14',s:'cf',T:'OT',b:'Exiles in the capital of their conquerors.',g:'God tells them to build houses, plant gardens and marry inside a foreign culture.',x:'"Seek the peace of the city… for in its peace you will have peace." Hope and a future.'},
+{t:'Daniel in Babylon',r:'Daniel 1-6',s:'pc',T:'OT',b:'Young captives renamed after Babylonian gods.',g:'God gives them skill in "all learning and wisdom" and meets the king through his own dream world.',x:'Faithfulness in a foreign court; a fourth man walking in the fire with them.'},
+{t:'Nebuchadnezzar\'s sanity restored',r:'Daniel 4',s:'pc',T:'OT',b:'An emperor driven mad by pride, eating grass like an ox.',g:'God uses the Babylonian image of a great world tree.',x:'"My understanding returned to me… and my kingdom was restored." A pagan king praises the King of heaven.'},
+{t:'Esther: a people preserved',r:'Esther 4-9',s:'c',T:'OT',b:'A decree of genocide in the Persian empire.',g:'God is never named; He works through Persian palace protocol, banquets and a sleepless king.',x:'A people rescued; mourning turned to the feast of Purim.'},
+{t:'Nehemiah rebuilds and releases',r:'Nehemiah 1-8',s:'c',T:'OT',b:'Broken walls, and the rich enslaving the poor through debt.',g:'God works through a Persian royal servant, permissions and building materials.',x:'Walls rebuilt in 52 days, debts and interest cancelled (ch. 5), and the Law read and translated so all understood (8:8).'},
+{t:'The valley of dry bones',r:'Ezekiel 37',s:'c',T:'OT',b:'A nation as good as dead: "Our hope is lost."',g:'God gives a vivid vision in the language of the battlefield.',x:'Breath (ruach) enters, bones become an army, two kingdoms become one.'},
+{t:'The Magi follow a star',r:'Matthew 2:1-12',s:'c',T:'NT',b:'Gentile astrologers far from Israel\'s covenant.',g:'God speaks to stargazers through a star.',x:'The nations come to worship the child: Isaiah 60:3 begins to be fulfilled.'},
+{t:'The Nazareth manifesto',r:'Luke 4:16-21; Isaiah 61:1-2',s:'pc',T:'NT',b:'Poverty, captivity, blindness, oppression.',g:'In His home synagogue, Jesus reads the Jubilee scroll of Isaiah.',x:'"Today this Scripture has been fulfilled in your hearing."'},
+{t:'The centurion\'s servant',r:'Matthew 8:5-13',s:'cf',T:'NT',b:'A Roman officer\'s servant paralysed; occupier and occupied.',g:'Jesus responds to a soldier who understands authority in military terms.',x:'Healing at a distance and praise: "I have not found so great a faith in Israel."'},
+{t:'The Syrophoenician woman',r:'Mark 7:24-30',s:'cf',T:'NT',b:'A Gentile mother with a tormented daughter.',g:'Jesus engages her in the sharp, witty dialogue of the marketplace; she wins with "even the dogs eat the crumbs".',x:'Her daughter is freed; the table opens wider.'},
+{t:'The good Samaritan',r:'Luke 10:25-37',s:'c',T:'NT',b:'A lawyer asking, "Who is my neighbour?" to limit love.',g:'Jesus makes a despised Samaritan the hero of a story on a road his hearers knew.',x:'The neighbour is the one who shows mercy; "Go and do likewise."'},
+{t:'The Ethiopian official',r:'Acts 8:26-40; Isaiah 56:3-5',s:'pc',T:'NT',b:'A eunuch, excluded from the temple assembly (Deuteronomy 23:1).',g:'Philip meets him in his chariot, starting from the Isaiah scroll he was reading.',x:'Baptised by the road; the promise to eunuchs, "a name better than sons and daughters", fulfilled.'},
+{t:'Peter and Cornelius',r:'Acts 10-11',s:'c',T:'NT',b:'The wall between Jew and Gentile, clean and unclean.',g:'God speaks to Peter through a vision of food laws, the very symbol of separation.',x:'"God has shown me that I should not call any man unholy or unclean." The Spirit falls on Gentiles.'},
+{t:'Paul at the Areopagus',r:'Acts 17:16-34',s:'c',T:'NT',b:'A city full of idols, worshipping "an unknown god".',g:'Paul starts from their altar and quotes their own poets (Epimenides, Aratus): "In him we live and move and have our being."',x:'Some believe, including Dionysius and Damaris.'},
+{t:'The Jerusalem council',r:'Acts 15',s:'c',T:'NT',b:'Would Gentiles have to become culturally Jewish to belong?',g:'The apostles listen to stories and Scripture and decide not to "trouble" the Gentiles.',x:'Faith without cultural conquest: one church, many cultures.'},
+{t:'The dividing wall broken',r:'Ephesians 2:11-22; Galatians 3:28',s:'c',T:'NT',b:'Hostility between peoples, symbolised by the temple barrier.',g:'Paul uses temple architecture: walls, cornerstone, a building growing.',x:'"He is our peace, who made both one." One new humanity.'},
+{t:'Every nation before the throne',r:'Revelation 7:9; 21:24-26',s:'c',T:'NT',b:'A world of rival empires.',g:'John\'s vision uses palm branches and royal processions.',x:'A multitude from every nation, tribe, people and language, bringing their glory and honour into the city.'},
+// ---- EARTH
+{t:'Creation and the garden mandate',r:'Genesis 1-2',s:'e',T:'OT',b:'Before the break: the pattern of shalom.',g:'Creation is told against the backdrop of ancient cosmologies: sun and moon are lamps, not gods, and humans are God\'s living images.',x:'Humanity placed in Eden "to work it and keep it" (2:15): earth as shared vocation.'},
+{t:'Covenant with every living creature',r:'Genesis 9:8-17',s:'e',T:'OT',b:'A world undone by the flood.',g:'God hangs up His war bow in the clouds.',x:'A covenant not only with Noah but "with every living creature… for all generations".'},
+{t:'Sabbath for the land',r:'Leviticus 25:1-7; 26:34-35',s:'e',T:'OT',b:'Land exhausted by endless taking.',g:'God gives an agrarian people a seventh-year rest for the soil.',x:'The land "keeps Sabbath"; even the wild animals share the produce.'},
+{t:'The land mourns',r:'Hosea 4:1-3; Isaiah 24:4-6',s:'ec',T:'OT',b:'Human violence and unfaithfulness spill into creation.',g:'The prophets speak in the language of drought and failing harvests.',x:'They reveal that healing the land and healing the people belong together (2 Chronicles 7:14).'},
+{t:'The wolf and the lamb',r:'Isaiah 11:1-9; 65:17-25',s:'ec',T:'OT',b:'Predation and fear in the animal world.',g:'Isaiah paints a pastoral picture his hearers knew: wolves, lambs, cobras, a little child.',x:'"They will not hurt nor destroy in all my holy mountain."'},
+{t:'The desert blossoms',r:'Isaiah 35',s:'ep',T:'OT',b:'Dry land and weak hands.',g:'A promise framed in the geography of the Judean wilderness.',x:'Crocus, streams in the desert, the lame leaping, the ransomed returning with singing.'},
+{t:'The river from the temple',r:'Ezekiel 47:1-12',s:'e',T:'OT',b:'The Dead Sea: water where nothing lives.',g:'An exiled priest sees the temple become a spring.',x:'Fresh water, swarms of fish, trees whose leaves are for healing.'},
+{t:'Restoring the years the locusts ate',r:'Joel 2:18-32',s:'ec',T:'OT',b:'Locust plague and economic ruin.',g:'God speaks to the ground itself: "Land, do not be afraid."',x:'Rain, full threshing floors, and the Spirit poured on all flesh.'},
+{t:'The trees clap their hands',r:'Psalm 96:11-13; 98:7-9',s:'e',T:'OT',b:'A creation waiting for justice.',g:'Israel\'s worship songs invite seas, fields and forests to join in.',x:'Creation rejoices because God "comes to judge the earth", to put it right.'},
+{t:'Jesus calms the storm',r:'Mark 4:35-41',s:'ep',T:'NT',b:'The chaotic sea, an ancient symbol of disorder.',g:'Jesus sleeps in the boat like a fisherman, then speaks to wind and wave.',x:'"Peace, be still!" The Creator restores order in His creation.'},
+{t:'Water into wine; bread for thousands',r:'John 2:1-11; 6:1-14',s:'ef',T:'NT',b:'Shortage at a village wedding; hunger on a hillside.',g:'Jesus works through jars for purification washing and a boy\'s barley loaves.',x:'Overflowing abundance, signs of the messianic feast.'},
+{t:'Resurrection in a garden',r:'John 19:41; 20:1-18',s:'e',T:'NT',b:'Death, the last enemy.',g:'John deliberately places the tomb in a garden on "the first day of the week".',x:'The first day of the new creation; the gardener has come back to Eden.'},
+{t:'Creation groans for freedom',r:'Romans 8:18-25',s:'e',T:'NT',b:'Creation "subjected to futility", groaning as in childbirth.',g:'Paul uses the image of labour pains, something every family knew.',x:'Creation will be "delivered from the bondage of decay" into the glorious freedom of God\'s children.'},
+{t:'All things reconciled',r:'Colossians 1:15-20; Acts 3:21',s:'epfc',T:'NT',b:'Everything in heaven and on earth estranged.',g:'Paul draws on the hymn language of the early church.',x:'"Through him to reconcile all things to himself… making peace through the blood of his cross."'},
+{t:'New heavens and new earth',r:'2 Peter 3:13; Revelation 21-22',s:'epfc',T:'NT',b:'Tears, death, mourning and pain.',g:'John\'s vision combines a city, a garden, a river and a wedding.',x:'"God himself will be with them… Behold, I am making all things new." The tree of life heals the nations.'}
+];
+
+const EPOCHS=[
+{name:'Creation',ref:'Genesis 1–2',hue:150,need:'Nothing was broken yet. Humanity was made in the image of a relational God ("Let us make…") to share His life and to tend the earth.',stoop:'God forms Adam from dust with His own hands and breathes into his nostrils (2:7). He walks with them in the garden.',rest:'The original pattern of shalom: harmony with God, self, one another and the earth. "Very good."',christ:'"All things were created through him and for him" (Colossians 1:16). The Son is both source and goal.'},
+{name:'The Fall',ref:'Genesis 3–11',hue:20,need:'Union fractures in four directions: hiding from God, shame of self, blame and murder between people, thorns in the ground, and finally scattered nations at Babel.',stoop:'God comes searching: "Where are you?" He covers them with garments of skin and marks Cain for protection.',rest:'The first gospel (3:15): the seed of the woman will crush the serpent. God refuses to abandon His image-bearers.',christ:'Jesus is the Last Adam (1 Corinthians 15:45) who undoes what the first Adam lost.'},
+{name:'Abraham',ref:'Genesis 12–50',hue:40,need:'A scattered humanity with no way back; a childless, ageing couple.',stoop:'God uses nomad imagery (stars, sand, land to walk) and an ancient covenant ritual, walking alone between the pieces so the promise rests on Him (Genesis 15).',rest:'"In you all the families of the earth will be blessed" (12:3). One family chosen for the sake of all families.',christ:'The Scripture "preached the gospel beforehand to Abraham" (Galatians 3:8). Christ is the promised Seed.'},
+{name:'Exodus',ref:'Exodus 1–15',hue:200,need:'A people crushed by slavery and genocide in Egypt.',stoop:'"I have seen… I have heard… I have come down to deliver" (3:7-8). God speaks from a desert bush, reveals His name, and confronts Egypt\'s gods on their own ground.',rest:'Liberation, a Passover meal for every household, and passage through the sea.',christ:'On the mountain, Moses and Elijah speak with Jesus about His "exodus" (Luke 9:31). He is our Passover (1 Corinthians 5:7).'},
+{name:'Sinai & Tabernacle',ref:'Exodus 19–40; Leviticus',hue:260,need:'Freed slaves who do not yet know how to live free.',stoop:'The covenant follows the shape of ancient treaty documents; God\'s dwelling is a tent in the middle of the tribes\' tents. The Law comes after rescue, not before.',rest:'A way of life: Sabbath, Jubilee, care for strangers. "I will walk among you, and will be your God" (Leviticus 26:12).',christ:'"The Word became flesh and tabernacled among us" (John 1:14).'},
+{name:'Land & Judges',ref:'Joshua, Judges, Ruth',hue:90,need:'Cycles of forgetting, oppression and crying out. "Everyone did what was right in his own eyes."',stoop:'God raises unlikely deliverers and works through ordinary customs like gleaning and the kinsman-redeemer.',rest:'Rest in the land, and a Moabite widow grafted into the line of the king.',christ:'Jesus is our kinsman-redeemer, "not ashamed to call them brothers" (Hebrews 2:11).'},
+{name:'Kings & Psalms',ref:'1–2 Samuel, Kings, Psalms',hue:45,need:'Israel wants "a king like all the nations".',stoop:'God works within their request (1 Samuel 8) and makes a covenant with a shepherd boy (2 Samuel 7). Worship gains songs and poetry.',rest:'A shepherd-king, a temple, and Psalms that give every emotion a voice before God.',christ:'Jesus is the Son of David and the Good Shepherd who lays down His life (John 10:11).'},
+{name:'Prophets',ref:'Isaiah – Malachi',hue:330,need:'Idolatry, corruption, the poor trampled; the covenant broken.',stoop:'The prophets become living parables: Hosea marries Gomer, Jeremiah wears a yoke, Ezekiel lies on his side. God speaks through street theatre.',rest:'Promises of a new heart (Ezekiel 36:26), a new covenant written on hearts (Jeremiah 31:33), and new heavens and earth (Isaiah 65).',christ:'Jesus is the suffering Servant (Isaiah 53) and the Spirit-anointed Jubilee-bringer (Isaiah 61; Luke 4).'},
+{name:'Exile & Return',ref:'Daniel, Esther, Ezra, Nehemiah',hue:220,need:'The temple burned, the people deported to Babylon.',stoop:'God is present in a foreign land: the fourth man in the fire. He tells exiles to seek the welfare of Babylon (Jeremiah 29:7). The Law is translated so the people understand (Nehemiah 8:8).',rest:'A return, a rebuilt temple and walls, debts cancelled.',christ:'The true return from exile happens in Jesus, the new temple raised in three days (John 2:19).'},
+{name:'Incarnation',ref:'Matthew – John',hue:50,need:'Humanity unable to heal itself; God seemingly silent.',stoop:'The fullest stooping: God becomes a baby in a feeding trough, a Galilean craftsman who speaks Aramaic, eats with sinners, and tells parables about seeds and sheep (Philippians 2:6-8).',rest:'Immanuel, God with us. Healings, deliverances and table fellowship restore people to community.',christ:'Here the Son joins Himself to our humanity. What is not assumed is not healed.'},
+{name:'Cross & Resurrection',ref:'Gospels; 1 Corinthians 15',hue:0,need:'Humanity\'s rejection of God reaches its climax; death holds everyone.',stoop:'God enters our godforsakenness ("My God, why have you forsaken me?") and forgives His killers.',rest:'"God was in Christ reconciling the world to himself, not reckoning their trespasses" (2 Corinthians 5:19). Death is undone on the first day of a new week, in a garden.',christ:'The new humanity rises in Him, and in His ascension our humanity is seated with the Father (Ephesians 2:6).'},
+{name:'Pentecost & Church',ref:'Acts; Epistles',hue:15,need:'Babel\'s division; Jew and Gentile, slave and free, male and female set against one another.',stoop:'The Spirit speaks in every language present; Paul becomes "all things to all people" (1 Corinthians 9:22).',rest:'A new family of every culture: shared meals, shared goods, walls broken down.',christ:'The church is the Body of Christ, His ongoing presence carrying restoration into every sphere.'},
+{name:'New Creation',ref:'Revelation 21–22',hue:170,need:'Tears, death, mourning and pain, still waiting to be finished.',stoop:'"The dwelling of God is with people; he will dwell with them" (21:3). God does not take us away; He comes to live here.',rest:'A garden-city, the river of life, the tree whose leaves heal the nations, and the glory of the nations brought in.',christ:'"Behold, I am making all things new" (21:5). The Lamb is its lamp.'}
+];
+
+const ADDR=[
+{l:'Eden',v:72,ref:'Genesis 3:8',n:'God walks in the garden with humanity: close, unhurried, relational.'},
+{l:'Pillar & cloud',v:42,ref:'Exodus 13:21',n:'After the fall God guides from above and ahead: present, yet veiled.'},
+{l:'Tabernacle',v:55,ref:'Exodus 25:8',n:'"Let them make me a sanctuary, that I may dwell among them." A tent among the tents, at the centre of the camp.'},
+{l:'Temple',v:50,ref:'1 Kings 8:27',n:'A fixed house in the city, yet Solomon admits, "Heaven cannot contain you; how much less this house!"'},
+{l:'In the fire',v:62,ref:'Daniel 3:25',n:'In exile, God is with His people in the furnace of a foreign empire.'},
+{l:'Flesh',v:86,ref:'John 1:14',n:'The Word becomes flesh and lives among us. God can be touched, heard and seen.'},
+{l:'Within',v:95,ref:'1 Corinthians 6:19; John 14:23',n:'The Spirit makes us His temple. "We will come to him and make our home with him."'},
+{l:'All in all',v:100,ref:'Revelation 21:3; 1 Corinthians 15:28',n:'The dwelling of God is with humanity, and God is all in all. Nothing is left outside.'}
+];
+
+const STOOP=[
+{t:'Covenant cutting',T:'OT',ref:'Genesis 15',c:'Ancient Near Eastern treaty ritual: both parties walk between halved animals, calling down that fate if they break the oath.',d:'God alone, as a smoking firepot, passes through while Abram sleeps.',m:'The promise rests entirely on God\'s faithfulness. Grace speaks in a form Abram already understood.'},
+{t:'A stairway to heaven',T:'OT',ref:'Genesis 28:10-22',c:'Mesopotamian ziggurats were human-built stairways for gods to come down.',d:'Jacob dreams of a stairway, but God stands at the top and speaks down to him with promises.',m:'Heaven is not reached by building up; God comes down. Jesus says He is that ladder (John 1:51).'},
+{t:'Dreams in Egypt',T:'OT',ref:'Genesis 40-41',c:'Egypt prized dream interpretation; Pharaoh had a court of interpreters.',d:'God speaks to Pharaoh in a dream and gives the interpretation through a Hebrew slave.',m:'God enters a pagan king\'s way of knowing to save Egypt, Israel and the nations from famine.'},
+{t:'Plagues against the gods',T:'OT',ref:'Exodus 7-12; 12:12',c:'Egypt worshipped the Nile, frogs (Heqet), the sun (Ra) and Pharaoh\'s firstborn as divine.',d:'Each plague confronts a power Egypt trusted.',m:'Liberation spoken in Egypt\'s own religious vocabulary, exposing what cannot save.'},
+{t:'A tent among tents',T:'OT',ref:'Exodus 25-40',c:'Nomadic tribes camped around their chief\'s tent; kings travelled with portable throne-tents.',d:'God asks for a tent in the middle of Israel\'s camp, with familiar materials: skins, acacia wood, woven cloth.',m:'God moves into the neighbourhood in a form a wandering people knew.'},
+{t:'Treaty-shaped covenant',T:'OT',ref:'Exodus 20; Deuteronomy',c:'Hittite suzerain treaties opened with what the king had done before listing obligations.',d:'The Ten Words begin: "I am the LORD your God, who brought you out of Egypt."',m:'Rescue comes first; the instructions describe life within a relationship already given.'},
+{t:'The fleece',T:'OT',ref:'Judges 6:36-40',c:'A frightened farmer seeking a sign in the world he knew: wool, dew, a threshing floor.',d:'God answers twice, wet then dry, without rebuke.',m:'God accommodates fear and weakness. He meets the person where they are.'},
+{t:'A parable for a shepherd',T:'OT',ref:'2 Samuel 12:1-7',c:'David was a shepherd before he was a king.',d:'Nathan tells of a poor man\'s beloved lamb.',m:'Truth arrives through story in the heart-language of the hearer, so it heals and does not only accuse.'},
+{t:'Wisdom of Babylon',T:'OT',ref:'Daniel 1:17; 2',c:'Daniel and friends were trained in Babylonian literature and dream science.',d:'God gives them understanding "in all learning and wisdom" and reveals the king\'s dream.',m:'God works inside a foreign education system without erasing His people\'s faithfulness.'},
+{t:'A star for stargazers',T:'NT',ref:'Matthew 2:1-12',c:'The Magi were Persian or Babylonian astrologers.',d:'God leads them through a star to a child in Bethlehem.',m:'God speaks to Gentiles through the very things they were watching.'},
+{t:'Born in a feeding trough',T:'NT',ref:'Luke 2:7; Philippians 2:6-8',c:'Peasant homes kept animals inside on the lower level.',d:'The Son is laid in a manger, raised in Nazareth, trained as a craftsman, speaking Aramaic.',m:'The fullest condescension: God takes on a specific culture, family and trade.'},
+{t:'Parables of the field',T:'NT',ref:'Matthew 13; Luke 15',c:'An agrarian, fishing and village economy.',d:'Jesus teaches with seeds, yeast, nets, lost sheep, lost coins and wineskins.',m:'The kingdom explained in the everyday objects of the listener\'s hands.'},
+{t:'Asking for a drink',T:'NT',ref:'John 4:7',c:'Jews avoided Samaritans; men did not speak with unknown women in public.',d:'Jesus starts by asking her for help.',m:'He lowers Himself to need before He offers living water. Dignity first.'},
+{t:'The Logos',T:'NT',ref:'John 1:1-14',c:'Greek philosophers spoke of the Logos, the reason ordering the universe; Jewish writers spoke of Word and Wisdom.',d:'John uses a word that both audiences recognised.',m:'The meaning they were reaching for has a name and a face: the Word became flesh.'},
+{t:'An unknown god and Greek poets',T:'NT',ref:'Acts 17:22-31',c:'Athens, full of altars and philosophers.',d:'Paul starts from the altar "To an unknown god" and quotes Epimenides and Aratus.',m:'The gospel builds a bridge from what a culture already sensed.'},
+{t:'Each in their own language',T:'NT',ref:'Acts 2:5-11',c:'Pilgrims from fifteen regions in Jerusalem.',d:'The Spirit causes each to hear God\'s works in their native tongue.',m:'God does not require one culture or language; every language becomes holy ground.'},
+{t:'All things to all people',T:'NT',ref:'1 Corinthians 9:19-23',c:'Jewish and Gentile communities with different customs.',d:'Paul adapts his manner of life to each without changing the message.',m:'Incarnational mission: the church keeps stooping as Christ stooped.'},
+{t:'One who sympathises',T:'NT',ref:'Hebrews 2:17-18; 4:15',c:'Priests were meant to represent people before God.',d:'Jesus is "made like his brothers in every way" and tempted as we are.',m:'Our High Priest knows our condition from the inside.'}
+];
+
+const ARC=[
+{t:'Incarnation',ref:'John 1:14; Hebrews 2:14',u:'The Son unites divine and human nature in one person. Before any act of healing, the healing has begun: God and humanity are joined in Jesus.',l:'Often treated only as the preparation needed so there would be a sinless victim.',v:'"The Word became flesh, and lived among us. We saw his glory." John 1:14'},
+{t:'Life & Ministry',ref:'Luke 4:18-19; Acts 10:38',u:'Jesus lives the human story rightly from within, and every healing, deliverance and shared meal restores people to God, family and community.',l:'Often reduced to proof of His sinlessness or a moral example.',v:'"He went about doing good and healing all who were oppressed by the devil, for God was with him." Acts 10:38'},
+{t:'Cross',ref:'2 Corinthians 5:19; Colossians 1:20',u:'God in Christ enters our darkness, takes our hostility and death into Himself, and forgives. He takes our place as God\'s own self-giving, not as the Father against the Son.',l:'Often framed as the Father punishing the Son to satisfy a legal requirement.',v:'"God was in Christ reconciling the world to himself, not reckoning their trespasses against them." 2 Corinthians 5:19'},
+{t:'Resurrection',ref:'1 Corinthians 15:20-22; Romans 4:25',u:'The new humanity is born. Death is defeated in human flesh, the firstfruits of the renewal of all creation.',l:'Often treated as God\'s receipt that the payment was accepted.',v:'"As in Adam all die, so also in Christ all will be made alive." 1 Corinthians 15:22'},
+{t:'Ascension',ref:'Ephesians 2:4-6; Hebrews 7:25',u:'Our humanity, healed in Jesus, is brought into the Father\'s presence. In Him we are seated in heavenly places. A human being now shares the throne.',l:'Rarely mentioned, which leaves the gospel ending at a transaction instead of a homecoming.',v:'"…made us alive together with Christ… and raised us up with him, and made us to sit with him in the heavenly places." Ephesians 2:5-6'},
+{t:'Pentecost',ref:'Acts 2:17; John 14:20',u:'The Spirit pours Jesus\' life into us so we can know what is already true: "I am in my Father, and you in me, and I in you."',l:'Often reduced to a power for service, not participation in the Trinity\'s life.',v:'"In that day you will know that I am in my Father, and you in me, and I in you." John 14:20'}
+];
+
+const FLIPS=[
+{a:'Adam',ar:'Genesis 2-3',b:'The Last Adam',br:'1 Corinthians 15:45; Romans 5:12-21',bt:'Where the first Adam grasped, Christ trusted; He heads a renewed humanity.'},
+{a:'The Tabernacle',ar:'Exodus 25:8',b:'The Word tabernacled',br:'John 1:14',bt:'God\'s presence now has a human face.'},
+{a:'The Temple',ar:'1 Kings 8',b:'"Destroy this temple"',br:'John 2:19-21',bt:'His body is where God and humanity meet; then His people become a temple.'},
+{a:'Sabbath rest',ar:'Genesis 2:2; Exodus 20:8',b:'"Come to me… I will give you rest"',br:'Matthew 11:28; Hebrews 4:9-10',bt:'Rest is a person, not a performance.'},
+{a:'The Passover lamb',ar:'Exodus 12',b:'The Lamb of God',br:'John 1:29; 1 Corinthians 5:7',bt:'The meal of liberation becomes the Lord\'s Supper.'},
+{a:'The Exodus',ar:'Exodus 14',b:'His "exodus" at Jerusalem',br:'Luke 9:31',bt:'Through cross and resurrection He leads humanity out of slavery to sin and death.'},
+{a:'Manna',ar:'Exodus 16',b:'The bread of life',br:'John 6:35',bt:'Daily dependence becomes communion with a person.'},
+{a:'The bronze serpent',ar:'Numbers 21:8-9',b:'The Son lifted up',br:'John 3:14-15',bt:'Look and live: healing through looking at the One lifted up.'},
+{a:'Jubilee',ar:'Leviticus 25',b:'The year of the Lord\'s favour',br:'Luke 4:18-21',bt:'Release for captives, debts and the oppressed, announced in His own person.'},
+{a:'Israel the vine',ar:'Psalm 80:8; Isaiah 5',b:'The true vine',br:'John 15:1-5',bt:'He is faithful Israel; we bear fruit by abiding in Him.'},
+{a:'The kinsman-redeemer',ar:'Ruth 3-4',b:'Not ashamed to call us brothers',br:'Hebrews 2:11-15',bt:'He becomes our kin to redeem our inheritance.'},
+{a:'Jacob\'s ladder',ar:'Genesis 28:12',b:'Angels on the Son of Man',br:'John 1:51',bt:'Jesus is the meeting place of heaven and earth.'}
+];
+
+const LENS=[
+{k:'Starting point',L:{h:'A broken law',p:'The story begins with Genesis 3: God gave a rule, humanity broke it, and justice now demands a penalty.',pic:'Picture: a courtroom'},R:{h:'A shared love',p:'The story begins before creation, with the Father, Son and Spirit in love (John 17:24). Humanity was made to share that life: "Let us make man in our image" (Genesis 1:26).',pic:'Picture: a family table'},v:'"You loved me before the foundation of the world." John 17:24',tw:'When the story begins with law, God\'s love looks like a response to a solved legal problem. When it begins with love, the law is seen as love\'s instruction.'},
+{k:'Sin',L:{h:'A crime',p:'Sin is mainly the breaking of rules, which creates a debt of guilt that must be paid.',pic:'Picture: a criminal record'},R:{h:'A sickness of alienation',p:'Sin is missing the mark of the life we were made for: a turning away that blinds, enslaves and destroys. It needs healing, not only pardon. "Those who are healthy have no need for a physician" (Mark 2:17).',pic:'Picture: a patient and a physician'},v:'"I came not to call the righteous, but sinners to repentance." Luke 5:32',tw:'The legal frame tends to treat behaviour while leaving the wound. The relational frame takes sin more seriously, because it touches the whole person.'},
+{k:'"Where are you?"',L:{h:'God arrives to sentence',p:'In Eden, God comes as judge to pronounce the curse on Adam and Eve.',pic:'Picture: a judge entering'},R:{h:'God arrives searching',p:'God comes walking and calling: "Where are you?" They hide because fear had distorted how they saw Him ("I was afraid"). He clothes them.',pic:'Picture: a father calling in the dark'},v:'"I heard your voice in the garden, and I was afraid." Genesis 3:10',tw:'The fear came from humanity\'s side. The legal frame can take Adam\'s fearful picture of God and build theology on it.'},
+{k:'God\'s posture',L:{h:'Must be appeased',p:'God\'s holiness keeps Him at a distance until His anger is satisfied; then He can love.',pic:'Picture: an offended ruler'},R:{h:'Love takes the first step',p:'"God so loved the world that he gave…" Love is the source of the cross, not its result. "God commends his own love toward us, in that while we were yet sinners, Christ died for us" (Romans 5:8).',pic:'Picture: the father running'},v:'"In this is love, not that we loved God, but that he loved us." 1 John 4:10',tw:'If the cross changes God\'s mind about us, we will always wonder whether He really likes us. If the cross reveals God\'s heart, we can rest.'},
+{k:'The Cross',L:{h:'A legal transaction',p:'The Father pours out punishment on the Son so that justice is satisfied and the guilty can be acquitted.',pic:'Picture: a payment ledger'},R:{h:'God reconciling the world',p:'"God was in Christ reconciling the world to himself" (2 Corinthians 5:19). The Son enters our darkness, takes our hostility, our sin and our death into Himself, and heals human nature from within. He does take our place, as God\'s own self-giving, with Father, Son and Spirit acting together.',pic:'Picture: a surgeon entering the wound'},v:'"…not reckoning their trespasses against them." 2 Corinthians 5:19',tw:'Separating the Father\'s anger from the Son\'s love divides the Trinity. Scripture shows them acting as one.'},
+{k:'Salvation',L:{h:'Acquittal and a ticket',p:'Saved means declared not guilty, with heaven guaranteed after death.',pic:'Picture: a pardon document'},R:{h:'Union and adoption',p:'"This is eternal life, that they should know you" (John 17:3). Salvation is adoption (Galatians 4:6), sharing the divine nature (2 Peter 1:4), and living now in the Father–Son relationship: "I in them, and you in me" (John 17:23).',pic:'Picture: a child welcomed home'},v:'"This is eternal life, that they should know you, the only true God, and him whom you sent." John 17:3',tw:'A pardoned prisoner can still be a stranger. A son is home. Justification is real, and its goal is family.'},
+{k:'The Law',L:{h:'A ladder or a verdict',p:'The Law is a standard to climb and the measure by which we are condemned or kept accepted.',pic:'Picture: a checklist'},R:{h:'A Father\'s instruction',p:'The Law came after the rescue: "I am the LORD your God, who brought you out of Egypt" (Exodus 20:2). It describes life in covenant love, served as a guardian until Christ (Galatians 3:24), and "love is the fulfilment of the law" (Romans 13:10).',pic:'Picture: a family\'s house rules'},v:'"Love is the fulfillment of the law." Romans 13:10',tw:'Grace came first in Exodus too. Obedience flows from belonging; it does not buy it.'},
+{k:'Holiness',L:{h:'Separation',p:'God is too holy to look on sin, so He must keep sinners at arm\'s length.',pic:'Picture: a barrier'},R:{h:'Contagious wholeness',p:'In Jesus, holiness moves toward the unclean. He touches the leper and the leper becomes clean (Mark 1:41). He eats with sinners. Holiness is love that is wholly other and wholly committed.',pic:'Picture: a healing touch'},v:'"Moved with compassion, he stretched out his hand, and touched him." Mark 1:41',tw:'The legal frame assumes sin defiles God. In Jesus, God\'s holiness overcomes defilement.'},
+{k:'Wrath & judgment',L:{h:'Retribution',p:'Judgment is God settling accounts, and wrath is His punishment for offence.',pic:'Picture: a gavel'},R:{h:'Love opposing what destroys',p:'Wrath is God\'s settled opposition to all that destroys His beloved, often expressed by giving people over to the consequences they choose (Romans 1:24). Judgment means setting things right: creation sings because "he comes to judge the earth" (Psalm 96:12-13).',pic:'Picture: a surgeon removing a tumour'},v:'"Let the fields and all that is in them exult… for he comes to judge the earth." Psalm 96:12-13',tw:'Judgment is real and serious. The question is its purpose: in Scripture it serves restoration and the putting right of all things.'},
+{k:'Repentance',L:{h:'Grovelling for pardon',p:'Repentance means feeling bad enough and promising enough to earn forgiveness.',pic:'Picture: penance'},R:{h:'A change of mind, coming home',p:'Metanoia means a change of mind: turning toward a welcome already running toward us. "The goodness of God leads you to repentance" (Romans 2:4).',pic:'Picture: turning toward the light'},v:'"…not knowing that the goodness of God leads you to repentance?" Romans 2:4',tw:'The prodigal\'s rehearsed speech ("make me a hired servant") is the legal frame. The father interrupts it.'},
+{k:'Motivation',L:{h:'Fear and performance',p:'We obey to avoid punishment and keep God pleased.',pic:'Picture: a supervisor watching'},R:{h:'Love casts out fear',p:'"There is no fear in love; but perfect love casts out fear, because fear has punishment" (1 John 4:18). "We love him, because he first loved us" (4:19).',pic:'Picture: a beloved child'},v:'"Perfect love casts out fear." 1 John 4:18',tw:'Fear can produce compliance, never union. Only love produces love.'},
+{k:'The Church',L:{h:'A court of the acquitted',p:'The church gathers the pardoned, guards the boundaries and polices behaviour.',pic:'Picture: a gated community'},R:{h:'A family and a body',p:'"You are… fellow citizens with the saints, and of the household of God" (Ephesians 2:19). The church is Christ\'s body, the visible place where reconciliation becomes social and spreads.',pic:'Picture: a household with an open door'},v:'"You are the body of Christ, and members individually." 1 Corinthians 12:27',tw:'When church becomes a courtroom, people hide as Adam did. When it is family, they can be known and healed.'},
+{k:'Mission',L:{h:'Rescue souls from the world',p:'The goal is to get individuals out before the world burns.',pic:'Picture: a lifeboat'},R:{h:'Join the restoration of all things',p:'Jesus came to reconcile "all things" (Colossians 1:20): persons, families, cultures and creation itself (Romans 8:21). We join what the Father is already doing.',pic:'Picture: a garden being renewed'},v:'"…and through him to reconcile all things to himself." Colossians 1:20',tw:'The legal frame tends to shrink salvation to individuals. Scripture keeps widening the circle.'},
+{k:'The prodigal story',L:{h:'The son\'s plan',p:'"Make me as one of your hired servants." He returns to work off his debt. The elder brother agrees: "These many years I have served you."',pic:'Picture: a wage contract'},R:{h:'The father\'s plan',p:'The father sees him far off, runs, falls on his neck and kisses him before the speech is finished. Robe, ring, sandals, feast. To the elder son: "You are always with me, and all that is mine is yours."',pic:'Picture: a party'},v:'"His father saw him, and was moved with compassion, and ran, and fell on his neck, and kissed him." Luke 15:20',tw:'Both sons thought in legal terms. The father only ever thought in terms of sonship.'}
+];
+
+const MEMBERS=[
+{n:'Reconcilers',s:'c',ref:'2 Corinthians 5:18-20',d:'Ambassadors who carry the message that God is not counting trespasses, and who make peace between estranged people.'},
+{n:'Healers',s:'p',ref:'James 5:14-16; Mark 16:18',d:'Those who pray for the sick, care for bodies and minds, and walk with people through trauma toward wholeness.'},
+{n:'Teachers',s:'p',ref:'Ephesians 4:11-13',d:'Those who equip the saints, renew minds and help people see the Father as Jesus revealed Him.'},
+{n:'Hosts',s:'f',ref:'Romans 12:13; Hebrews 13:2',d:'Those who open homes and tables, as Jesus did with tax collectors and sinners, making family for the lonely.'},
+{n:'Parents & mentors',s:'f',ref:'Malachi 4:6; Titus 2:3-5',d:'Spiritual fathers and mothers who turn hearts across generations and nurture identity.'},
+{n:'Givers',s:'c',ref:'Acts 4:32-35; 2 Corinthians 8:13-15',d:'Those who practise Jubilee economics, so "there was not a needy person among them".'},
+{n:'Justice-seekers',s:'c',ref:'Micah 6:8; Isaiah 58:6-12',d:'Those who loosen the bonds of injustice, defend the widow and orphan, and become "repairers of the breach".'},
+{n:'Artists & builders',s:'c',ref:'Exodus 31:1-6',d:'Like Bezalel, filled with the Spirit for craft. They shape culture, beauty and cities that tell the truth.'},
+{n:'Peacemakers',s:'f',ref:'Matthew 5:9; Romans 12:18',d:'"Blessed are the peacemakers, for they shall be called children of God." They mediate in families and communities.'},
+{n:'Creation keepers',s:'e',ref:'Genesis 2:15; Romans 8:19-21',d:'Farmers, scientists and gardeners who "work and keep" the earth as an act of worship.'},
+{n:'Intercessors',s:'p',ref:'Romans 8:26-27; 1 Timothy 2:1-2',d:'Those who join the Spirit\'s groaning for the world and pray for leaders and nations.'},
+{n:'Cross-cultural messengers',s:'c',ref:'Acts 2; Revelation 7:9',d:'Translators and missionaries who carry the gospel into every language, honouring each culture as Pentecost did.'}
+];
+
+const NOW={p:['Receiving forgiveness and forgiving others','Inner healing of shame and trauma','Recovering identity as a beloved child','Spiritual friendship and discipleship'],
+f:['Reconciliation between estranged relatives','Fostering, adoption and caring for orphans','Honouring and caring for elders','Marriages renewed through mutual self-giving'],
+c:['Racial and ethnic reconciliation','Fair work, debt relief and generosity','Art, education and media that heal','Bible translation and honouring local cultures'],
+e:['Community gardens and regenerative farming','Clean water projects','Sabbath rhythms of rest from consumption','Protecting creatures and wild places']};
+
+const PRACT={p:[['Begin each day by receiving the Father\'s love','1 John 3:1'],['Bring one shame into the light with God or a friend','1 John 1:7'],['Forgive someone specifically','Matthew 6:14'],['Read a Gospel story and picture Jesus\' face toward you','2 Corinthians 4:6']],
+f:[['Make a reconciling call or visit','Matthew 5:23-24'],['Share a meal with someone who eats alone','Luke 14:12-14'],['Bless your parents or children in words','Numbers 6:24-26'],['Mentor or be mentored','Titus 2:3-5']],
+c:[['Learn a neighbour\'s culture and story','Acts 17:26-27'],['Give toward someone\'s debt or need','Deuteronomy 15:7-8'],['Speak up for someone treated unjustly','Proverbs 31:8-9'],['Support local work that brings shalom to your city','Jeremiah 29:7']],
+e:[['Plant or tend something living','Genesis 2:15'],['Keep a weekly Sabbath from buying','Exodus 20:8-11'],['Reduce waste in one specific way','Psalm 24:1'],['Spend time in creation giving thanks','Psalm 19:1']]};
+
+/* ================= ROUTER ================= */
+const VIEWS=['home','story','stoop','spheres','jesus','lens','body','library','journey'];
+function route(){
+  let v=(location.hash||'#home').slice(1); if(!VIEWS.includes(v))v='home';
+  $$('.view').forEach(el=>el.hidden=el.dataset.view!==v);
+  $$('#tabs a').forEach(a=>{a.toggleAttribute('aria-current',a.getAttribute('href')==='#'+v); if(a.hasAttribute('aria-current'))a.setAttribute('aria-current','page')});
+  const cur=$('#tabs a[aria-current]'),tb=$('#tabs'); if(cur)tb.scrollLeft=cur.offsetLeft-tb.clientWidth/2+cur.offsetWidth/2;
+  if(v==='stoop'){$$('#addr .addr-bar i').forEach(el=>el.style.width='0%');requestAnimationFrame(()=>requestAnimationFrame(fillAddr))}
+  if(v!=='story')setTint(null); else selectEpoch(curEpoch,false);
+  window.scrollTo({top:0});
+  if(v==='home')startGather();
+}
+addEventListener('hashchange',route);
+
+/* ================= CARD RENDER ================= */
+const sphTags=s=>[...s].map(k=>`<span class="tag ${SPH[k].cls}">${SPH[k].name}</span>`).join('');
+function narrCard(n){
+  const main=n.s[0];
+  return `<article class="card ${SPH[main].cls}">
+    <div class="top"><div class="stack" style="gap:4px"><h4>${esc(n.t)}</h4><span class="ref">${esc(n.r)}</span></div><span class="tag" style="--c:var(--muted)">${n.T}</span></div>
+    <dl><div><dt>What was broken</dt><dd>${esc(n.b)}</dd></div>
+    <div><dt>How God met them</dt><dd>${esc(n.g)}</dd></div>
+    <div><dt>What was restored</dt><dd>${esc(n.x)}</dd></div></dl>
+    <div class="tags">${sphTags(n.s)}</div></article>`;
+}
+$('#libCountHome').textContent=N.length+' stories';
+
+/* ================= STORY ================= */
+let curEpoch=0;
+const track=$('#tlTrack');
+track.innerHTML=EPOCHS.map((e,i)=>`<button class="tl-stop" role="tab" id="tl${i}" aria-selected="false" aria-controls="tlDetail"><span class="knot"></span><span>${e.name}</span></button>`).join('');
+$$('.tl-stop',track).forEach((b,i)=>b.addEventListener('click',()=>selectEpoch(i,true)));
+track.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){selectEpoch(Math.min(EPOCHS.length-1,curEpoch+1),true);e.preventDefault()}if(e.key==='ArrowLeft'){selectEpoch(Math.max(0,curEpoch-1),true);e.preventDefault()}});
+function selectEpoch(i,focus){
+  curEpoch=i; const e=EPOCHS[i];
+  $$('.tl-stop',track).forEach((b,j)=>{b.setAttribute('aria-selected',j===i);b.tabIndex=j===i?0:-1});
+  const b=$('#tl'+i); focus&&b.focus({preventScroll:true}); track.scrollTo({left:b.offsetLeft-track.clientWidth/2+b.offsetWidth/2,behavior:reduce?'auto':'smooth'});
+  $('#tlDetail').innerHTML=`<div class="head"><div class="stack" style="gap:4px"><span class="eyebrow">Movement ${i+1} of ${EPOCHS.length}</span><h2>${e.name}</h2><span class="ref">${e.ref}</span></div>
+    <div class="pager"><button class="chip" data-d="-1" ${i===0?'disabled':''}>← Previous</button><button class="chip" data-d="1" ${i===EPOCHS.length-1?'disabled':''}>Next →</button></div></div>
+    <div class="facet need"><span class="eyebrow">The brokenness</span><p>${esc(e.need)}</p></div>
+    <div class="facet stoop"><span class="eyebrow">How God came down</span><p>${esc(e.stoop)}</p></div>
+    <div class="facet rest"><span class="eyebrow">What He restored</span><p>${esc(e.rest)}</p></div>
+    <div class="facet christ"><span class="eyebrow">Pointing to Christ</span><p>${esc(e.christ)}</p></div>`;
+  $$('#tlDetail .pager button').forEach(bt=>bt.addEventListener('click',()=>selectEpoch(curEpoch+ +bt.dataset.d,false)));
+  if(!$('#v-story').hidden)setTint(`hsl(${e.hue} 70% 50%)`);
+}
+selectEpoch(0,false);
+
+/* ================= STOOP ================= */
+$('#addr').innerHTML=ADDR.map((a,i)=>`<button class="addr-row" data-i="${i}"><span class="lbl">${a.l}</span><span class="addr-bar"><i style="width:0%">${a.ref}</i></span></button>`).join('');
+function fillAddr(){ $$('#addr .addr-bar i').forEach((el,i)=>el.style.width=ADDR[i].v+'%'); }
+$$('#addr .addr-row').forEach(b=>{const show=()=>{const a=ADDR[b.dataset.i];$('#addrNote').innerHTML=`<b style="color:var(--ink)">${a.l}</b> · <span class="ref">${a.ref}</span><br>${esc(a.n)}`};b.addEventListener('click',show);b.addEventListener('mouseenter',show);b.addEventListener('focus',show)});
+$('#addrNote').innerHTML=`<b style="color:var(--ink)">${ADDR[5].l}</b> · <span class="ref">${ADDR[5].ref}</span><br>${esc(ADDR[5].n)}`;
+let stoopT='all';
+function renderStoop(){
+  $('#stoopFilter').innerHTML=['all','OT','NT'].map(t=>`<button class="chip" data-t="${t}" aria-pressed="${stoopT===t}">${t==='all'?'All':t==='OT'?'Old Testament':'New Testament'}</button>`).join('')+`<span class="count">${STOOP.filter(s=>stoopT==='all'||s.T===stoopT).length} examples</span>`;
+  $$('#stoopFilter .chip').forEach(c=>c.addEventListener('click',()=>{stoopT=c.dataset.t;renderStoop()}));
+  $('#stoopGrid').innerHTML=STOOP.filter(s=>stoopT==='all'||s.T===stoopT).map(s=>`<article class="card">
+    <div class="top"><div class="stack" style="gap:4px"><h4>${esc(s.t)}</h4><span class="ref">${esc(s.ref)}</span></div><span class="tag" style="--c:var(--muted)">${s.T}</span></div>
+    <dl><div><dt>Their world</dt><dd>${esc(s.c)}</dd></div>
+    <div class="culture-arrow"><svg width="22" height="14" viewBox="0 0 22 14" aria-hidden="true"><path d="M1 7h18M14 2l5 5-5 5" fill="none" stroke="currentColor" stroke-width="2"/></svg>God stooped</div>
+    <div><dt>What God did</dt><dd>${esc(s.d)}</dd></div>
+    <div><dt>What it shows</dt><dd>${esc(s.m)}</dd></div></dl></article>`).join('');
+}
+renderStoop();
+
+/* ================= SPHERES ================= */
+let curSph='p', sphT='all';
+const RINGS=[['e',190],['c',145],['f',100],['p',55]];
+var drawSpheres=function(){
+  const svg=$('#sphereSvg'); if(!svg)return;
+  let h='';
+  RINGS.forEach(([k,r])=>{
+    const on=k===curSph;
+    h+=`<circle class="ring" data-k="${k}" cx="210" cy="210" r="${r}" style="fill:color-mix(in srgb, var(${SPH[k].var}) ${on?30:12}%, var(--surface));stroke:var(${SPH[k].var})" stroke-width="${on?4:1.5}" tabindex="0" role="button" aria-label="${SPH[k].name}" aria-pressed="${on}"></circle>`;
+  });
+  RINGS.forEach(([k,r],i)=>{ const y= k==='p'?246:210-r+24; h+=`<text x="210" y="${y}" text-anchor="middle" style="fill:var(${SPH[k].var})">${SPH[k].name.split(' ')[0]}</text>`; });
+  h+=`<path d="M210 168v44M193 183h34" style="fill:none;stroke:var(--accent2)" stroke-width="6" stroke-linecap="round"/>`;
+  svg.innerHTML=h;
+  $$('.ring',svg).forEach(c=>{const go=()=>{curSph=c.dataset.k;renderSphere()};c.addEventListener('click',go);c.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();go()}})});
+};
+function renderSphere(){
+  drawSpheres();
+  const s=SPH[curSph];
+  $('#sphereInfo').innerHTML=`<span class="eyebrow" style="color:var(${s.var})">Sphere</span><h2>${s.name}</h2>
+    <p>${esc(s.text)}</p>
+    <div class="facet need"><span class="eyebrow">Where it broke</span><p>${esc(s.broke)}</p></div>
+    <blockquote class="scripture" style="border-color:var(${s.var})">${esc(s.verse)}</blockquote>
+    <div class="row">${Object.values(SPH).map(o=>`<button class="chip ${o.cls}" data-k="${o.key}" aria-pressed="${o.key===curSph}"><span class="dot"></span>${o.name}</button>`).join('')}</div>`;
+  $$('#sphereInfo .chip').forEach(c=>c.addEventListener('click',()=>{curSph=c.dataset.k;renderSphere()}));
+  $('#sphereTest').innerHTML=['all','OT','NT'].map(t=>`<button class="chip" data-t="${t}" aria-pressed="${sphT===t}">${t==='all'?'Both':t}</button>`).join('');
+  $$('#sphereTest .chip').forEach(c=>c.addEventListener('click',()=>{sphT=c.dataset.t;renderSphere()}));
+  const list=N.filter(n=>n.s.includes(curSph)&&(sphT==='all'||n.T===sphT));
+  $('#sphereListTitle').textContent=`${list.length} ${s.name.toLowerCase()} restoration narratives`;
+  $('#sphereGrid').innerHTML=list.map(narrCard).join('');
+}
+renderSphere();
+
+/* ================= JESUS ================= */
+let curArc=2;
+$('#arc').innerHTML=ARC.map((a,i)=>`<button role="tab" aria-selected="false" data-i="${i}"><span class="n">${i+1}</span><b>${a.t}</b></button>`).join('');
+$$('#arc button').forEach(b=>b.addEventListener('click',()=>{curArc=+b.dataset.i;renderArc()}));
+function renderArc(){
+  $$('#arc button').forEach((b,i)=>b.setAttribute('aria-selected',i===curArc));
+  const a=ARC[curArc];
+  $('#arcDetail').innerHTML=`<div class="lens rel"><span class="eyebrow">In the relational gospel of union</span><h3>${a.t}</h3><p>${esc(a.u)}</p><span class="ref">${a.ref}</span></div>
+  <div class="stack"><blockquote class="scripture">${esc(a.v)}</blockquote><div class="lens leg"><span class="eyebrow">How the legal frame flattens it</span><p>${esc(a.l)}</p></div></div>`;
+}
+renderArc();
+$('#flips').innerHTML=FLIPS.map(f=>`<button class="flip" aria-pressed="false" aria-label="${esc(f.a)}: reveal fulfilment"><span class="in">
+  <span class="face"><span class="eyebrow">Shadow</span><b>${esc(f.a)}</b><span class="ref">${esc(f.ar)}</span><span class="hint">Tap to see the substance</span></span>
+  <span class="face back"><span class="eyebrow" style="color:var(--onaccent)">Fulfilled in Christ</span><b>${esc(f.b)}</b><span class="ref">${esc(f.br)}</span><span style="font-size:.95rem">${esc(f.bt)}</span></span></span></button>`).join('');
+$$('#flips .flip').forEach(f=>f.addEventListener('click',()=>f.setAttribute('aria-pressed',f.getAttribute('aria-pressed')!=='true')));
+
+/* ================= LENS ================= */
+let curLens=0, lensMode='both';
+$('#lensTopics').innerHTML=LENS.map((l,i)=>`<button class="chip" data-i="${i}" aria-pressed="false">${esc(l.k)}</button>`).join('');
+$$('#lensTopics .chip').forEach(c=>c.addEventListener('click',()=>{curLens=+c.dataset.i;renderLens()}));
+$$('.lens-ctl .seg button').forEach(b=>b.addEventListener('click',()=>{lensMode=b.dataset.mode;$$('.lens-ctl .seg button').forEach(x=>x.setAttribute('aria-pressed',x===b));renderLens()}));
+$('#lensPrev').addEventListener('click',()=>{curLens=(curLens-1+LENS.length)%LENS.length;renderLens()});
+$('#lensNext').addEventListener('click',()=>{curLens=(curLens+1)%LENS.length;renderLens()});
+function renderLens(){
+  const l=LENS[curLens];
+  $$('#lensTopics .chip').forEach((c,i)=>c.setAttribute('aria-pressed',i===curLens));
+  const cmp=$('#compare'); cmp.className='compare'+(lensMode==='l'?' only-l':lensMode==='r'?' only-r':'');
+  cmp.innerHTML=`<div class="lens leg"><span class="eyebrow"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v18M5 7h14M5 7l-3 7a4 4 0 0 0 6 0zM19 7l-3 7a4 4 0 0 0 6 0z"/></svg>Legal frame · ${esc(l.k)}</span><h3>${esc(l.L.h)}</h3><p>${esc(l.L.p)}</p><span class="pic">${esc(l.L.pic)}</span></div>
+  <div class="lens rel"><span class="eyebrow"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="9" cy="12" r="6"/><circle cx="15" cy="12" r="6"/></svg>Relational union · ${esc(l.k)}</span><h3>${esc(l.R.h)}</h3><p>${esc(l.R.p)}</p><span class="pic">${esc(l.R.pic)}</span></div>
+  <div class="twist" style="grid-column:1/-1"><svg viewBox="0 0 24 24" fill="none" style="stroke:var(--accent2)" stroke-width="1.8" aria-hidden="true"><path d="M4 12c0-4 3-7 8-7s8 3 8 7-3 7-8 7"/><path d="M8 15l-4-3 4-3"/></svg><div class="stack" style="gap:6px"><span class="eyebrow">Where the twist happens</span><p>${esc(l.tw)}</p><span class="ref">${esc(l.v)}</span></div></div>`;
+}
+renderLens();
+
+/* ================= BODY ================= */
+let curMember=-1;
+function drawBody(){
+  const svg=$('#bodySvg'),cx=260,cy=260,R=200; let links='',pulses='',nodes='';
+  const pts=MEMBERS.map((m,i)=>{const a=-Math.PI/2+i*2*Math.PI/MEMBERS.length;return[cx+R*Math.cos(a),cy+R*Math.sin(a)]});
+  pts.forEach(([x,y],i)=>{const[nx,ny]=pts[(i+1)%pts.length];links+=`<line class="link" x1="${x}" y1="${y}" x2="${nx}" y2="${ny}"/><line class="link" x1="${cx}" y1="${cy}" x2="${x}" y2="${y}"/>`;pulses+=`<path class="pulse" d="M${cx} ${cy}L${x} ${y}" style="animation-delay:${(i*0.27).toFixed(2)}s"/>`});
+  MEMBERS.forEach((m,i)=>{const[x,y]=pts[i];const words=m.n.split(' ');const ty=y+(y>cy+10?44:y<cy-10?-36:44);
+    nodes+=`<g class="node${i===curMember?' on':''}" data-i="${i}" tabindex="0" role="button" aria-label="${esc(m.n)}" style="--c:var(${SPH[m.s].var})"><circle cx="${x}" cy="${y}" r="${i===curMember?20:15}"/>${words.map((w,j)=>`<text x="${x}" y="${ty+j*14-(words.length-1)*7}">${esc(w)}</text>`).join('')}</g>`});
+  svg.innerHTML=`${links}${pulses}<g class="head"><circle cx="${cx}" cy="${cy}" r="52"/><text x="${cx}" y="${cy-4}">Christ</text><text x="${cx}" y="${cy+16}" style="font-size:12px;font-family:var(--f-ui)">the Head</text></g>${nodes}`;
+  $$('.node',svg).forEach(g=>{const go=()=>{curMember=+g.dataset.i;drawBody();showMember()};g.addEventListener('click',go);g.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();go()}})});
+}
+function showMember(){
+  const box=$('#bodyInfo');
+  if(curMember<0){box.innerHTML=`<span class="eyebrow">Ephesians 4:15-16</span><h3>Growing up into the Head</h3><p>"…from whom all the body, being fitted and knit together through that which every joint supplies… makes the body increase to the building up of itself in love." Every member is a channel of the same life flowing from Christ.</p><p class="muted">Select a member to see how restoration flows through them. Colours match the four spheres.</p><div class="legend">${Object.values(SPH).map(s=>`<span style="--c:var(${s.var})"><i></i>${s.name}</span>`).join('')}</div>`;return}
+  const m=MEMBERS[curMember],s=SPH[m.s];
+  box.innerHTML=`<span class="eyebrow" style="color:var(${s.var})">${s.name} sphere</span><h3>${esc(m.n)}</h3><p>${esc(m.d)}</p><span class="ref">${esc(m.ref)}</span>
+  <div class="row"><button class="chip" id="mPrev">← Previous</button><button class="chip" id="mNext">Next →</button><button class="chip" id="mAll">Overview</button></div>`;
+  $('#mPrev').onclick=()=>{curMember=(curMember-1+MEMBERS.length)%MEMBERS.length;drawBody();showMember()};
+  $('#mNext').onclick=()=>{curMember=(curMember+1)%MEMBERS.length;drawBody();showMember()};
+  $('#mAll').onclick=()=>{curMember=-1;drawBody();showMember()};
+}
+drawBody();showMember();
+$('#now').innerHTML=Object.entries(NOW).map(([k,arr])=>`<div class="facet ${SPH[k].cls}" style="--c:var(${SPH[k].var})"><span class="eyebrow">${SPH[k].name}</span><ul>${arr.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`).join('');
+
+/* ================= LIBRARY ================= */
+let libS=new Set(), libT='all', q='';
+$('#libSph').innerHTML=Object.values(SPH).map(s=>`<button class="chip ${s.cls}" data-k="${s.key}" aria-pressed="false"><span class="dot"></span>${s.name}</button>`).join('');
+$('#libTest').innerHTML=['all','OT','NT'].map(t=>`<button class="chip" data-t="${t}" aria-pressed="${t==='all'}">${t==='all'?'Both testaments':t}</button>`).join('');
+$$('#libSph .chip').forEach(c=>c.addEventListener('click',()=>{const k=c.dataset.k;libS.has(k)?libS.delete(k):libS.add(k);c.setAttribute('aria-pressed',libS.has(k));renderLib()}));
+$$('#libTest .chip').forEach(c=>c.addEventListener('click',()=>{libT=c.dataset.t;$$('#libTest .chip').forEach(x=>x.setAttribute('aria-pressed',x===c));renderLib()}));
+$('#q').addEventListener('input',e=>{q=e.target.value.trim().toLowerCase();renderLib()});
+function renderLib(){
+  const list=N.filter(n=>(libT==='all'||n.T===libT)&&(!libS.size||[...libS].some(k=>n.s.includes(k)))&&(!q||(n.t+' '+n.r+' '+n.b+' '+n.g+' '+n.x).toLowerCase().includes(q)));
+  $('#libCount').textContent=`${list.length} of ${N.length}`;
+  $('#libGrid').innerHTML=list.length?list.map(narrCard).join(''):`<div class="empty" style="grid-column:1/-1">No stories match "${esc(q)}". Try a book name like "Luke" or a theme like "family".</div>`;
+}
+renderLib();
+
+/* ================= JOURNEY ================= */
+let checks=store.get('checks',{});
+$('#practice').innerHTML=Object.entries(PRACT).map(([k,arr])=>`<fieldset class="${SPH[k].cls}" style="--c:var(${SPH[k].var})"><legend>${SPH[k].name}</legend>${arr.map(([t,r],i)=>`<label for="pr-${k}${i}"><input type="checkbox" id="pr-${k}${i}" data-id="${k}${i}" ${checks[k+i]?'checked':''}><span>${esc(t)}<small>${esc(r)}</small></span></label>`).join('')}</fieldset>`).join('');
+$$('#practice input').forEach(i=>i.addEventListener('change',()=>{checks[i.dataset.id]=i.checked;store.set('checks',checks);drawRing()}));
+$('#resetJourney').addEventListener('click',()=>{checks={};store.set('checks',checks);$$('#practice input').forEach(i=>i.checked=false);drawRing()});
+var drawRing=function(){
+  const svg=$('#ringSvg'); if(!svg)return; const cx=150,cy=150; let h='',total=0;
+  RINGS.forEach(([k,r0],idx)=>{
+    const r=118-idx*24, n=PRACT[k].length, done=PRACT[k].filter((_,i)=>checks[k+i]).length; total+=done;
+    const C=2*Math.PI*r, f=done/n;
+    h+=`<circle cx="${cx}" cy="${cy}" r="${r}" style="fill:none;stroke:var(--surface2)" stroke-width="14"/>`;
+    h+=`<circle cx="${cx}" cy="${cy}" r="${r}" stroke-width="14" stroke-linecap="round" stroke-dasharray="${(C*f).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 ${cx} ${cy})" style="fill:none;stroke:var(${SPH[k].var});transition:stroke-dasharray .6s"/>`;
+  });
+  h+=`<text x="${cx}" y="${cy+4}" text-anchor="middle" style="fill:var(--ink);font-family:var(--f-display);font-size:30px">${total}/16</text><text x="${cx}" y="${cy+24}" text-anchor="middle" style="fill:var(--muted);font-family:var(--f-ui);font-size:11px;letter-spacing:.1em">PRACTICES</text>`;
+  svg.innerHTML=h;
+  $('#ringNote').textContent= total===0?'Outer ring: earth. Inner ring: personal. Choose a practice to begin.': total===16?'"Behold, I am making all things new." Revelation 21:5':'"He who began a good work in you will complete it." Philippians 1:6';
+};
+drawRing();
+
+/* ================= SURPRISE MODAL ================= */
+function openModal(html){
+  const host=$('#modalHost'); host.innerHTML=`<div class="modal" role="dialog" aria-modal="true" aria-label="Restoration story">${html}</div>`;
+  const m=$('.modal',host); const close=()=>{host.innerHTML='';$('#surprise').focus()};
+  m.addEventListener('click',e=>{if(e.target===m||e.target.closest('[data-close]'))close()});
+  m.addEventListener('keydown',e=>{if(e.key==='Escape')close()});
+  $('[data-close]',m).focus();
+  $('[data-again]',m)?.addEventListener('click',surprise);
+}
+function surprise(){
+  const n=N[Math.floor(Math.random()*N.length)];
+  openModal(narrCard(n).replace('</article>',`<div class="row" style="justify-content:flex-end"><button class="chip" data-again>Another story</button><button class="btn" data-close>Close</button></div></article>`));
+}
+$('#surprise').addEventListener('click',surprise);
+
+/* ================= SETTINGS ================= */
+const drawer=$('#drawer'),scrim=$('#scrim');
+function openDrawer(o){drawer.classList.toggle('open',o);scrim.classList.toggle('open',o);drawer.setAttribute('aria-hidden',!o);$('#openSettings').setAttribute('aria-expanded',o);if(o)$('#closeSettings').focus();}
+$('#openSettings').addEventListener('click',()=>openDrawer(true));
+$('#closeSettings').addEventListener('click',()=>{openDrawer(false);$('#openSettings').focus()});
+scrim.addEventListener('click',()=>openDrawer(false));
+addEventListener('keydown',e=>{if(e.key==='Escape'&&drawer.classList.contains('open'))openDrawer(false)});
+function renderSwatches(){
+  const d=isDark()?'dark':'light';
+  $('#swatches').innerHTML=Object.entries(SCHEMES).map(([k,s])=>{const p=s[d];return `<button class="swatch" data-k="${k}" aria-pressed="${k===state.scheme}" style="background:${p.bg};color:${p.ink}"><span class="bars"><i style="background:${p.accent}"></i><i style="background:${p.accent2}"></i><i style="background:${p.sc}"></i><i style="background:${p.se}"></i></span><b>${s.name}</b><small style="color:${p.muted}">${s.ref}</small></button>`}).join('');
+  $$('#swatches .swatch').forEach(b=>b.addEventListener('click',()=>{state.scheme=b.dataset.k;store.set('scheme',state.scheme);applyScheme();renderSwatches()}));
+}
+$$('#modeSeg button').forEach(b=>b.addEventListener('click',()=>{state.mode=b.dataset.v;store.set('mode',state.mode);applyMode()}));
+function applySize(){root.style.setProperty('--fs',state.fs);$$('#sizeSeg button').forEach(b=>b.setAttribute('aria-pressed',+b.dataset.v===+state.fs))}
+$$('#sizeSeg button').forEach(b=>b.addEventListener('click',()=>{state.fs=+b.dataset.v;store.set('fs',state.fs);applySize()}));
+function bindSwitch(id,key,fn){const el=$(id);const sync=()=>el.setAttribute('aria-checked',!!state[key]);sync();el.addEventListener('click',()=>{state[key]=!state[key];store.set(key,state[key]);sync();fn&&fn()})}
+bindSwitch('#swAmbient','ambient',()=>{state.ambient?startAmbient():stopAmbient()});
+bindSwitch('#swTint','tint',()=>{if(!state.tint)setTint(null);else if(!$('#v-story').hidden)selectEpoch(curEpoch,false)});
+let cycleTimer=null;
+function syncCycle(){clearInterval(cycleTimer);if(state.cycle){const keys=Object.keys(SCHEMES);cycleTimer=setInterval(()=>{state.scheme=keys[(keys.indexOf(state.scheme)+1)%keys.length];applyScheme()},9000)}}
+bindSwitch('#swCycle','cycle',()=>{syncCycle();if(!state.cycle)store.set('scheme',state.scheme)});
+
+/* ================= GATHER CANVAS (hero) ================= */
+const gc=$('#gather'),gx=gc.getContext('2d'); let GW=0,GH=0,parts=[],gT=1,gTarget=1,gRAF=0,gSpin=0;
+function sizeGather(){const r=gc.getBoundingClientRect(),dpr=Math.min(2,devicePixelRatio||1);GW=r.width;GH=r.height;gc.width=GW*dpr;gc.height=GH*dpr;gx.setTransform(dpr,0,0,dpr,0,0);buildParts()}
+function rnd(a,b){return a+Math.random()*(b-a)}
+function buildParts(){
+  parts=[];const cx=GW/2,cy=GH/2,S=Math.min(GW,GH)/2*.92;
+  // cross at the centre
+  for(let i=0;i<46;i++){const v=i<30;const tt=v?(i/29-.5):((i-30)/15-.5);parts.push({k:'x',tx:v?cx:cx+tt*S*.32,ty:v?cy+tt*S*.5-S*.04:cy-S*.12,})}
+  const rings=[['sp',.38,40],['sf',.56,64],['sc',.74,90],['se',.92,120]];
+  rings.forEach(([k,rf,n])=>{for(let i=0;i<n;i++){const a=i/n*Math.PI*2;parts.push({k,ring:rf*S,a,tx:0,ty:0})}});
+  parts.forEach(p=>{p.sx=rnd(0,GW);p.sy=rnd(0,GH);p.ph=rnd(0,6.28);p.sz=p.k==='x'?2.6:rnd(1.4,2.6)});
+}
+const ease=t=>t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
+function colorOf(k){return k==='x'?cssVars.accent2||'#c90':cssVars[k]||'#888'}
+function drawGather(now){
+  gRAF=0; if($('#v-home').hidden)return; const time=(now||0)/1000;
+  if(Math.abs(gTarget-gT)>.002){gT+=(gTarget-gT)*.06;queueGather()} else gT=gTarget;
+  const e=ease(gT),cx=GW/2,cy=GH/2;
+  if(e>.98&&!reduce){gSpin+=.0016;queueGather()}
+  gx.clearRect(0,0,GW,GH);
+  // faint guide rings
+  if(e>.5){gx.globalAlpha=(e-.5)*.5;['sp','sf','sc','se'].forEach((k,i)=>{gx.beginPath();gx.strokeStyle=colorOf(k);gx.lineWidth=1;gx.arc(cx,cy,Math.min(GW,GH)/2*.92*[.38,.56,.74,.92][i],0,Math.PI*2);gx.stroke()});gx.globalAlpha=1}
+  for(const p of parts){
+    let tx=p.tx,ty=p.ty;
+    if(p.ring){const dir=(p.k==='sf'||p.k==='se')?-1:1;const a=p.a+gSpin*dir;tx=cx+p.ring*Math.cos(a);ty=cy+p.ring*Math.sin(a)}
+    const j=(1-e)*6;const x=p.sx+(tx-p.sx)*e+Math.sin(time*1.3+p.ph)*j,y=p.sy+(ty-p.sy)*e+Math.cos(time*1.1+p.ph)*j;
+    gx.beginPath();gx.fillStyle=colorOf(p.k);gx.globalAlpha=.35+.65*e;gx.arc(x,y,p.sz*(p.k==='x'?1+.4*e:1),0,Math.PI*2);gx.fill();
+  }
+  gx.globalAlpha=1;
+  if(e<.98&&!reduce)queueGather();
+}
+function queueGather(){if(!gRAF)gRAF=requestAnimationFrame(drawGather)}
+$('#gatherRange').addEventListener('input',e=>{gTarget=e.target.value/100;const v=+e.target.value;$('#gatherLbl').textContent=v<25?'Scattered':v<60?'Being gathered':v<95?'Drawing near':'Restored';queueGather()});
+let started=false;
+function startGather(){sizeGather(); if(!started&&!reduce){started=true;gT=0;gTarget=1} queueGather()}
+addEventListener('resize',()=>{if(!$('#v-home').hidden){sizeGather();queueGather()}});
+
+/* ================= AMBIENT ================= */
+const ac=$('#ambient'),ax=ac.getContext('2d');let motes=[],aRAF=0;
+function sizeAmb(){const dpr=Math.min(2,devicePixelRatio||1);ac.width=innerWidth*dpr;ac.height=innerHeight*dpr;ax.setTransform(dpr,0,0,dpr,0,0);motes=Array.from({length:Math.round(innerWidth/22)},()=>({x:rnd(0,innerWidth),y:rnd(0,innerHeight),r:rnd(.6,2.2),v:rnd(.15,.5),ph:rnd(0,6.28)}))}
+function ambLoop(t){ax.clearRect(0,0,innerWidth,innerHeight);const c=cssVars.accent2||'#c90';for(const m of motes){m.y-=m.v;m.x+=Math.sin(t/2000+m.ph)*.25;if(m.y<-5){m.y=innerHeight+5;m.x=rnd(0,innerWidth)}ax.globalAlpha=.25+.25*Math.sin(t/900+m.ph);ax.fillStyle=c;ax.beginPath();ax.arc(m.x,m.y,m.r,0,6.28);ax.fill()}aRAF=requestAnimationFrame(ambLoop)}
+function startAmbient(){if(reduce)return;stopAmbient();sizeAmb();ac.hidden=false;aRAF=requestAnimationFrame(ambLoop)}
+function stopAmbient(){cancelAnimationFrame(aRAF);ax.clearRect(0,0,innerWidth,innerHeight);ac.hidden=true}
+addEventListener('resize',()=>{if(state.ambient&&!reduce)sizeAmb()});
+
+/* ================= BOOT ================= */
+applySize(); applyMode(); syncCycle();
+state.ambient?startAmbient():stopAmbient();
+route(); fillAddr();
+})();
+</script>
+</body>
+</html>
