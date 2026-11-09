@@ -121,7 +121,7 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 .legend{display:flex;flex-wrap:wrap;gap:12px;font-family:var(--f-ui);font-size:.85rem;color:var(--muted)}
 .legend span{display:inline-flex;align-items:center;gap:6px}
 .legend i{width:10px;height:10px;border-radius:50%;background:var(--c)}
-.paths{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.paths{display:grid;grid-template-columns:repeat(5,1fr);gap:14px}
 .path{display:flex;flex-direction:column;gap:8px;padding:18px;border-radius:var(--r);border:1px solid var(--line);background:var(--surface);text-decoration:none;color:var(--ink);transition:transform .2s, border-color .2s, box-shadow .2s}
 .path:hover{transform:translateY(-3px);border-color:var(--accent);box-shadow:0 10px 30px -18px var(--accent)}
 .path .n{font-family:var(--f-ref);font-size:.75rem;color:var(--accent2)}
@@ -433,6 +433,85 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between}
 .sph-rip{transform-box:fill-box;transform-origin:center;animation:sphr 3.9s ease-out infinite;pointer-events:none;stroke-width:2}
 @keyframes sphr{from{transform:scale(.15);opacity:.9}to{transform:scale(1);opacity:0}}
 @media (prefers-reduced-motion: reduce){.sph-rip{opacity:0}}
+/* ===== Hard texts ===== */
+.pulse-soft{transform-box:fill-box;transform-origin:center;animation:psoft 2.6s ease-out infinite}
+@keyframes psoft{from{transform:scale(1);opacity:.7}to{transform:scale(1.4);opacity:0}}
+.method{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;position:relative}
+.method::before{content:"";position:absolute;left:8%;right:8%;top:30px;height:2px;background:repeating-linear-gradient(90deg,var(--accent2) 0 8px,transparent 8px 18px);background-size:36px 2px;animation:march 1.2s linear infinite;z-index:0}
+@keyframes march{to{background-position:36px 0}}
+.m-step{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px;font-family:var(--f-ui);font-size:.92rem;color:var(--muted)}
+.m-step b{color:var(--ink);font-family:var(--f-display);font-weight:400;font-size:1.05rem}
+.m-ico{width:60px;height:60px;border-radius:50%;display:grid;place-items:center;background:var(--surface);border:2px solid var(--accent);animation:bob 3s ease-in-out infinite}
+.m-step:nth-child(2) .m-ico{animation-delay:.4s}.m-step:nth-child(3) .m-ico{animation-delay:.8s}.m-step:nth-child(4) .m-ico{animation-delay:1.2s}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+.m-ico svg{width:28px;height:28px;fill:none;stroke:var(--accent);stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.alch{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.6fr);gap:24px;align-items:center}
+.alch-word{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center}
+.alch-word .scr{font-size:clamp(2.6rem,7vw,4.4rem);line-height:1.1;color:var(--accent);font-family:var(--f-body),"SBL Hebrew","Ezra SIL","Times New Roman",serif}
+.alch-word .tr{font-family:var(--f-ref);font-size:1rem;color:var(--muted)}
+.alch-mean{display:grid;grid-template-columns:1fr auto 1fr;gap:14px;align-items:center}
+.alch-mean > div{display:flex;flex-direction:column;gap:6px;min-width:0}
+.alch-mean b{font-family:var(--f-display);font-weight:400;font-size:1.4rem;line-height:1.25}
+.alch-mean .heard b{color:var(--legal);background-image:linear-gradient(var(--legal),var(--legal));background-repeat:no-repeat;background-position:0 58%;background-size:0 2px}
+.alch-mean .rooted b{color:var(--accent)}
+.alch-arrow{width:60px;height:24px}
+.alch-arrow .flowdash{stroke:var(--accent2);stroke-width:2.5}
+.alch.swap .scr{animation:unblur .9s ease both}
+.alch.swap .heard b{animation:strike 1s .5s ease forwards}
+.alch.swap .rooted b{animation:pop .7s 1.2s cubic-bezier(.2,.8,.2,1) both}
+@keyframes unblur{from{filter:blur(10px);opacity:.0001;transform:scale(.92)}to{filter:none;opacity:1;transform:none}}
+@keyframes strike{to{background-size:100% 2px}}
+.alch-ctl{grid-column:1/-1;justify-content:center}
+.alch-dots{display:flex;gap:6px}
+.alch-dots button{width:9px;height:9px;border-radius:50%;border:0;padding:0;background:var(--line);cursor:pointer}
+.alch-dots button[aria-current="true"]{background:var(--accent);transform:scale(1.3)}
+.arcj{display:grid;grid-template-columns:minmax(0,500px) 1fr;gap:26px;align-items:center}
+.arcj > *{min-width:0}
+#arcSvg{width:100%;max-width:500px;height:auto;display:block;margin:0 auto}
+#arcSvg .an circle{fill:var(--surface);stroke:var(--c);stroke-width:3;transition:fill .4s, r .4s}
+#arcSvg .an.on circle{fill:var(--c)}
+#arcSvg .an text{font-family:var(--f-ui);text-anchor:middle;fill:var(--ink)}
+#arcSvg .an.on text.n{fill:var(--onaccent)}
+.arc-steps{display:flex;flex-direction:column;gap:10px}
+.arc-step{display:grid;grid-template-columns:34px 1fr;gap:12px;align-items:start;padding:12px 14px;border-radius:var(--r);border:1px solid var(--line);background:var(--surface);transition:border-color .3s, background .3s, transform .3s}
+.arc-step i{font-style:normal;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-family:var(--f-ref);font-size:.8rem;border:2px solid var(--c);color:var(--ink)}
+.arc-step.on{border-color:var(--c);background:color-mix(in srgb,var(--c) 10%,var(--surface));transform:translateX(6px)}
+.arc-step.on i{background:var(--c);color:var(--onaccent)}
+.arc-step small{display:block;font-family:var(--f-ui);font-size:.75rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted)}
+.lexicon{display:flex;flex-wrap:wrap;gap:8px}
+.lex{display:inline-flex;align-items:baseline;gap:8px;padding:7px 12px;border-radius:999px;border:1px solid var(--line);background:var(--surface);cursor:pointer;font-family:var(--f-ui);font-size:.88rem;transition:transform .15s}
+.lex:hover{transform:translateY(-2px)}
+.lex .s{font-size:1.1rem;color:var(--accent)}
+.lex[aria-pressed="true"]{background:var(--accent);color:var(--onaccent);border-color:var(--accent)}
+.lex[aria-pressed="true"] .s{color:var(--onaccent)}
+.hgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
+.hcard{display:flex;flex-direction:column;gap:12px;padding:18px;border-radius:var(--r);background:var(--surface);border:1px solid var(--line);min-width:0;transition:border-color .3s, box-shadow .3s}
+.hcard.open{border-color:var(--accent);box-shadow:0 18px 40px -28px var(--accent)}
+.hcard .top{display:flex;justify-content:space-between;gap:10px;align-items:start}
+.hcard .q{font-style:italic;font-size:1.08rem;padding-left:12px;border-left:3px solid var(--legal)}
+.hcard .legal{font-family:var(--f-ui);font-size:.95rem;color:var(--ink)}
+.hcard .legal span{background-image:linear-gradient(var(--legal),var(--legal));background-repeat:no-repeat;background-position:0 58%;background-size:0 1.5px;transition:background-size .9s ease, color .6s}
+.hcard.open .legal span{background-size:100% 1.5px;color:var(--muted)}
+.hcard .more{display:grid;grid-template-rows:0fr;transition:grid-template-rows .6s cubic-bezier(.2,.8,.2,1)}
+.hcard.open .more{grid-template-rows:1fr}
+.hcard .more > div{overflow:hidden;display:flex;flex-direction:column;gap:12px}
+.roots{display:flex;flex-wrap:wrap;gap:8px}
+.root{display:flex;flex-direction:column;gap:2px;padding:8px 12px;border-radius:10px;border:1px solid color-mix(in srgb,var(--accent2) 50%,transparent);background:color-mix(in srgb,var(--accent2) 8%,var(--surface));max-width:100%}
+.root .s{font-size:1.35rem;color:var(--accent2);line-height:1.2}
+.root .tl{font-family:var(--f-ref);font-size:.76rem;color:var(--ink)}
+.root .m{font-family:var(--f-ui);font-size:.85rem;color:var(--muted)}
+.hcard.open .root{animation:pop .5s both;animation-delay:calc(var(--i) * .12s + .2s)}
+.hcard .blk{display:flex;flex-direction:column;gap:4px}
+.hcard .blk.rest{padding:12px 14px;border-radius:8px;background:color-mix(in srgb,var(--accent) 10%,var(--surface));border-left:3px solid var(--accent)}
+.hcard .blk.rest .eyebrow{color:var(--accent)}
+.hcard .blk .ref{margin-top:2px}
+.honest{padding:10px 12px;border-radius:8px;border:1px dashed var(--legal);font-family:var(--f-ui);font-size:.9rem;color:var(--muted)}
+.honest b{color:var(--ink)}
+.hcard .act{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.hcard .act .btn{padding:7px 14px;font-size:.88rem}
+@media (max-width: 980px){.method{grid-template-columns:repeat(2,1fr)}.method::before{display:none}}
+@media (max-width: 760px){.alch,.arcj,.hgrid{grid-template-columns:1fr}.alch-mean{grid-template-columns:1fr}.alch-arrow{transform:rotate(90deg);justify-self:center}}
+@media (prefers-reduced-motion: reduce){.alch-mean .heard b{background-size:100% 2px}}
 @media (max-width: 980px){
   .paths{grid-template-columns:repeat(2,1fr)}
   .grid{grid-template-columns:repeat(2,1fr)}
@@ -473,6 +552,7 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between}
       <a href="#spheres">Four Spheres</a>
       <a href="#jesus">Jesus</a>
       <a href="#lens">Two Lenses</a>
+      <a href="#hard">Hard Texts</a>
       <a href="#body">The Body</a>
       <a href="#library">Narratives</a>
       <a href="#today">Life Today</a>
@@ -538,13 +618,14 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between}
     </section>
 
     <section class="sec">
-      <div class="sec-head"><span class="eyebrow">Nine paths through the material</span><h2>Choose where to begin</h2></div>
+      <div class="sec-head"><span class="eyebrow">Ten paths through the material</span><h2>Choose where to begin</h2></div>
       <div class="paths">
         <a class="path" href="#story"><span class="n">Genesis → Revelation</span><h3>The Story</h3><p>Thirteen movements of the one restoration arc.</p></a>
         <a class="path" href="#stoop"><span class="n">Philippians 2:7</span><h3>God Stoops</h3><p>How God accommodates to every culture He enters.</p></a>
         <a class="path" href="#spheres"><span class="n">Colossians 1:20</span><h3>Four Spheres</h3><p>Personal, family, culture, earth: explore each ring.</p></a>
         <a class="path" href="#jesus"><span class="n">Ephesians 1:10</span><h3>Jesus, the Pinnacle</h3><p>Every thread of restoration gathered in one Person.</p></a>
         <a class="path" href="#lens"><span class="n">2 Corinthians 5:19</span><h3>Two Lenses</h3><p>The relational gospel of union beside the legal frame.</p></a>
+        <a class="path" href="#hard"><span class="n">Lamentations 3:31-33</span><h3>Hard Texts</h3><p>Wrath, hell and judgment read through root words and culture.</p></a>
         <a class="path" href="#body"><span class="n">1 Corinthians 12</span><h3>The Body</h3><p>How restoration continues through Christ's people now.</p></a>
         <a class="path" href="#library"><span class="n" id="libCountHome">Narratives</span><h3>Narrative Library</h3><p>Search every restoration story by sphere and testament.</p></a>
         <a class="path" href="#today"><span class="n">2 Corinthians 5:17</span><h3>Life Today</h3><p>A restored day, real situations, and the ripple of one life.</p></a>
@@ -651,6 +732,7 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between}
         <span class="eyebrow">The relational gospel of union</span>
         <h2>Same Bible, two lenses</h2>
         <p class="prose">Many of us received the gospel mainly as a courtroom drama: a broken law, a guilty defendant and a sentence that must be paid. The relational reading starts somewhere older: the Father, Son and Spirit sharing love, and a God who in Christ comes to bring us into that life. Legal words like justification are biblical. The question is which frame holds the other. When law becomes the frame, relationship shrinks to a transaction.</p>
+        <div class="row"><a class="btn ghost" href="#hard">Read the hard texts reconciled</a></div>
       </div>
       <div class="lens-ctl">
         <div class="seg" role="group" aria-label="Show">
@@ -698,6 +780,66 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between}
           <button class="chip" id="quizReset">Start again</button>
         </div>
       </div>
+    </section>
+  </div>
+</div>
+
+<!-- HARD TEXTS -->
+<div class="view" id="v-hard" data-view="hard" hidden>
+  <div class="wrap">
+    <section class="sec">
+      <div class="sec-head">
+        <span class="eyebrow">Reconciling the hard texts</span>
+        <h2>Every harsh text, read toward restoration</h2>
+        <p class="prose">Read through a courtroom lens, many passages sound like a God who loves punishing. Read in their own language and culture, and followed to where the story goes next, they keep bending toward healing. Words like <i>kolasis</i> (pruning), <i>apollumi</i> (lost), <i>haphakh</i> (overturned, transformed) and <i>qorban</i> (drawing near) change how a verse sounds. Where a text stays genuinely hard, this page says so.</p>
+      </div>
+      <div class="method" id="method">
+        <div class="m-step"><span class="m-ico"><svg viewBox="0 0 24 24"><path d="M4 19V5h9l3 3v11z"/><path d="M8 10h6M8 14h6"/></svg></span><b>1 · The root word</b><span>What does the Hebrew or Greek actually mean?</span></div>
+        <div class="m-step"><span class="m-ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M4 12h16M12 4c3 3 3 13 0 16M12 4c-3 3-3 13 0 16"/></svg></span><b>2 · The culture</b><span>What would the first hearers have pictured?</span></div>
+        <div class="m-step"><span class="m-ico"><svg viewBox="0 0 24 24"><path d="M4 18c4 0 4-12 8-12s4 12 8 12"/><path d="M17 15l3 3-3 3"/></svg></span><b>3 · Where the story goes</b><span>What happens in the next chapter, or at the end?</span></div>
+        <div class="m-step"><span class="m-ico"><svg viewBox="0 0 24 24"><path d="M12 4v16M7 9h10"/></svg></span><b>4 · Through Jesus</b><span>How does the Son, the exact image of the Father, reveal it?</span></div>
+      </div>
+    </section>
+
+    <section class="sec">
+      <div class="sec-head"><span class="eyebrow">Word lens</span><h3>Heard as punishment, rooted in restoration</h3></div>
+      <div class="panel alch" id="alch" aria-live="polite">
+        <div class="alch-word"><span class="scr" id="alScr"></span><span class="tr" id="alTr"></span><span class="tag" id="alLang"></span></div>
+        <div class="alch-mean">
+          <div class="heard"><span class="eyebrow">Often heard as</span><b id="alHeard"></b></div>
+          <svg class="alch-arrow" viewBox="0 0 60 24" aria-hidden="true"><path class="flowdash" d="M2 12h46"/><path d="M42 5l10 7-10 7" style="fill:none;stroke:var(--accent2)" stroke-width="2.5" stroke-linecap="round"/></svg>
+          <div class="rooted"><span class="eyebrow">Root sense</span><b id="alRoot"></b></div>
+        </div>
+        <div class="row alch-ctl"><button class="chip" id="alPrev" aria-label="Previous word">←</button><div class="alch-dots" id="alDots"></div><button class="chip" id="alNext" aria-label="Next word">→</button><button class="chip" id="alPause">Pause</button></div>
+      </div>
+    </section>
+
+    <section class="sec">
+      <div class="sec-head"><span class="eyebrow">Lamentations 3:31-33 · a pattern across Scripture</span><h3>The arc of every judgment</h3><p class="muted prose">“The Lord will not cast off forever. For though he causes grief, yet he will have compassion according to the multitude of his loving kindnesses.” Judgment in Scripture is rarely the last word. Pick a story to watch it travel the cycle.</p></div>
+      <div class="arcj">
+        <svg id="arcSvg" viewBox="0 0 560 560" role="img" aria-label="Cycle diagram: turning away, given over, crying out and return, restored, held by steadfast love"></svg>
+        <div class="stack">
+          <div class="row" id="arcPick"></div>
+          <div id="arcSteps" class="arc-steps" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="sec">
+      <div class="sec-head"><span class="eyebrow">Lexicon</span><h3>Root words in these passages</h3><p class="muted">Tap a word to show only the passages that use it. Tap it again to clear.</p></div>
+      <div class="lexicon" id="lexicon"></div>
+    </section>
+
+    <section class="sec">
+      <div class="sec-head"><span class="eyebrow">The passages</span><h3>Hard texts, reconciled</h3></div>
+      <div class="lib-ctl">
+        <label class="search" for="hq"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="hq" type="search" placeholder="Search: flood, wrath, Gehenna, Jonah, Romans…" autocomplete="off"></label>
+        <button class="chip" id="hAll" aria-pressed="false">Reconcile all</button>
+        <button class="chip" id="hHard" aria-pressed="false">Only the hardest</button>
+        <span class="count" id="hCount"></span>
+      </div>
+      <div class="row" id="hCats" style="margin-bottom:16px"></div>
+      <div class="hgrid" id="hGrid"></div>
     </section>
   </div>
 </div>
@@ -1211,8 +1353,101 @@ const SCENES=[
 function scene(i){const h=EPOCHS[i].hue;return `<svg viewBox="0 0 1000 240" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Illustration: ${esc(EPOCHS[i].name)}"><defs><linearGradient id="sky${i}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:color-mix(in srgb,hsl(${h} 70% 55%) 38%,var(--surface))"/><stop offset="1" style="stop-color:var(--surface)"/></linearGradient></defs><rect width="1000" height="240" style="fill:url(#sky${i})"/><style>.gnd{fill:color-mix(in srgb,hsl(${h} 35% 40%) 30%,var(--surface2))}</style>${SCENES[i]()}</svg>`}
 
 
+/* ================= HARD TEXTS DATA ================= */
+/* c category · t title · r reference · q the harsh-sounding text · L how the legal frame reads it
+   w root words [script, transliteration, H/G, meaning] · cu culture and context · x the restorative reading
+   v where the story goes · h honest note (optional) */
+const HCAT={words:'Words of wrath',fire:'Hell, fire & the end',ot:'Hard Old Testament stories',law:'Law & sacrifice',cross:'The cross',nt:'Hard New Testament moments'};
+const HT=[
+// ---------- WORDS
+{c:'words',t:'The wrath of God',r:'Romans 1:18-32',q:'“The wrath of God is revealed from heaven against all ungodliness.”',L:'God’s rage builds up until He must punish; His anger has to be satisfied before He can love.',w:[['אַף','ʾaph','H','nose, nostrils; flared nostrils as the picture of anger'],['ὀργή','orgē','G','settled anger; strong opposition'],['παραδίδωμι','paradidōmi','G','to hand over, give over']],cu:'Hebrew pictures anger as a flaring nose, and God is “slow to anger”, literally “long of nostrils” (ʾerekh ʾappayim, Exodus 34:6). In Romans 1 Paul defines the wrath three times as God “giving them over” to what they chose (1:24, 26, 28).',x:'Wrath is love’s resistance to what destroys the beloved. Often it takes the form of letting us feel the weight of our own path so that we come home. Paul’s whole argument lands on mercy: “God has shut up all to disobedience, that he might have mercy on all” (Romans 11:32).',v:'“His anger is but for a moment. His favour is for a lifetime.” Psalm 30:5'},
+{c:'words',t:'A jealous God',r:'Exodus 34:14',q:'“The LORD, whose name is Jealous, is a jealous God.”',L:'An insecure, controlling deity who punishes anyone who looks elsewhere.',w:[['קַנָּא','qannaʾ','H','zealous, ardent; the protective passion of a spouse']],cu:'The Sinai covenant is framed as a marriage (Jeremiah 2:2; Hosea 2). In that world, a husband’s zeal for his bride was a sign of faithful love, not insecurity. The idols of Canaan demanded children in fire (Deuteronomy 12:31).',x:'God is jealous for us, not of us. He refuses to share His bride with gods that devour her. His jealousy is the fierce side of covenant love.',v:'“I am jealous for Zion with great jealousy.” Zechariah 8:2'},
+{c:'words',t:'“Esau I hated”',r:'Malachi 1:2-3; Romans 9:13',q:'“Yet I loved Jacob; but Esau I hated.”',L:'God arbitrarily chose to reject Esau and his people forever.',w:[['שָׂנֵא','śaneʾ','H','to hate; in comparisons, to love less or choose second']],cu:'This is a Semitic idiom of preference. Leah was “hated” in Genesis 29:30-31, which the same passage explains as Jacob loving Rachel “more than Leah”. Jesus’ “hate father and mother” (Luke 14:26) means “love more than me” (Matthew 10:37). The subject is which nation carries the promise, not anyone’s eternal fate.',x:'Esau is blessed and says “I have enough” (Genesis 33:9). Edom receives a future in Amos 9:12, which James quotes as a promise for “all the Gentiles” (Acts 15:17).',v:'“Esau ran to meet him, embraced him, fell on his neck, kissed him.” Genesis 33:4'},
+{c:'words',t:'The fear of the LORD',r:'Proverbs 9:10',q:'“The fear of the LORD is the beginning of wisdom.”',L:'Terror of punishment is the foundation of faith; keep God happy or suffer.',w:[['יִרְאָה','yirʾah','H','fear, awe, reverence; trembling wonder'],['φόβος','phobos','G','fear; reverence']],cu:'Yirʾah is the awe of a person before majesty, and Scripture pairs it with delight: the Messiah’s “delight shall be in the fear of the LORD” (Isaiah 11:3). It can be taught like a skill (Psalm 34:11).',x:'Awe makes love deep. Terror is what love casts out (1 John 4:18). Strikingly, forgiveness is what produces this fear.',v:'“There is forgiveness with you, therefore you are feared.” Psalm 130:4'},
+{c:'words',t:'“Vengeance is mine”',r:'Deuteronomy 32:35; Romans 12:19',q:'“Vengeance is mine, and recompense.”',L:'God is the ultimate avenger who will make His enemies pay.',w:[['נָקָם','naqam','H','vengeance; vindication, setting right the wronged']],cu:'In the ancient Near East, families carried out blood revenge for generations. Claiming vengeance for God takes it out of human hands and ends the cycle. The very next verse reads: “For the LORD will vindicate his people, and have compassion on his servants” (32:36).',x:'God’s vengeance means rescue for the victims: “Your God will come with vengeance… he will come and save you” (Isaiah 35:4). That is why Paul’s conclusion is “overcome evil with good” (Romans 12:21).',v:'“If your enemy is hungry, feed him.” Romans 12:20'},
+{c:'words',t:'Under a curse',r:'Deuteronomy 28; Galatians 3:10',q:'“Cursed shall you be in the city, and cursed in the field.”',L:'God hurls curses on those who fail to keep every rule.',w:[['אָרַר','ʾarar','H','to curse; to put under a ban'],['κατάρα','katara','G','curse']],cu:'Ancient covenant treaties ended with blessings and curses: the natural outcomes of keeping or breaking the relationship. Deuteronomy 28 is followed immediately by chapter 30, where God promises to bring them back and “circumcise your heart” after the curses fall.',x:'The curses describe what life outside the relationship does to people. Then God takes the curse Himself: “Christ redeemed us from the curse of the law, having become a curse for us” (Galatians 3:13).',v:'“There will be no curse any more.” Revelation 22:3'},
+{c:'words',t:'Perish and destroy',r:'John 3:16; Matthew 10:28',q:'“Rather fear him who is able to destroy both soul and body in Gehenna.”',L:'The unsaved will be annihilated or burned forever; “perish” is final.',w:[['ἀπόλλυμι','apollumi','G','to destroy, perish; to be lost']],cu:'It is the same verb Luke uses for the lost sheep, the lost coin and the son who “was lost” (Luke 15:4, 8, 24), and in “the Son of Man came to seek and to save that which was lost” (Luke 19:10).',x:'The perishing are exactly the people the Shepherd goes after. “Lost” describes a condition that the Seeker does not leave alone.',v:'“Not wishing that any should perish, but that all should come to repentance.” 2 Peter 3:9'},
+{c:'words',t:'Judgment day',r:'Psalm 96:13; John 5:22',q:'“He comes to judge the earth.”',L:'A cosmic courtroom where sinners are sentenced; something to dread.',w:[['שָׁפַט','shaphat','H','to judge, govern, vindicate, deliver'],['κρίσις','krisis','G','separation, decision, verdict']],cu:'Israel’s “judges” (shophetim) were deliverers: “The LORD raised up judges, who saved them” (Judges 2:16). For the poor and the wronged, judgment meant rescue and the righting of wrongs.',x:'That is why creation sings at the news of judgment: “Let the fields exult… for he comes to judge the earth” (Psalm 96:12-13). All judgment is given to the Son (John 5:22), who came “not to judge the world, but to save the world” (John 12:47).',v:'“He will judge the world with righteousness, and the peoples with his truth.” Psalm 96:13'},
+{c:'words',t:'“I create evil”',r:'Isaiah 45:7',q:'“I make peace, and create evil. I am the LORD, who does all these things.” (KJV)',L:'God is the author of moral evil and cruelty.',w:[['רַע','raʿ','H','bad; calamity, disaster (here the opposite of shalom)']],cu:'The verse contrasts shalom with raʿ, so it means calamity. It was spoken to Cyrus of Persia, whose world believed in rival gods of light and darkness. God says there is no rival; He rules history, even its upheavals.',x:'This is sovereignty over disaster, not delight in it. Its aim comes a few verses later: “Look to me, and be saved, all the ends of the earth” (45:22).',v:'“Look to me, and be saved, all the ends of the earth.” Isaiah 45:22'},
+// ---------- FIRE & END
+{c:'fire',t:'Four words translated “hell”',r:'Psalm 16:10; Luke 16:23; Mark 9:43; 2 Peter 2:4',q:'“The wicked shall be turned into hell.” (Psalm 9:17, KJV)',L:'One place of eternal fiery torment, mentioned everywhere.',w:[['שְׁאוֹל','sheʾol','H','the grave; the realm of all the dead'],['ᾅδης','hadēs','G','Greek name for the realm of the dead'],['γέεννα','geenna','G','the Valley of Hinnom outside Jerusalem'],['ταρταρόω','tartaroō','G','to confine in Tartarus, the Greek prison of the Titans']],cu:'English “hell” covers four different ideas. Sheol is where everyone goes, righteous Jacob included (Genesis 37:35). Hades is its Greek equivalent. Gehenna is a real valley. Tartarus appears once, for fallen angels (2 Peter 2:4), borrowing a Greek myth.',x:'None of these is outside God’s reach. “If I make my bed in Sheol, behold, you are there” (Psalm 139:8). The risen Christ holds “the keys of Death and of Hades” (Revelation 1:18).',v:'“You will not leave my soul in Sheol.” Psalm 16:10'},
+{c:'fire',t:'Gehenna',r:'Mark 9:43-47; Matthew 5:22',q:'“It is better for you to enter into life maimed, rather than having your two hands to go into Gehenna.”',L:'A literal underground torture chamber that God built for unbelievers.',w:[['גֵּי הִנֹּם','gei Hinnom','H','Valley of Hinnom, south-west of Jerusalem']],cu:'A real valley where kings of Judah burned their children to Molech (2 Kings 23:10; Jeremiah 7:31). Jeremiah renamed it “the valley of slaughter”, where bodies would lie after Babylon’s siege (7:32; 19:6). Jesus’ hearers knew it as the symbol of a nation destroying itself. Josephus later describes bodies thrown into the valleys around Jerusalem in AD 70.',x:'Jesus uses it as a real warning about where violence and idolatry lead. And Jeremiah promised that this very valley “of the dead bodies and of the ashes… shall be holy to the LORD” (Jeremiah 31:40).',v:'“The whole valley of the dead bodies and of the ashes… shall be holy to the LORD.” Jeremiah 31:40',h:'These are serious warnings of real ruin. The relational reading takes them seriously; it questions only whether they describe a Father’s torture chamber.'},
+{c:'fire',t:'The worm that does not die',r:'Mark 9:48; Isaiah 66:24',q:'“Where their worm does not die, and the fire is not quenched.”',L:'Endless conscious torment with no possibility of change.',w:[['ἄσβεστος','asbestos','G','unquenchable; that cannot be put out']],cu:'Jesus quotes the last verse of Isaiah, which pictures corpses outside Jerusalem. “Unquenchable” means no one can put it out until it finishes its work: Jeremiah promised “unquenchable” fire on Jerusalem’s gates (Jeremiah 17:27), and those gates are not burning today. Just before, Isaiah 66:23 says “all flesh will come to worship”.',x:'Fire that we cannot stop is God’s fire, and God’s fire refines. The very next verse says: “For everyone will be salted with fire” (Mark 9:49).',v:'“For everyone will be salted with fire.” Mark 9:49'},
+{c:'fire',t:'Eternal punishment',r:'Matthew 25:31-46',q:'“These will go away into eternal punishment, but the righteous into eternal life.”',L:'Unending retribution: suffering for its own sake, forever.',w:[['κόλασις','kolasis','G','correction; from kolazō, to prune or cut back'],['αἰώνιος','aiōnios','G','of the age; belonging to the age to come']],cu:'Aristotle distinguished kolasis, punishment “for the sake of the one who suffers”, from timōria, inflicted to satisfy the one who punishes (Rhetoric 1.10). Aiōnios describes the quality of the coming age; “eternal life” is defined as knowing God (John 17:3), not only as length.',x:'The age to come brings correction for those who would not love “the least of these”. The fire is “prepared for the devil and his angels” (25:41), not for people. The goal is the putting right of what was wrong.',v:'“Inasmuch as you did it to one of the least of these my brothers, you did it to me.” Matthew 25:40',h:'Scholars disagree on whether kolasis kept its corrective sense in the first century and on how long aiōnios lasts. The word study opens the question rather than closing it.'},
+{c:'fire',t:'Fire, brimstone and torment',r:'Revelation 14:10-11',q:'“He will be tormented with fire and sulphur in the presence of the holy angels, and in the presence of the Lamb.”',L:'God watching unbelievers burn forever for His glory.',w:[['θεῖον','theion','G','sulphur, brimstone; used in purification rites'],['βασανίζω','basanizō','G','to test with a touchstone (basanos); later, to torment']],cu:'A basanos was the touchstone that tested gold. Sulphur was burned to purify and disinfect: Odysseus purifies his hall with it after the battle (Odyssey 22). Notice where this happens: “in the presence of the Lamb”, the slain One.',x:'Fire, sulphur and touchstone are images of testing and purifying in the presence of self-giving love. Revelation then shows gates that are never shut and leaves “for the healing of the nations” (21:25; 22:2).',v:'“Its gates will never be shut by day.” Revelation 21:25',h:'This is still a picture of real anguish. The question is whether its goal is destruction for its own sake or purification.'},
+{c:'fire',t:'The lake of fire',r:'Revelation 20:10-15; 21:8',q:'“If anyone was not found written in the book of life, he was cast into the lake of fire.”',L:'The final dumping ground of the damned; the end of God’s patience.',w:[['λίμνη τοῦ πυρός','limnē tou pyros','G','lake of fire'],['θάνατος','thanatos','G','death']],cu:'Revelation speaks in apocalyptic symbols (beasts, a harlot city, a sea). Death and Hades themselves are thrown into the lake (20:14): it is where death ends. Right after, “the kings of the earth”, who fought the Lamb in 19:19, bring their glory into the city (21:24).',x:'The lake is God’s final destruction of death and all that destroys. The last chapter still invites: “Let him who is thirsty come” (22:17).',v:'“Death will be no more.” Revelation 21:4',h:'Hope for the restoration of all is one view held by faithful Christians across history (for example Gregory of Nyssa). Others hold that final loss is real. Both read these chapters with care.'},
+{c:'fire',t:'Outer darkness and gnashing teeth',r:'Matthew 8:11-12; 22:13; 25:30',q:'“The children of the Kingdom will be thrown out into the outer darkness. There will be weeping and gnashing of teeth.”',L:'God locks sinners in a dark dungeon of despair.',w:[['βρυγμός τῶν ὀδόντων','brygmos tōn odontōn','G','grinding of teeth; a gesture of rage']],cu:'The picture is a lit wedding banquet at night; outside is dark. Gnashing teeth is anger (Psalm 112:10; the council at Stephen, Acts 7:54). The ones outside are “children of the Kingdom” furious that Gentiles from east and west are reclining with Abraham (8:11).',x:'They are like the elder brother who “was angry, and would not go in” to the feast, while the father “came out, and begged him” (Luke 15:28). The door is shut by refusal, and the Father keeps coming out.',v:'“His father came out, and begged him.” Luke 15:28'},
+{c:'fire',t:'Everlasting destruction',r:'2 Thessalonians 1:9',q:'“They will pay the penalty: eternal destruction from the face of the Lord.”',L:'Final, irreversible annihilation as payment for sin.',w:[['ὄλεθρος','olethros','G','ruin, destruction']],cu:'Paul uses the same word in 1 Corinthians 5:5: hand the man over “for the destruction (olethros) of the flesh, that the spirit may be saved”. In Paul, destruction can serve salvation. “From the face of the Lord” echoes Isaiah 2:10, people hiding from His glory.',x:'What is destroyed is the flesh-life set against God, so that the person can be saved. Glory exposes and burns away what cannot live in it.',v:'“That the spirit may be saved in the day of the Lord Jesus.” 1 Corinthians 5:5'},
+{c:'fire',t:'The rich man and Lazarus',r:'Luke 16:19-31',q:'“In Hades, he lifted up his eyes, being in torment.”',L:'A literal snapshot of hell proving that the dead burn with no way out.',w:[['ᾅδης','hadēs','G','the realm of the dead, not the final judgment'],['τέκνον','teknon','G','child']],cu:'A parable built on a popular Jewish picture of Hades, told to Pharisees “who were lovers of money” (16:14). The rich man still calls Abraham “Father”, and Abraham answers “Child” (16:25). The great chasm mirrors the gate he never crossed to feed the poor man.',x:'The warning is aimed at the living: hear Moses and the prophets about the poor at your gate now. And One did rise from the dead (16:31) to cross every chasm.',v:'“Child, remember…” Luke 16:25'},
+{c:'fire',t:'The unforgivable sin',r:'Mark 3:28-30',q:'“Whoever may blaspheme against the Holy Spirit never has forgiveness.”',L:'One wrong thought and you are doomed forever; God is waiting to catch you out.',w:[['βλασφημία','blasphēmia','G','slander; speaking injuriously']],cu:'Jesus has just said “all sins of the descendants of man will be forgiven” (3:28). Mark explains the warning: “because they said, He has an unclean spirit” (3:30). The scribes called the Spirit’s healing work demonic.',x:'To call the Healer the disease is to refuse the only cure while refusing it. It is a hardened stance, not an accident. Anyone afraid of having committed it shows a heart the Spirit is still softening.',v:'“All sins… will be forgiven them.” Mark 3:28'},
+// ---------- OT STORIES
+{c:'ot',t:'Driven out of Eden',r:'Genesis 3:22-24',q:'“He drove out the man; and he placed cherubim… to guard the way to the tree of life.”',L:'God angrily expels humanity and bars the door.',w:[['מוֹת תָּמוּת','mot tamut','H','“dying you shall die”: a process set in motion'],['כְּרֻבִים','keruvim','H','cherubim; throne guardians']],cu:'God bars the tree of life “lest he… live forever” in a broken state (3:22). Before they leave, He clothes them (3:21). Cherubim later appear over the mercy seat, where God says “there I will meet with you” (Exodus 25:22).',x:'Not living forever in ruin was a mercy. The guardians of the barred way become the guardians of the meeting place, and the way reopens: the tree of life stands in the new city.',v:'“Blessed are those who wash their robes, that they may have the right to the tree of life.” Revelation 22:14'},
+{c:'ot',t:'The flood',r:'Genesis 6-9',q:'“I will destroy man whom I have created from the surface of the ground.”',L:'An angry God wipes out humanity in a fit of rage.',w:[['עָצַב','ʿatsav','H','to be pained, grieved'],['חָמָס','chamas','H','violence, wrongdoing']],cu:'“It grieved him in his heart” (6:6): the same root as the pain of Genesis 3:16-17. God shares the pain. The earth was “filled with violence” (6:11). In the Babylonian Atrahasis story, the gods flood humanity because it is too noisy; Genesis tells of a grieving God who saves a family and every kind of animal.',x:'Afterwards God hangs up His war bow and promises “never again” (8:21; 9:15). Peter says Christ preached even to those who were disobedient “in the days of Noah” (1 Peter 3:19-20).',v:'“I set my rainbow in the cloud… a covenant between me and the earth.” Genesis 9:13'},
+{c:'ot',t:'Babel scattered',r:'Genesis 11:1-9',q:'“The LORD scattered them abroad from there on the surface of all the earth.”',L:'God punishes ambition by confusing and dividing humanity.',w:[['בָּלַל','balal','H','to mix, confuse (a pun on Babel)']],cu:'The builders wanted to “make a name” for themselves and avoid being scattered (11:4), resisting the call to fill the earth (1:28; 9:1). A tower reaching heaven was Mesopotamian ziggurat language.',x:'The scattering pushed humanity into its calling, and diversity of languages became a gift. At Pentecost the Spirit did not undo the languages; He spoke in all of them (Acts 2:6-11).',v:'“We hear them speaking in our languages the mighty works of God!” Acts 2:11'},
+{c:'ot',t:'Sodom and Gomorrah',r:'Genesis 18-19; Jude 7',q:'“The LORD rained on Sodom and on Gomorrah sulphur and fire.”',L:'The permanent example of God’s hatred; Sodom burns forever.',w:[['שׁוּב שְׁבוּת','shuv shevut','H','to restore the fortunes; to bring back the captivity']],cu:'Ezekiel names Sodom’s sin: “pride, fullness of bread, and prosperous ease… neither did she strengthen the hand of the poor and needy” (Ezekiel 16:49), as well as the attempted gang rape of guests, a violation of sacred hospitality. Abraham bargained for the city and God agreed (Genesis 18).',x:'God promises: “I will restore their fortunes, the fortunes of Sodom and her daughters” (Ezekiel 16:53). Jesus says it will be “more tolerable for Sodom” on the day of judgment (Matthew 11:24). Sodom’s story is not finished.',v:'“Sodom and her daughters will return to their former estate.” Ezekiel 16:55'},
+{c:'ot',t:'The plagues and the firstborn',r:'Exodus 7-12',q:'“All the firstborn in the land of Egypt shall die.”',L:'God slaughters innocent Egyptians to show off His power.',w:[['בְּכוֹר','bekhor','H','firstborn; heir']],cu:'Pharaoh began with genocide, ordering Hebrew baby boys thrown into the Nile (1:22). God warned him first: “Israel is my firstborn son… let my son go” (4:22-23). The plagues confronted Egypt’s gods (12:12), and a “mixed multitude” of non-Israelites left with Israel (12:38).',x:'The prophets see Egypt’s story ending in healing: “The LORD will strike Egypt, striking and healing. They will return to the LORD, and he will heal them… Blessed be Egypt my people” (Isaiah 19:22, 25).',v:'“Blessed be Egypt my people.” Isaiah 19:25',h:'The death of children remains grievous. The text frames it as Pharaoh’s own violence returning on his house after repeated warnings.'},
+{c:'ot',t:'Pharaoh’s hardened heart',r:'Exodus 7-14',q:'“I will harden Pharaoh’s heart.”',L:'God overrides free will to create a villain and then punishes him.',w:[['חָזַק','chazaq','H','to strengthen, make firm'],['כָּבֵד','kaved','H','to be heavy']],cu:'Pharaoh first makes his own heart heavy (8:15, 32); God then “strengthens” the choice he made. Egyptians believed the heart was weighed after death against the feather of Maʿat, so a “heavy heart” was a damning image to an Egyptian reader.',x:'The stated purpose, repeated: “The Egyptians shall know that I am the LORD” (7:5; 14:18). Even the oppressor’s nation receives revelation.',v:'“The Egyptians shall know that I am the LORD.” Exodus 7:5'},
+{c:'ot',t:'The golden calf',r:'Exodus 32',q:'“About three thousand men of the people fell that day.”',L:'The Law arrives with a massacre; disobedience means death.',w:[['עֵגֶל','ʿegel','H','calf, young bull: a symbol of strength in Egypt and Canaan']],cu:'At the giving of the Law on stone, three thousand die (32:28). Moses intercedes: “Blot me out of your book” (32:32). Pentecost (Shavuot) became the festival that remembered the giving of the Law at Sinai in Jewish tradition.',x:'At Pentecost, three thousand are made alive (Acts 2:41). “The letter kills, but the Spirit gives life” (2 Corinthians 3:6). The story of Sinai is reversed by the Spirit.',v:'“There were added that day about three thousand souls.” Acts 2:41'},
+{c:'ot',t:'Korah swallowed by the earth',r:'Numbers 16; 26:11',q:'“The earth opened its mouth, and swallowed them up.”',L:'Question authority and God will bury you and your family alive.',w:[['בְּנֵי קֹרַח','benei Qorach','H','sons of Korah: later temple singers']],cu:'A revolt against Moses and Aaron threatened to tear apart the camp in the wilderness. But the record adds a line that is easy to miss: “Notwithstanding, the sons of Korah did not die” (26:11).',x:'Korah’s descendants became temple singers and wrote Psalms 42-49 and 84-88, including “How lovely are your dwellings” and “I would rather be a doorkeeper in the house of my God” (Psalm 84:10). From a rebel’s line came worship.',v:'“As the deer pants for the water brooks, so my soul pants after you, God.” Psalm 42:1 (a psalm of the sons of Korah)'},
+{c:'ot',t:'The fiery serpents',r:'Numbers 21:4-9',q:'“The LORD sent venomous snakes among the people, and they bit the people.”',L:'Complain and God sends snakes.',w:[['שָׂרָף','saraph','H','fiery one; the same word as the seraphim of Isaiah 6']],cu:'In the ancient Near East the serpent was both a deadly and a healing symbol. God provides the remedy in the shape of the wound: a bronze serpent on a pole. Look and live.',x:'Jesus takes this as a picture of Himself: “As Moses lifted up the serpent in the wilderness, even so must the Son of Man be lifted up” (John 3:14). The cure comes through looking at the One lifted up.',v:'“Whoever believes in him should not perish, but have eternal life.” John 3:15'},
+{c:'ot',t:'The conquest of Canaan',r:'Joshua 6-11; Deuteronomy 7:2',q:'“You shall utterly destroy them.”',L:'God commands genocide; violence is holy when God orders it.',w:[['חֵרֶם','cherem','H','devoted; set apart wholly to God, removed from ordinary use'],['גָּרַשׁ','garash','H','to drive out']],cu:'God waited over four hundred years (Genesis 15:16). Ancient war reports used sweeping language (“left none remaining”) while the same books say the Canaanites remained (Judges 1:21-33). The main instruction for the land is “drive out” (Exodus 23:28-30). Rahab’s family and the Gibeonites were spared, and Rahab entered the line of the Messiah (Matthew 1:5).',x:'The aim was a land free of child sacrifice (Deuteronomy 12:31) for a people called to bless all nations. Jesus later praises a Canaanite woman’s faith (Matthew 15:22-28).',v:'“Woman, great is your faith! Be it done to you even as you desire.” Matthew 15:28',h:'This remains one of Scripture’s hardest texts. Reading it as stylised ancient war rhetoric helps but does not remove the difficulty. Many in the relational tradition read it through Jesus, the clearest revelation of the Father (Hebrews 1:3).'},
+{c:'ot',t:'Elisha and the bears',r:'2 Kings 2:23-24',q:'“Two female bears came out of the woods, and mauled forty-two of the children.”',L:'God kills little children for teasing a bald prophet.',w:[['נְעָרִים קְטַנִּים','neʿarim qetannim','H','young men; naʿar is used of 17-year-old Joseph and of soldiers']],cu:'A mob of 42 young men from Bethel, the centre of the golden-calf cult (1 Kings 12:29), confronts the new prophet. “Go up, baldhead” mocks Elijah’s ascension. In a world without police, a gang threatening a prophet threatened the word of God in the land. The verb “mauled” means tore; the text does not say they died.',x:'Elisha’s ministry before and after is overwhelmingly healing: he heals Jericho’s water just before (2:21), multiplies oil, raises a boy, cleanses the Syrian Naaman, and feeds an enemy army and sends it home (6:22-23).',v:'“Set bread and water before them, that they may eat and drink, and go to their master.” 2 Kings 6:22',h:'Even with the context, the story is disturbing, and that discomfort is honest.'},
+{c:'ot',t:'Fire from heaven on soldiers',r:'2 Kings 1; Luke 9:51-56',q:'“If I am a man of God, let fire come down from the sky, and consume you.”',L:'God’s way with enemies is fire.',w:[['ἐπιτιμάω','epitimaō','G','to rebuke, warn sternly']],cu:'When a Samaritan village refused Jesus, James and John asked, “Do you want us to command fire to come down from the sky?” They were copying Elijah.',x:'Jesus “turned and rebuked them” (Luke 9:55); some manuscripts add, “The Son of Man didn’t come to destroy men’s lives, but to save them.” Later, John himself goes to Samaria and lays hands on Samaritans to receive the Holy Spirit (Acts 8:14-17). The fire that came was the Spirit.',v:'“They laid their hands on them, and they received the Holy Spirit.” Acts 8:17'},
+{c:'ot',t:'Nineveh overturned',r:'Jonah 3-4',q:'“In forty days, Nineveh will be overthrown!”',L:'God announces doom; the prophet’s job is to pronounce punishment.',w:[['הָפַךְ','haphakh','H','to overturn, overthrow; to turn into, transform']],cu:'The same verb describes Saul being “turned into another man” (1 Samuel 10:6) and mourning “turned into dancing” (Psalm 30:11). Jonah wanted Nineveh destroyed; he knew God was “gracious… and relenting of disaster” (4:2).',x:'The prophecy came true. Nineveh was overturned, by repentance. God’s last word is concern for 120,000 people “and also much cattle” (4:11).',v:'“Shouldn’t I be concerned for Nineveh, that great city?” Jonah 4:11'},
+{c:'ot',t:'Exile to Babylon',r:'2 Kings 25; Jeremiah 25',q:'“I will send… Nebuchadnezzar… and will bring them against this land.”',L:'God abandons His people in anger to a foreign empire.',w:[['שׁוּב','shuv','H','to turn, return, restore; also “repent”']],cu:'The covenant warned that exile would follow injustice and idolatry (Leviticus 26). Chronicles says the land finally received the Sabbaths it had been denied (2 Chronicles 36:21).',x:'Exile was designed to end in return. The one Hebrew word shuv means both repent and return, and God promises to make both happen: “I will turn your captivity, and gather you” (Jeremiah 29:14; Deuteronomy 30:3).',v:'“I know the thoughts that I think toward you… thoughts of peace, and not of evil, to give you hope and a future.” Jeremiah 29:11'},
+{c:'ot',t:'Like a bear robbed of her cubs',r:'Hosea 13:7-8',q:'“I will meet them like a bear that is bereaved of her cubs, and will tear the covering of their heart.”',L:'God as a savage beast tearing sinners apart.',w:[['רָפָא','rapha','H','to heal, repair, restore']],cu:'Hosea’s images come from a betrayed spouse and a grieving parent (Hosea 11:1-4 “When Israel was a child, I loved him”). A mother bear’s fury is about her lost children.',x:'The next chapter is pure healing: “I will heal their backsliding. I will love them freely” (14:4). Hosea gives the logic himself: “He has torn us to pieces, and he will heal us” (6:1).',v:'“I will heal their backsliding. I will love them freely.” Hosea 14:4'},
+{c:'ot',t:'Psalm 137',r:'Psalm 137:7-9',q:'“Happy shall he be, who takes and dashes your little ones against the rock.”',L:'God approves of revenge on enemy children.',w:[['זָכַר','zakhar','H','to remember: “Remember, LORD, against the children of Edom”']],cu:'This is the cry of refugees whose own children were killed when Babylon took Jerusalem. Imprecatory psalms are prayers: they hand rage to God instead of carrying it out.',x:'Scripture keeps the honest rage and then moves past it. By giving vengeance to God the psalmist is freed from enacting it, and the New Testament completes the movement: “Bless those who persecute you; bless, and do not curse” (Romans 12:14).',v:'“Bless those who persecute you.” Romans 12:14'},
+{c:'ot',t:'Job’s suffering',r:'Job 1-2; 4:7; 42:7-10',q:'“Who ever perished, being innocent?” (Eliphaz, Job 4:7)',L:'Suffering always proves sin; if you are hurting, you deserved it.',w:[['שָׂטָן','satan','H','adversary, accuser']],cu:'Job’s friends speak the legal gospel: blessing for the good, suffering for the bad, so Job must be guilty. The accuser in the story is the satan, not God.',x:'God tells the friends: “You have not spoken of me the thing that is right, as my servant Job has” (42:7). Job prays for the very friends who accused him, and “the LORD restored the fortunes of Job” (42:10), shuv shevut again.',v:'“The LORD restored the fortunes of Job, when he prayed for his friends.” Job 42:10'},
+// ---------- LAW
+{c:'law',t:'An eye for an eye',r:'Exodus 21:23-27; Leviticus 24:20',q:'“Eye for eye, tooth for tooth.”',L:'God’s justice is payback.',w:[['תַּחַת','tachat','H','in place of, instead of']],cu:'In a world of Lamech’s seventy-seven-fold revenge (Genesis 4:24), the Law limited retaliation to proportion and placed it in courts. Two verses later, a master who knocks out a slave’s eye or tooth must set the slave free (21:26-27). Jewish courts applied the principle as monetary compensation.',x:'Jesus fulfils its intent: “Turn the other cheek” (Matthew 5:38-39), and forgive “seventy times seven” (Matthew 18:22), the same phrase the Greek Old Testament uses for Lamech’s revenge, now reversed.',v:'“I tell you, not until seven times, but, until seventy times seven.” Matthew 18:22'},
+{c:'law',t:'Death penalties in the Law',r:'Leviticus 20; Deuteronomy 21:18-21',q:'“He shall surely be put to death.”',L:'God is eager to execute sinners.',w:[['מוֹת יוּמָת','mot yumat','H','“he shall surely be put to death”: the formula for the maximum sentence']],cu:'These were maximum sentences wrapped in safeguards: two or three witnesses (Deuteronomy 17:6) and elders at the city gate; parents could not act alone. The Mishnah calls a court that executes once in seven years “destructive” (Makkot 1:10).',x:'The Law shows how seriously God takes harm. Jesus shows how God deals with it: faced with a death-penalty case, He stooped, wrote, and sent everyone home alive (John 8:1-11).',v:'“Neither do I condemn you. Go your way. From now on, sin no more.” John 8:11'},
+{c:'law',t:'To the third and fourth generation',r:'Exodus 20:5-6; 34:7',q:'“Visiting the iniquity of the fathers on the children, on the third and on the fourth generation.”',L:'God punishes children for their parents’ sins.',w:[['פָּקַד','paqad','H','to visit, attend to, take account of']],cu:'Israelite households often held three or four generations under one roof, so a father’s sin shaped everyone living with him. The same verb describes God “visiting” Sarah with a child (Genesis 21:1).',x:'Compare the numbers: consequences to the fourth generation, steadfast love “to thousands” (20:6). Ezekiel clarifies: “The son shall not bear the iniquity of the father” (Ezekiel 18:20). Mercy outruns consequence by far.',v:'“Showing loving kindness to thousands of those who love me.” Exodus 20:6'},
+{c:'law',t:'Sacrifices',r:'Leviticus 1-7',q:'“He shall kill the bull before the LORD.”',L:'God is hungry for blood and must be paid off with death.',w:[['קָרְבָּן','qorban','H','offering; from qarav, to draw near'],['קָרַב','qarav','H','to come near']],cu:'Neighbouring nations fed their gods. Israel’s God says, “If I were hungry, I would not tell you” (Psalm 50:12). Many offerings were shared meals eaten in God’s presence (Leviticus 7:15; Deuteronomy 12:7).',x:'The very word for offering means “drawing near”. Sacrifice is about coming close, fulfilled in Jesus: “You who once were far off are made near” (Ephesians 2:13).',v:'“Let’s draw near with a true heart.” Hebrews 10:22'},
+{c:'law',t:'No forgiveness without blood',r:'Hebrews 9:22; Leviticus 17:11',q:'“Apart from shedding of blood there is no remission.”',L:'God needs a quantity of suffering before He can forgive.',w:[['דָּם','dam','H','blood; life'],['כָּפַר','kaphar','H','to cover, wipe clean, ransom']],cu:'“The life of the flesh is in the blood” (Leviticus 17:11). Blood was applied to cleanse and consecrate people and objects: a life given to wash, not an amount of pain owed.',x:'Christ gives His own life to “cleanse your conscience from dead works to serve the living God” (Hebrews 9:14). The blood is about cleansing and new life.',v:'“The blood of Jesus Christ, his Son, cleanses us from all sin.” 1 John 1:7'},
+{c:'law',t:'Propitiation',r:'Romans 3:25; 1 John 2:2',q:'“Whom God sent to be an atoning sacrifice (propitiation).”',L:'Jesus calms an angry God by absorbing His fury.',w:[['ἱλαστήριον','hilastērion','G','the mercy seat; place of atonement (Exodus 25:17 in the Greek OT)']],cu:'In pagan Greek religion, hilaskomai meant appeasing an angry god. But in the Greek Old Testament, hilastērion is the gold lid of the ark, the place where God says, “There I will meet with you” (Exodus 25:22). And here it is God who “set forth” Jesus.',x:'Jesus is the mercy seat: the meeting place where sin is covered and God and humanity meet. God is not appeased by someone else; God is the one reconciling (2 Corinthians 5:18-19).',v:'“There I will meet with you.” Exodus 25:22'},
+// ---------- CROSS
+{c:'cross',t:'Stricken by God',r:'Isaiah 53:4-10',q:'“Yet it pleased the LORD to bruise him.” (KJV)',L:'The Father punished the Son with the wrath we deserved.',w:[['חָפֵץ','chaphets','H','to delight in, desire, will']],cu:'Verse 4 says “we considered him… struck by God”. The text tells us that was our assumption; in fact, “he was wounded for our transgressions”. The delight in verse 10 is in the outcome: “he will see his offspring… and the LORD’s pleasure (chephets) will prosper in his hand”.',x:'The cross was human violence that God absorbed and turned into healing: “by his wounds we are healed” (53:5).',v:'“By his wounds we are healed.” Isaiah 53:5'},
+{c:'cross',t:'“Why have you forsaken me?”',r:'Matthew 27:46; Psalm 22',q:'“My God, my God, why have you forsaken me?”',L:'The Father turned His back on the Son because He could not look at sin.',w:[['ἐγκαταλείπω','enkataleipō','G','to forsake, abandon']],cu:'Jews often called up a whole psalm by quoting its first line. Psalm 22 turns: “He has not hidden his face from him; but when he cried to him, he heard” (22:24). It ends with “all the families of the nations” worshipping (22:27).',x:'Jesus enters our experience of godforsakenness to its depth. But the Father did not turn away: “God was in Christ reconciling the world to himself” (2 Corinthians 5:19).',v:'“He has not hidden his face from him.” Psalm 22:24'},
+{c:'cross',t:'Made to be sin',r:'2 Corinthians 5:21',q:'“He made him who knew no sin to be sin on our behalf.”',L:'God poured out on Jesus the hatred He has for sinners.',w:[['ἁμαρτία','hamartia','G','missing the mark; in the Greek OT also the sin offering (Leviticus 4)']],cu:'The Greek Old Testament often uses hamartia for the sin offering itself, and many interpreters read Paul that way here.',x:'He identifies wholly with our condition so that “we might become the righteousness of God in him”: an exchange that creates union.',v:'“That in him we might become the righteousness of God.” 2 Corinthians 5:21'},
+{c:'cross',t:'The wages of sin',r:'Romans 6:23',q:'“For the wages of sin is death.”',L:'God pays sinners death as their just salary.',w:[['ὀψώνιον','opsōnion','G','a soldier’s ration or wages'],['χάρισμα','charisma','G','free gift']],cu:'Paul pictures sin as a tyrant king (6:12-14) who pays his soldiers in death. The paymaster of death is sin, not God.',x:'Death is what sin produces; life is what God gives. The verse continues, “but the free gift of God is eternal life in Christ Jesus our Lord.”',v:'“The free gift of God is eternal life in Christ Jesus our Lord.” Romans 6:23'},
+// ---------- NT
+{c:'nt',t:'Ananias and Sapphira',r:'Acts 5:1-11',q:'“Ananias, hearing these words, fell down and died.”',L:'God strikes dead anyone who holds back money from the church.',w:[['ἐκκλησία','ekklēsia','G','assembly; church (first used in Acts here, 5:11)']],cu:'In a brand-new community of radical sharing, where “there was no one among them who lacked” (4:34), they pretended to give everything in order to gain honour. Peter pronounces no sentence on Ananias.',x:'The story guards the trust that was feeding the poor; deception would have poisoned that sharing at the root.',v:'“Not one of them claimed that anything of the things which he possessed was his own.” Acts 4:32',h:'Luke does not explain the deaths, and this remains a hard passage. The relational reading does not resolve it fully.'},
+{c:'nt',t:'Handed over to Satan',r:'1 Corinthians 5:5; 1 Timothy 1:20',q:'“Deliver such a one to Satan for the destruction of the flesh.”',L:'The church curses and casts out sinners for good.',w:[['παιδεύω','paideuō','G','to train, educate a child']],cu:'Exclusion from the community meant losing its protection. Paul gives the purpose: “that the spirit may be saved” (1 Corinthians 5:5) and “that they might be taught (paideuō) not to blaspheme” (1 Timothy 1:20).',x:'Even exclusion aims at return. Later Paul urges: “Forgive him and comfort him… confirm your love toward him” (2 Corinthians 2:7-8).',v:'“Confirm your love toward him.” 2 Corinthians 2:8'},
+{c:'nt',t:'God disciplines',r:'Hebrews 12:5-11',q:'“Whom the Lord loves, he disciplines, and chastises every son whom he receives.”',L:'Hardship is God beating you for your sins.',w:[['παιδεία','paideia','G','child-training; the whole upbringing of a child']],cu:'In the Greco-Roman world paideia meant the whole formation of a child into adulthood: education, culture and character.',x:'Discipline is proof of sonship (12:8), “for our profit, that we may be partakers of his holiness” (12:10), and it yields “the peaceful fruit of righteousness” (12:11).',v:'“That we may be partakers of his holiness.” Hebrews 12:10'},
+{c:'nt',t:'The hands of the living God',r:'Hebrews 10:31',q:'“It is a fearful thing to fall into the hands of the living God.”',L:'God’s hands are a place of terror.',w:[['φοβερός','phoberos','G','fearful, awe-inspiring']],cu:'Written to believers tempted to walk away after persecution. David, given a choice of consequences, chose: “Let us fall now into the hand of the LORD; for his mercies are great” (2 Samuel 24:14).',x:'They are the same hands: fearful to the one running from them, the safest place for the one held by them. “No one will snatch them out of my hand” (John 10:28).',v:'“Let us fall now into the hand of the LORD; for his mercies are great.” 2 Samuel 24:14'},
+{c:'nt',t:'Vessels of wrath',r:'Romans 9:20-23',q:'“Vessels of wrath made for destruction.”',L:'God creates some people simply to damn them.',w:[['σκεῦος','skeuos','G','vessel, jar']],cu:'Paul draws on Jeremiah 18, where the potter reworks the marred vessel “into another vessel” (18:4). The point is God’s freedom to show mercy beyond Israel’s expectations.',x:'The argument of Romans 9-11 climaxes in mercy for all: “God has shut up all to disobedience, that he might have mercy on all” (11:32).',v:'“That he might have mercy on all.” Romans 11:32'},
+{c:'nt',t:'Not peace, but a sword',r:'Matthew 10:34-37',q:'“I didn’t come to send peace, but a sword.”',L:'Jesus brings violence and division.',w:[['μάχαιρα','machaira','G','sword, dagger']],cu:'Luke’s parallel says “division” (Luke 12:51). Following Jesus cut across family honour systems, where loyalty to the clan came first.',x:'He creates a bigger family: “Whoever does the will of my Father… is my brother, and sister, and mother” (Matthew 12:50). In Revelation, His only sword comes from His mouth (19:15).',v:'“Whoever does the will of my Father… is my brother, and sister, and mother.” Matthew 12:50'},
+{c:'nt',t:'Woe to Judas',r:'Mark 14:21; Matthew 26:50',q:'“Woe to that man through whom the Son of Man is betrayed! It would be better for that man if he had not been born.”',L:'Jesus curses Judas to damnation.',w:[['οὐαί','ouai','G','alas; a cry of grief, a lament'],['ἑταῖρος','hetairos','G','friend, companion']],cu:'“Woe” is a cry of grief. That night Jesus washed Judas’s feet and gave him the bread. In Gethsemane He greeted him: “Friend, why are you here?” (Matthew 26:50).',x:'God’s posture toward the betrayer is grief and friendship to the end.',v:'“Friend, why are you here?” Matthew 26:50'},
+{c:'nt',t:'The wrath of the Lamb',r:'Revelation 6:16; 19:11-15',q:'“Hide us from… the wrath of the Lamb.”',L:'Jesus returns as a violent avenger.',w:[['ἀρνίον','arnion','G','little lamb']],cu:'The Lamb is the slain one (5:6). In chapter 19 the Rider’s robe is dipped in blood before the battle (19:13), His own, and His only weapon is the sword from His mouth (19:15): the Word.',x:'The Lamb conquers by sacrifice and by word. Those hiding in the rocks are like Adam hiding in the trees, afraid of the One who comes to cover them.',v:'“They overcame him because of the Lamb’s blood, and because of the word of their testimony.” Revelation 12:11'},
+{c:'nt',t:'Suffering as punishment',r:'John 9:1-3; Luke 13:1-5',q:'“Unless you repent, you will all perish in the same way.”',L:'Disasters are God’s punishment on bad people.',w:[['μετάνοια','metanoia','G','change of mind; a new way of seeing']],cu:'People assumed disaster proved guilt. Jesus: “Neither did this man sin, nor his parents” (John 9:3). The victims of Pilate and of the tower of Siloam were no worse sinners (Luke 13:2-4). His warning was about the path of violent revolt that later brought Roman swords and falling towers on Jerusalem.',x:'Suffering becomes an occasion for “the works of God to be revealed” (John 9:3). A changed mind (metanoia) opens a different future.',v:'“That the works of God might be revealed in him.” John 9:3'}
+];
+
+const HWORDS=[
+['κόλασις','kolasis','Greek','punishment','pruning; correction for the good of the one corrected'],
+['ἀπόλλυμι','apollumi','Greek','destroy, perish','lost: the sheep the Shepherd seeks'],
+['הָפַךְ','haphakh','Hebrew','overthrown','turned into something new'],
+['βάσανος','basanos','Greek','torment','the touchstone that tests and proves gold'],
+['קָרְבָּן','qorban','Hebrew','sacrifice to appease','drawing near'],
+['שָׁפַט','shaphat','Hebrew','condemn','to deliver and set right'],
+['παιδεία','paideia','Greek','punishment','raising a child'],
+['שָׂנֵא','śaneʾ','Hebrew','hate','love less; choose second'],
+['ἱλαστήριον','hilastērion','Greek','appeasement','the mercy seat, where God meets us'],
+['οὐαί','ouai','Greek','a curse','a cry of grief'],
+['נָקָם','naqam','Hebrew','revenge','vindication of the wronged'],
+['שׁוּב','shuv','Hebrew','turn back in fear','return home; restore']];
+
+const ARCS={
+judges:{n:'The Judges cycle',r:'Judges 2:11-18',s:['Israel serves the Baals','Handed to raiders who plunder them','“The LORD was moved to pity by their groaning”','“The LORD raised up judges who saved them”']},
+flood:{n:'The flood',r:'Genesis 6-9',s:['The earth filled with violence','The waters undo creation','Noah’s household carried through','A covenant with every living creature']},
+exile:{n:'The exile',r:'Jeremiah 25; 29; Daniel 9',s:['Idolatry and injustice','Taken to Babylon','“By the rivers of Babylon… we wept”; Daniel’s prayer','Return, rebuilt walls, debts released']},
+nineveh:{n:'Nineveh',r:'Jonah 3',s:['“Their wickedness has come up before me”','Forty days’ warning','Sackcloth from king to cattle','“God relented of the disaster”']},
+david:{n:'David',r:'2 Samuel 11-12; Psalm 51',s:['Adultery and murder','The child dies; the sword in his house','“Create in me a clean heart”','Solomon born: “Jedidiah, beloved of the LORD” (12:25)']},
+prodigal:{n:'The prodigal son',r:'Luke 15:11-32',s:['Takes the inheritance and leaves','Famine and feeding pigs','“He came to himself”','Robe, ring, sandals and a feast']},
+peter:{n:'Peter',r:'Luke 22; John 21',s:['Three denials','“He went out and wept bitterly”','Breakfast by a charcoal fire','“Feed my sheep”']},
+sodom:{n:'Sodom',r:'Genesis 19; Ezekiel 16',s:['Pride, plenty, and no help for the poor','Fire and sulphur','Abraham’s intercession; the story held open','“I will restore the fortunes of Sodom”']}};
+
 /* ================= ROUTER ================= */
-const VIEWS=['home','story','stoop','spheres','jesus','lens','body','library','today','journey'];
+const VIEWS=['home','story','stoop','spheres','jesus','lens','hard','body','library','today','journey'];
 function route(){
   let v=(location.hash||'#home').slice(1); if(!VIEWS.includes(v))v='home';
   $$('.view').forEach(el=>el.hidden=el.dataset.view!==v);
@@ -1539,7 +1774,7 @@ function drawSankey(){
     <circle cx="250" cy="${y}" r="8" style="fill:${c}"/><circle cx="750" cy="${y}" r="8" style="fill:${c}"/>
     <text x="236" y="${y-2}" text-anchor="end" style="fill:var(--ink)">${esc(r.l)}</text><text x="236" y="${y+16}" text-anchor="end" style="fill:var(--muted);font-size:12px;font-family:var(--f-ref)">${esc(r.lr)}</text>
     <text x="764" y="${y-2}" style="fill:var(--ink)">${esc(r.r)}</text><text x="764" y="${y+16}" style="fill:var(--muted);font-size:12px;font-family:var(--f-ref)">${esc(r.rr)}</text></g>`});
-  h+=`<g style="pointer-events:none"><circle cx="500" cy="${cy}" r="68" style="fill:var(--accent)"/><circle cx="500" cy="${cy}" r="68" class="pulse-dot" style="fill:none;stroke:var(--accent)" stroke-width="2"/><path d="M500 180v58M478 200h44" style="stroke:var(--onaccent)" stroke-width="6" stroke-linecap="round"/><text x="500" y="262" text-anchor="middle" style="fill:var(--onaccent);font-family:var(--f-display);font-size:15px">Christ</text></g>`;
+  h+=`<g style="pointer-events:none"><circle cx="500" cy="${cy}" r="68" style="fill:var(--accent)"/><circle cx="500" cy="${cy}" r="68" class="pulse-soft" style="fill:none;stroke:var(--accent)" stroke-width="2"/><path d="M500 180v58M478 200h44" style="stroke:var(--onaccent)" stroke-width="6" stroke-linecap="round"/><text x="500" y="262" text-anchor="middle" style="fill:var(--onaccent);font-family:var(--f-display);font-size:15px">Christ</text></g>`;
   h+=`<text x="40" y="430" style="fill:var(--muted);font-size:12px;letter-spacing:.1em">THE FALL · GENESIS 3–11</text><text x="960" y="430" text-anchor="end" style="fill:var(--muted);font-size:12px;letter-spacing:.1em">RESTORED · NOW AND COMING</text>`;
   svg.innerHTML=h; svg.classList.toggle('sk-dim',skOn>=0);
   $$('.sk-row',svg).forEach(g=>{const go=()=>{skOn=+g.dataset.i===skOn?-1:+g.dataset.i;drawSankey()};g.addEventListener('click',go);g.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();go()}})});
@@ -1674,6 +1909,82 @@ ENTER.jesus=()=>drawSankey();
 ENTER.today=()=>{drawRipple();drawAnt();setDay(dayMin);if(!dayRAF)drawDay();setTimeout(sendRipple,900)};
 ENTER.story=()=>{};
 renderQuiz();updateGauge();renderScen();drawSankey();
+
+/* ================= HARD TEXTS ================= */
+// word lens carousel
+let alI=0,alTimer=null,alPaused=false;
+$('#alDots').innerHTML=HWORDS.map((w,i)=>`<button aria-label="${esc(w[1])}" data-i="${i}"></button>`).join('');
+function showWord(i){
+  alI=(i+HWORDS.length)%HWORDS.length;const w=HWORDS[alI],box=$('#alch');
+  $('#alScr').textContent=w[0];$('#alScr').setAttribute('dir',w[2]==='Hebrew'?'rtl':'ltr');
+  $('#alTr').textContent=w[1];$('#alLang').textContent=w[2];$('#alHeard').textContent=w[3];$('#alRoot').textContent=w[4];
+  $$('#alDots button').forEach((b,j)=>b.setAttribute('aria-current',j===alI));
+  box.classList.remove('swap');void box.offsetWidth;box.classList.add('swap');
+}
+function alTick(){clearInterval(alTimer);if(!alPaused&&!reduce)alTimer=setInterval(()=>{if(!$('#v-hard').hidden)showWord(alI+1)},4800)}
+$('#alPrev').addEventListener('click',()=>{showWord(alI-1);alTick()});
+$('#alNext').addEventListener('click',()=>{showWord(alI+1);alTick()});
+$$('#alDots button').forEach(b=>b.addEventListener('click',()=>{showWord(+b.dataset.i);alTick()}));
+$('#alPause').addEventListener('click',()=>{alPaused=!alPaused;$('#alPause').textContent=alPaused?'Play':'Pause';alTick()});
+
+// arc of judgment
+const ARC_NODES=[{t:'Turning away',w:'ḥataʾ · hamartia',m:'missing the mark',c:'--legal'},{t:'Given over',w:'paradidōmi',m:'consequences run their course',c:'--sf'},{t:'Crying out, returning',w:'shuv',m:'turn, return',c:'--sc'},{t:'Restored',w:'shuv shevut',m:'fortunes restored',c:'--accent'}];
+let arcKey='judges',arcStep=0,arcTimer=null;
+function drawArc(){
+  const cx=280,cy=280,R=190,pts=ARC_NODES.map((_,i)=>{const a=-Math.PI/2+i*Math.PI/2;return[cx+R*Math.cos(a),cy+R*Math.sin(a)]});
+  let h=`<circle cx="${cx}" cy="${cy}" r="${R}" style="fill:none;stroke:var(--line)" stroke-width="2"/>`;
+  for(let i=0;i<4;i++){const a0=-Math.PI/2+i*Math.PI/2+.32,a1=a0+Math.PI/2-.64;const p0=[cx+R*Math.cos(a0),cy+R*Math.sin(a0)],p1=[cx+R*Math.cos(a1),cy+R*Math.sin(a1)];
+    h+=`<path class="flowdash" d="M${p0[0].toFixed(1)} ${p0[1].toFixed(1)} A${R} ${R} 0 0 1 ${p1[0].toFixed(1)} ${p1[1].toFixed(1)}" style="stroke:var(--accent2)" stroke-width="4"/>`;
+    const ah=a1,tx=cx+R*Math.cos(ah),ty=cy+R*Math.sin(ah),deg=ah*180/Math.PI+90;
+    h+=`<path d="M-8 -7 L4 0 L-8 7" transform="translate(${tx.toFixed(1)} ${ty.toFixed(1)}) rotate(${(deg-90).toFixed(1)})" style="fill:none;stroke:var(--accent2)" stroke-width="3" stroke-linecap="round"/>`;}
+  h+=`<circle cx="${cx}" cy="${cy}" r="92" style="fill:color-mix(in srgb,var(--accent) 12%,var(--surface));stroke:var(--accent)" stroke-width="2"/><circle cx="${cx}" cy="${cy}" r="92" class="pulse-soft" style="fill:none;stroke:var(--accent)" stroke-width="1.5"/>
+  <text x="${cx}" y="${cy-18}" text-anchor="middle" style="fill:var(--accent);font-family:var(--f-body);font-size:30px">חֶסֶד</text>
+  <text x="${cx}" y="${cy+8}" text-anchor="middle" style="fill:var(--ink);font-family:var(--f-display);font-size:16px">Hesed</text>
+  <text x="${cx}" y="${cy+28}" text-anchor="middle" style="fill:var(--muted);font-family:var(--f-ui);font-size:12px">steadfast love holds</text><text x="${cx}" y="${cy+44}" text-anchor="middle" style="fill:var(--muted);font-family:var(--f-ui);font-size:12px">the whole cycle</text>`;
+  ARC_NODES.forEach((n,i)=>{const[x,y]=pts[i],on=i===arcStep,ly=i===0?y-50:i===2?y+52:y+56;
+    h+=`<g class="an${on?' on':''}" style="--c:var(${n.c})"><circle cx="${x}" cy="${y}" r="${on?30:24}"/><text class="n" x="${x}" y="${y+6}" style="font-size:17px;font-weight:700">${i+1}</text>
+    <text x="${x}" y="${ly}" style="font-size:15px;font-weight:700">${n.t}</text><text x="${x}" y="${ly+17}" style="font-size:12px;fill:var(--muted);font-family:var(--f-ref)">${n.w}</text></g>`});
+  if(!reduce)h+=`<circle r="7" style="fill:var(--accent2)"><animateMotion dur="8s" repeatCount="indefinite" path="M${cx} ${cy-R} A${R} ${R} 0 1 1 ${cx-.01} ${cy-R}"/></circle>`;
+  $('#arcSvg').innerHTML=h;
+  const a=ARCS[arcKey];
+  $('#arcSteps').innerHTML=`<div class="row" style="justify-content:space-between"><h4>${esc(a.n)}</h4><span class="ref">${esc(a.r)}</span></div>`+a.s.map((s,i)=>`<div class="arc-step${i===arcStep?' on':''}" style="--c:var(${ARC_NODES[i].c})"><i>${i+1}</i><div><small>${ARC_NODES[i].t} · ${ARC_NODES[i].m}</small>${esc(s)}</div></div>`).join('');
+}
+$('#arcPick').innerHTML=Object.entries(ARCS).map(([k,a])=>`<button class="chip" data-k="${k}" aria-pressed="${k===arcKey}">${esc(a.n)}</button>`).join('');
+$$('#arcPick .chip').forEach(c=>c.addEventListener('click',()=>{arcKey=c.dataset.k;arcStep=0;$$('#arcPick .chip').forEach(x=>x.setAttribute('aria-pressed',x===c));drawArc();runArc()}));
+function runArc(){clearInterval(arcTimer);if(reduce)return;arcTimer=setInterval(()=>{if($('#v-hard').hidden)return;arcStep=(arcStep+1)%4;drawArc()},2200)}
+
+// lexicon + list
+let hCat='all',hq='',hWord=null,hOpen=new Set([0]),hAllOn=false,hHardOnly=false;
+const lexMap=new Map();HT.forEach(e=>e.w.forEach(w=>{if(!lexMap.has(w[1]))lexMap.set(w[1],w)}));
+$('#lexicon').innerHTML=[...lexMap.values()].map(w=>`<button class="lex" data-w="${esc(w[1])}" aria-pressed="false" title="${esc(w[3])}"><span class="s" dir="${w[2]==='H'?'rtl':'ltr'}">${w[0]}</span><span>${esc(w[1])}</span></button>`).join('');
+$$('#lexicon .lex').forEach(b=>b.addEventListener('click',()=>{hWord=hWord===b.dataset.w?null:b.dataset.w;$$('#lexicon .lex').forEach(x=>x.setAttribute('aria-pressed',x.dataset.w===hWord));renderHard()}));
+$('#hCats').innerHTML=[['all','All']].concat(Object.entries(HCAT)).map(([k,n])=>`<button class="chip" data-k="${k}" aria-pressed="${k==='all'}">${esc(n)} <span class="count">${k==='all'?HT.length:HT.filter(e=>e.c===k).length}</span></button>`).join('');
+$$('#hCats .chip').forEach(c=>c.addEventListener('click',()=>{hCat=c.dataset.k;$$('#hCats .chip').forEach(x=>x.setAttribute('aria-pressed',x===c));renderHard()}));
+$('#hq').addEventListener('input',e=>{hq=e.target.value.trim().toLowerCase();renderHard()});
+$('#hAll').addEventListener('click',()=>{hAllOn=!hAllOn;$('#hAll').setAttribute('aria-pressed',hAllOn);hOpen=hAllOn?new Set(HT.map((_,i)=>i)):new Set();$$('#hGrid .hcard').forEach(c=>{c.classList.toggle('open',hAllOn);const b=$('.btn',c);if(b)b.textContent=hAllOn?'Show less':'Reconcile'})});
+$('#hHard').addEventListener('click',()=>{hHardOnly=!hHardOnly;$('#hHard').setAttribute('aria-pressed',hHardOnly);renderHard()});
+function hCard(e,i){
+  const open=hOpen.has(i);
+  return `<article class="hcard${open?' open':''}" data-i="${i}">
+  <div class="top"><div class="stack" style="gap:4px"><span class="eyebrow">${esc(HCAT[e.c])}</span><h4>${esc(e.t)}</h4><span class="ref">${esc(e.r)}</span></div>${e.h?'<span class="tag" style="--c:var(--legal)">Hard text</span>':''}</div>
+  <p class="q">${esc(e.q)}</p>
+  <p class="legal"><b style="color:var(--legal)">Legal reading:</b> <span>${esc(e.L)}</span></p>
+  <div class="more"><div>
+    <div class="blk"><span class="eyebrow">Root words</span><div class="roots">${e.w.map((w,j)=>`<span class="root" style="--i:${j}"><span class="s" dir="${w[2]==='H'?'rtl':'ltr'}">${w[0]}</span><span class="tl">${esc(w[1])} · ${w[2]==='H'?'Hebrew':'Greek'}</span><span class="m">${esc(w[3])}</span></span>`).join('')}</div></div>
+    <div class="blk"><span class="eyebrow">Culture and context</span><p>${esc(e.cu)}</p></div>
+    <div class="blk rest"><span class="eyebrow">Read toward restoration</span><p>${esc(e.x)}</p><span class="ref">${esc(e.v)}</span></div>
+    ${e.h?`<div class="honest"><b>Honest note.</b> ${esc(e.h)}</div>`:''}
+  </div></div>
+  <div class="act"><span class="count">${e.w.length} root word${e.w.length>1?'s':''}</span><button class="btn">${open?'Show less':'Reconcile'}</button></div></article>`;
+}
+function renderHard(){
+  const list=HT.map((e,i)=>[e,i]).filter(([e])=>(hCat==='all'||e.c===hCat)&&(!hHardOnly||e.h)&&(!hWord||e.w.some(w=>w[1]===hWord))&&(!hq||(e.t+' '+e.r+' '+e.q+' '+e.cu+' '+e.x+' '+e.w.map(w=>w[1]+' '+w[3]).join(' ')).toLowerCase().includes(hq)));
+  $('#hCount').textContent=`${list.length} of ${HT.length} passages`;
+  $('#hGrid').innerHTML=list.length?list.map(([e,i])=>hCard(e,i)).join(''):`<div class="empty" style="grid-column:1/-1">No passages match. Try a book name like “Jonah” or a word like “fire”.</div>`;
+  $$('#hGrid .hcard').forEach(c=>$('.btn',c).addEventListener('click',()=>{const i=+c.dataset.i,o=!c.classList.contains('open');c.classList.toggle('open',o);o?hOpen.add(i):hOpen.delete(i);$('.btn',c).textContent=o?'Show less':'Reconcile'}));
+}
+renderHard();showWord(0);drawArc();
+ENTER.hard=()=>{showWord(alI);alTick();runArc()};
 
 /* ================= BOOT ================= */
 applySize(); applyMode(); syncCycle();
