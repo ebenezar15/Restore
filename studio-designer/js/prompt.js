@@ -2,7 +2,7 @@
 // needed: commands are matched with a small grammar of verbs, objects,
 // quantities, colours and locations. Several commands can be chained with
 // "and", "then", "," or ";".
-import { COLOR_NAMES, parseColor } from './materials.js';
+import { COLOR_NAMES, parseColor, FINISHES } from './materials.js';
 
 const NUM_WORDS = { a: 1, an: 1, one: 1, single: 1, two: 2, pair: 2, couple: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12, dozen: 12 };
 
@@ -31,7 +31,8 @@ const ITEM_WORDS = [
   ['led panel', 'ledPanel'], ['downlight', 'downlight'], ['spotlight', 'trackLight'], ['track light', 'trackLight'], ['pendant', 'pendant'],
   ['led strip', 'ledStrip'], ['strip light', 'ledStrip'], ['rgb tube', 'lightBar'], ['light tube', 'lightBar'], ['floor lamp', 'floorLamp'], ['lamp', 'floorLamp'],
   ['sconce', 'sconce'], ['on air', 'neon'], ['neon', 'neon'], ['sign', 'neon'], ['light', 'ledPanel'],
-  ['door', 'door'], ['window', 'window'], ['partition', 'partition'], ['wall', 'partition'], ['soffit', 'soffit'], ['column', 'column'], ['pillar', 'column'],
+  ['door', 'door'], ['window', 'window'], ['mirror', 'mirror'], ['cladding', 'cladding'], ['feature wall', 'cladding'], ['panelling', 'cladding'], ['glass wall', 'glassWall'], ['glass partition', 'glassWall'], ['glass screen', 'glassWall'],
+  ['double door', 'doubleDoor'], ['french door', 'doubleDoor'], ['pass-through', 'opening'], ['opening', 'opening'], ['custom shape', 'custom'], ['partition', 'partition'], ['wall', 'partition'], ['soffit', 'soffit'], ['column', 'column'], ['pillar', 'column'],
   ['riser', 'riser'], ['platform', 'riser'], ['booth', 'booth'], ['iso booth', 'booth'], ['steps', 'stairs'], ['stairs', 'stairs'], ['plant', 'plant'],
   ['cube', 'shapeBox'], ['box', 'shapeBox'], ['board', 'shapeBoard'], ['cylinder', 'shapeCylinder'], ['sphere', 'shapeSphere'], ['ball', 'shapeSphere'],
   ['cone', 'shapeCone'], ['pyramid', 'shapePyramid'], ['wedge', 'shapeWedge'], ['ramp', 'shapeWedge'], ['half cylinder', 'shapeHalfCyl'], ['arch', 'shapeArch'], ['torus', 'shapeTorus'], ['ring', 'shapeTorus'],
@@ -56,8 +57,32 @@ const LOCATIONS = [
 
 const SURFACE_WORDS = [['front wall', ['front']], ['back wall', ['back']], ['rear wall', ['back']], ['left wall', ['left']], ['right wall', ['right']], ['side walls', ['left', 'right']], ['walls', ['*walls']], ['wall', ['*walls']], ['floor', ['floor']], ['ceiling', ['ceiling']]];
 
-const FINISH_WORDS = { oak: ['wood', '#c49a6c'], walnut: ['wood', '#5d4030'], wood: ['wood', null], wooden: ['wood', null], timber: ['wood', null], concrete: ['concrete', '#9a9a96'], brick: ['brick', '#b5654a'], carpet: ['carpet', null], carpeted: ['carpet', null], tile: ['tile', null], tiled: ['tile', null], marble: ['marble', '#efefef'], stone: ['marble', null], fabric: ['fabric', null], felt: ['felt', null], metal: ['metal', null], gloss: ['gloss', null], glossy: ['gloss', null], matte: ['paint', null], leather: ['leather', null] };
-const SURFACE_ACOUSTIC = { wood: 'wood_floor', concrete: 'concrete', brick: 'brick', carpet: 'carpet_pad', tile: 'tile_floor', marble: 'tile_floor' };
+const MATERIAL_WORDS = {
+  velvet: 'velvet', linen: 'linen', boucle: 'boucle', 'bouclé': 'boucle', tweed: 'tweed', suede: 'suede', leather: 'leather', felt: 'felt', fabric: 'fabric', 'grille cloth': 'grille', foam: 'foam',
+  oak: 'oak', walnut: 'walnut', ash: 'ash', maple: 'maple', cherry: 'cherry', ebony: 'ebony', ebonised: 'ebony', bamboo: 'bamboo', plywood: 'plywood', wood: 'wood', wooden: 'wood', timber: 'wood', 'slatted wood': 'woodSlat',
+  concrete: 'concrete', 'polished concrete': 'polishedConcrete', brick: 'brick', 'white brick': 'whiteBrick', 'painted brick': 'whiteBrick', marble: 'marble', terrazzo: 'terrazzo', slate: 'slate', stone: 'stone',
+  tile: 'tile', tiled: 'tile', 'subway tile': 'subway', 'hex tile': 'hexTile', 'hexagon tile': 'hexTile', mosaic: 'mosaic',
+  parquet: 'parquet', herringbone: 'parquet', chevron: 'chevron', plank: 'plank', 'wide plank': 'plank', carpet: 'carpet', carpeted: 'carpet', 'loop carpet': 'loopCarpet', cork: 'cork', rubber: 'rubber', vinyl: 'vinyl',
+  brass: 'brass', copper: 'copper', chrome: 'chrome', steel: 'metal', 'black steel': 'blackSteel', metal: 'metal', perforated: 'perforated', mirror: 'mirror', mirrored: 'mirror',
+  plaster: 'plaster', 'venetian plaster': 'plaster', limewash: 'limewash', wallpaper: 'wallpaperStripe', 'striped wallpaper': 'wallpaperStripe', 'geometric wallpaper': 'wallpaperGeo', damask: 'damask',
+  glass: 'glass', 'clear glass': 'glass', frosted: 'frosted', 'frosted glass': 'frosted', tinted: 'tinted', 'tinted glass': 'tinted', fluted: 'fluted', reeded: 'fluted', 'bronze glass': 'bronzeGlass', reflective: 'reflective', 'acoustic glass': 'acousticGlass', 'laminated glass': 'acousticGlass',
+  gloss: 'gloss', glossy: 'gloss', lacquered: 'gloss', matte: 'paint', satin: 'satin', eggshell: 'eggshell', acrylic: 'acrylic',
+};
+const MATERIAL_KEYS = Object.keys(MATERIAL_WORDS).sort((a, b) => b.length - a.length);
+function findFinish(s) { for (const w of MATERIAL_KEYS) if (new RegExp(`(^|[^a-z])${w}([^a-z]|$)`).test(s)) return { word: w, key: MATERIAL_WORDS[w] }; return null; }
+const GLASS_TYPES = { frosted: 'frosted', tinted: 'tinted', fluted: 'fluted', reeded: 'fluted', bronze: 'bronzeGlass', reflective: 'reflective', 'acoustic glass': 'acousticGlass', laminated: 'acousticGlass', clear: 'glass' };
+// Styled items: "barn door", "arched window", "hexagon panels", "glass wall"…
+const STYLE_WORDS = [
+  [/\bbarn doors?\b/, 'door', { style: 'barn' }], [/\b(sliding|pocket) (glass )?doors?\b/, 'door', { style: 'sliding' }], [/\bfrench doors?\b/, 'doubleDoor', { style: 'french' }], [/\bdouble doors?\b/, 'doubleDoor', { style: 'double' }],
+  [/\bglass doors?\b/, 'door', { style: 'glass' }], [/\bhalf[- ]glass doors?\b/, 'door', { style: 'half' }], [/\bpanel(led)? doors?\b/, 'door', { style: 'panel' }], [/\bflush doors?\b/, 'door', { style: 'flush' }], [/\b(acoustic|studio|soundproof) doors?\b/, 'door', { style: 'acoustic' }],
+  [/\b(arched|arch) windows?\b/, 'window', { style: 'arch' }], [/\b(round|circular|porthole) windows?\b|\bporthole\b/, 'window', { style: 'round' }], [/\bcasement windows?\b/, 'window', { style: 'casement' }], [/\bsliding windows?\b/, 'window', { style: 'sliding' }], [/\b(grid|georgian) windows?\b/, 'window', { style: 'grid' }],
+  [/\b(floor[- ]to[- ]ceiling|tall|picture) windows?\b/, 'skylightWin', {}], [/\b(studio|control room) windows?\b/, 'window', { style: 'studio' }],
+  [/\bcrittall\b|\bsteel[- ]framed glass\b/, 'glassWall', { style: 'crittall' }], [/\b(glass (wall|partition|screen))s?\b/, 'glassWall', { style: 'glass' }], [/\bhalf[- ]walls?\b/, 'partition', { style: 'half' }], [/\bslatted (wall|partition|screen)s?\b/, 'partition', { style: 'slatted' }],
+  [/\bwainscot(ing)?\b/, 'cladding', { style: 'wainscot' }], [/\b(battens?|batten wall)\b/, 'cladding', { style: 'battens' }], [/\b(feature walls?|cladding|panelling|paneling|wall panelling)\b/, 'cladding', {}],
+  [/\b(hex|hexagon|hexagonal) (panel|absorber|tile)s?\b/, 'customWall', { profile: 'polygon', sides: 6 }], [/\b(octagon|octagonal) panels?\b/, 'customWall', { profile: 'polygon', sides: 8 }],
+  [/\b(round|circle|circular) (panel|absorber)s?\b/, 'customWall', { profile: 'circle' }], [/\btriangle (panel|absorber)s?\b/, 'customWall', { profile: 'triangle' }], [/\bstar panels?\b/, 'customWall', { profile: 'star', sides: 5 }],
+  [/\b(round|circular) clouds?\b/, 'customCeiling', { profile: 'circle' }], [/\bhex(agon)? clouds?\b/, 'customCeiling', { profile: 'polygon', sides: 6 }],
+];
 
 const DIRS = { left: [-1, 0, 0], right: [1, 0, 0], forward: [0, 0, -1], forwards: [0, 0, -1], ahead: [0, 0, -1], back: [0, 0, 1], backward: [0, 0, 1], backwards: [0, 0, 1], up: [0, 1, 0], down: [0, -1, 0], higher: [0, 1, 0], lower: [0, -1, 0] };
 
@@ -132,6 +157,9 @@ export const PROMPT_EXAMPLES = [
   'make the room L shaped',
   'sloped ceiling 2.4 to 3.4',
   'curve the back wall 0.6',
+  'add a barn door on the right wall',
+  'add 6 hexagon panels on the back wall',
+  'make the floor herringbone',
   'add bass traps in all corners',
   'add 2 absorbers at first reflections',
   'add a cloud above the listener',
@@ -322,29 +350,38 @@ function handle(s, verb, api) {
 
   // ---- add
   if (['add', 'place', 'put', 'insert', 'create'].includes(verb) || (verb === 'make' && /\b(a|an|\d+)\s/.test(s) && findItem(s) && !findSurfaceTarget(s))) {
-    const found = findItem(s.replace(/\b(on|at|in|to|along|onto|over|above|behind|near)\s+(the\s+)?(front|back|rear|left|right|side|all)?\s*(walls?|ceiling|floor|corners?)\b/g, ' '));
+    let styleParams = null, styled = STYLE_WORDS.find(([re]) => re.test(s));
+    let found = styled ? { type: styled[1], word: s.match(styled[0])[0].trim().split(' ').pop().replace(/s$/, '') } : null;
+    if (styled) styleParams = { ...styled[2] };
+    const gw = Object.keys(GLASS_TYPES).find((k) => new RegExp(`\\b${k}\\b`).test(s));
+    if (gw && /door|window|glass|partition|screen|wall/.test(s)) styleParams = { ...(styleParams || {}), glass: GLASS_TYPES[gw] };
+    if (!found) found = findItem(s.replace(/\b(on|at|in|to|along|onto|over|above|behind|near)\s+(the\s+)?(front|back|rear|left|right|side|all)?\s*(walls?|ceiling|floor|corners?)\b/g, ' '));
     if (!found) return { ok: false, msg: 'Which item? e.g. "add 2 absorbers on the left wall"' };
+    if (found.type === 'glassWall' && !styleParams?.style && /\bglass\b/.test(s)) styleParams = { style: 'glass', ...(styleParams || {}) };
+    const fin = findFinish(s.replace(/\b(frosted|tinted|fluted|reeded|clear|bronze|reflective|laminated) glass\b|\bglass (door|wall|partition|screen)s?\b/g, ' '));
+    const finish = fin && !['glass'].includes(fin.key) ? fin.key : null;
     let loc = findLocation(s);
     let qty = findQty(s, found.word);
     const plural = /s$/.test(found.word) || new RegExp(`\\b${found.word}(e?s)\\b`).test(s);
+    if (!qty && found.type === 'doubleDoor') qty = 1;
     if (!qty) qty = loc === 'corners' ? 4 : loc === 'frontCorners' || loc === 'backCorners' || loc === 'sides' ? 2 : loc === 'reflections' ? 0 : found.type === 'monitor' && plural ? 2 : plural ? 2 : 1;
     const color = findColor(s.replace(/\bwood\b|\boak\b|\bwalnut\b/g, (m) => (found.type === 'desk' ? m : m)));
     const size = findSize(s);
-    const items = api.addMany(found.type, { qty, loc, color, size });
+    const items = api.addMany(found.type, { qty, loc, color: color && !(fin && COLOR_NAMES[fin.word] === color) ? color : null, size, params: styleParams, finish });
     return { ok: items.length > 0, msg: items.length ? `Added ${items.length} × ${api.nameOf(found.type)}${loc ? ' (' + loc + ')' : ''}` : 'Could not place that' };
   }
 
   // ---- paint / colour / finish
   if (['make', 'paint', 'color', 'colour', 'set', 'change'].includes(verb) || findColor(s)) {
     const color = findColor(s);
-    const finishWord = Object.keys(FINISH_WORDS).find((f) => new RegExp(`\\b${f}\\b`).test(s));
+    const fw = findFinish(s), finishWord = fw?.key;
     const surf = findSurfaceTarget(s);
     if (surf && (color || finishWord)) {
       // "paint walls charcoal and floor oak" is split earlier; apply here
       surf.forEach((name) => {
         const patch = {};
-        if (finishWord) { const [fin, fc] = FINISH_WORDS[finishWord]; patch.finish = fin; if (fc && !color) patch.color = fc; if (name === 'floor' && SURFACE_ACOUSTIC[fin]) patch.acoustic = SURFACE_ACOUSTIC[fin]; if (name !== 'floor' && fin === 'brick') patch.acoustic = 'brick'; }
-        if (color) patch.color = color;
+        if (finishWord) { const f = FINISHES[finishWord]; patch.finish = finishWord; if (f.color) patch.color = f.color; if (f.ac) patch.acoustic = name === 'floor' && f.ac === 'plywood' ? 'wood_floor' : f.ac; }
+        if (color && !(fw && COLOR_NAMES[fw.word] === color)) patch.color = color;
         api.setSurface(name, patch);
       });
       api.commit();
@@ -356,7 +393,7 @@ function handle(s, verb, api) {
       targets.forEach((it) => {
         const patch = {};
         if (color) patch[second ? 'color2' : 'color'] = color;
-        if (finishWord) patch.finish = FINISH_WORDS[finishWord][0];
+        if (finishWord) { patch.finish = finishWord; if (!color && FINISHES[finishWord].color && !second) patch.color = FINISHES[finishWord].color; }
         api.updateItem(it, patch);
       });
       api.commit();

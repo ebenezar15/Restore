@@ -101,7 +101,7 @@ export function openScanner(app, opts = {}) {
     if (t && app.surfaces[t]) { app.applyColorToSurface(t, c); app.toast('Colour applied to ' + app.surfaces[t]); return; }
     if (app.selected()) { app.applyColorToSelection(c); app.toast('Colour applied to selection'); return; }
     // otherwise offer surfaces
-    const m = app.modal('Apply colour ' + c, h('div', { class: 'row gap wrap' }, ...Object.entries(app.surfaces).map(([k, l]) => h('button', { class: 'btn small', onclick: () => { app.applyColorToSurface(k, c); app.toast(`${l} → ${c}`); m.close(); reopen(); } }, l))));
+    const cm = app.modal('Apply colour ' + c, h('div', { class: 'row gap wrap' }, ...Object.entries(app.surfaces).map(([k, l]) => h('button', { class: 'btn small', onclick: () => { app.applyColorToSurface(k, c); app.toast(`${l} → ${c}`); cm.close(); } }, l))));
   }
   function nextStep() {
     wizard++;
@@ -120,7 +120,6 @@ export function openScanner(app, opts = {}) {
     ]);
   }
   function done() { stop(); m.close(); }
-  function reopen() { openScanner(app, opts); }
 
   const body = h('div', { class: 'scanner' },
     h('div', { class: 'scan-stage' }, video, canvas),
@@ -132,6 +131,6 @@ export function openScanner(app, opts = {}) {
       h('button', { class: 'btn', onclick: () => { wizard = 0; start(); } }, '🧭 Guided room scan (every surface)'),
       h('button', { class: 'btn', onclick: () => { stop(); m.close(); app.importModel(); } }, 'Import 3D scan (GLB/OBJ)')));
   const m = app.modal('Scan & capture', body, [], { wide: true });
-  document.getElementById('modal').addEventListener('closed', stop, { once: true });
+  m.el.addEventListener('closed', stop, { once: true });
   if (opts.mode === 'upload') { status.textContent = 'Choose a photo…'; upload(); } else start();
 }

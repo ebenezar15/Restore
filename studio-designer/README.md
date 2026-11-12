@@ -29,6 +29,28 @@ The camera needs `https://` or `localhost`. On phones, "Upload photo" also opens
   - **Real wall openings:** doors, windows and pass-throughs cut holes through the wall. Wall thickness is adjustable.
   - **Acoustics follow the real shape:** volume, surface areas, RT60 and image-source reflections all use the actual geometry, and angled corner traps fit any corner angle.
   - **Prompts work too**, for example `make the room L shaped`, `sloped ceiling 2.4 to 3.4`, `vaulted ceiling 4`, `curve the back wall 0.6`.
+- **Materials & colours:** a visual material picker with 60+ finishes in ten groups.
+  - **Paint & plaster:** matte, eggshell, satin, gloss, Venetian plaster, limewash.
+  - **Fabrics:** acoustic fabric, linen, velvet, bouclé, herringbone weave, tweed, felt, suede, leather, grille cloth.
+  - **Wood:** oak, walnut, ash, maple, cherry, ebonised, bamboo, plywood, slatted wood.
+  - **Stone & masonry:** stone, concrete, polished concrete, red or painted brick, marble, terrazzo, slate.
+  - **Tile:** square, subway, hexagon, mosaic.
+  - **Metal:** brushed steel, black steel, chrome, brass, copper, perforated.
+  - **Glass & mirror:** clear, frosted, grey-tinted, bronze, reflective, fluted/reeded, laminated acoustic, mirror.
+  - **Wallcoverings:** striped, geometric and damask wallpaper, cork, stretched-fabric wall.
+  - **Flooring:** cut-pile and loop carpet, wide plank, herringbone and chevron parquet, rubber, vinyl.
+  - **Colour palettes:** Studio, Earth, Jewel and Soft, a named fabric-colour range and recently used colours, plus hex entry.
+  - **Two-tone walls:** a dado/wainscot with its own material, colour and rail.
+  - **Glass walls:** any room wall can be made glass.
+- **Doors, windows & walls:**
+  - **Doors:** flush, panel, acoustic studio, vision-panel, half-glass, glass, double, French, sliding and barn. Choose the hinge side, open angle, handle, glass type, frame material and hardware colour.
+  - **Windows:** studio double/triple with an angled pane, fixed, grid, casement, sliding, arched and round, with a choice of glass type. Arched and round windows cut matching shaped openings in the wall.
+  - **Walls & glass:** partitions (solid, half, glass-topped, slatted, frameless glass, steel-framed glass), glass screens, feature-wall cladding (boards, battens, tiles, hex tiles, wainscot) and mirrors.
+- **Custom shape builder (✦):**
+  - **Profiles:** pick one (rectangle, rounded, circle, triangle, diamond, N-sided polygon, star, arch, half-circle, trapezoid, L, T, cross, wave) or draw your own on a grid.
+  - **Build it:** extrude the profile, or revolve one of the preset profiles (cylinder, cone, dome, sphere, vase, bowl, column, hourglass, tube).
+  - **Size and finish:** exact width, height and depth, plus edge bevel, a hollow frame, and the material, colour and acoustic behaviour.
+  - **Placement:** free-standing, wall-mounted or hanging. Shapes can be saved to *My Shapes* in the library.
 - **Views:** 3D orbit, a true-to-scale Plan with an adjustable cut height, Front, Back, Left and Right elevations with section depth, a Quad view, a first-person Walkthrough and the Listener's-eye view. Walls nearest the camera are cut away automatically, and there's an X-ray mode.
 - **80+ items:**
   - **Absorption:** broadband 50/100 mm panels, framed panels, printed art panels, foam, PET felt, curtains, gobos and rugs.
@@ -50,7 +72,7 @@ The camera needs `https://` or `localhost`. On phones, "Upload photo" also opens
   - SBIR null frequencies, the stereo listening triangle and the 38 % rule.
   - Plain-language recommendations.
 - **✨ Auto-treat** presets for mixing, mastering, tracking, podcast and home theater. They place bass traps, panels at the computed reflection points, a cloud, diffusion and more.
-- **Prompt bar (offline, no AI service):** for example `room 4.5 x 6 x 2.8`, `add bass traps in all corners and a cloud above the listener`, `paint walls charcoal and floor oak`, `move selected 0.3 left`, `lights warm`, `treat room for mastering`, `top view`, `export pdf`. Feet and centimetres are understood. Voice input works where the browser supports it.
+- **Prompt bar (offline, no AI service):** for example `room 4.5 x 6 x 2.8`, `add a barn door on the right wall`, `add 6 hexagon panels on the back wall`, `make the floor herringbone`, `add a velvet sofa`, `add bass traps in all corners and a cloud above the listener`, `paint walls charcoal and floor oak`, `move selected 0.3 left`, `lights warm`, `treat room for mastering`, `top view`, `export pdf`. Feet and centimetres are understood. Voice input works where the browser supports it.
 - **Scan and import:**
   - Camera capture can map photos onto walls, sample colours, make printed art panels or set a floor-plan underlay.
   - A guided 6-surface room scan.
@@ -78,6 +100,7 @@ js/acoustics.js       RT60, modes, ratios, reflections, SBIR
 js/geometry.js        room outlines, ceiling profiles, areas & volume, shape presets
 js/prompt.js          offline natural-language command interpreter
 js/scan.js            camera capture, colour sampling, guided scan
+js/shapebuilder.js    custom shape builder (profile editor, extrude / revolve, preview)
 js/export.js          PDF generation (jsPDF)
 js/materials.js       procedural textures, finishes, colour names
 sw.js, manifest.webmanifest   offline PWA

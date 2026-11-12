@@ -5,7 +5,7 @@
 // inside corner as origin).
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
-import { mat, drawnTexture, imageTexture } from './materials.js';
+import { mat, drawnTexture, imageTexture, FINISHES } from './materials.js';
 
 const UNIT = new THREE.BoxGeometry(1, 1, 1);
 const DEG = Math.PI / 180;
@@ -554,31 +554,153 @@ const B = {
   },
   // ------------------------------------------------------------- architecture
   door(it) {
-    const [w, h, d] = it.size, g = new THREE.Group(), fr = mat(it.color2, 'paint'), t = 0.06;
-    g.add(box(t, h, d, fr, -w / 2 + t / 2, h / 2, 0), box(t, h, d, fr, w / 2 - t / 2, h / 2, 0), box(w, t, d, fr, 0, h - t / 2, 0));
-    g.add(box(w - 2 * t, h - t, d * 0.8, mat(it.color, it.finish), 0, (h - t) / 2, 0));
-    g.add(box(0.12, 0.025, 0.05, mat('#bbb', 'metal'), w / 2 - t - 0.1, h * 0.48, d / 2 + 0.02));
-    if (it.params.window) g.add(box(0.25, 0.5, d * 0.82, mat('#cfe8ff', 'glass'), 0, h * 0.68, 0));
-    if (it.params.seals !== false) g.add(box(w - 2 * t, 0.015, d * 0.82, mat('#222', 'plastic'), 0, 0.0075, 0));
+    const [w, h, d] = it.size, g = new THREE.Group(), P = it.params;
+    const style = P.style || 'flush', fr = mat(it.color2, P.frameFinish || 'paint'), t = 0.06;
+    const glass = mat(P.glassColor || FINISHES[P.glass || 'glass']?.color || '#dfeff7', P.glass || 'glass');
+    const leafMat = mat(it.color, it.finish), metal = mat(P.hardware || '#b9bcbf', 'metal');
+    const isBarn = style === 'barn', isSliding = style === 'sliding';
+    // frame (barn doors hang outside the opening, so they get a slimmer casing)
+    if (!isBarn) g.add(box(t, h, d, fr, -w / 2 + t / 2, h / 2, 0), box(t, h, d, fr, w / 2 - t / 2, h / 2, 0), box(w, t, d, fr, 0, h - t / 2, 0));
+    else g.add(box(0.04, h, 0.02, fr, -w / 2 + 0.02, h / 2, d / 2), box(0.04, h, 0.02, fr, w / 2 - 0.02, h / 2, d / 2), box(w, 0.04, 0.02, fr, 0, h - 0.02, d / 2));
+    const ow = isBarn ? w : w - 2 * t, oh = isBarn ? h : h - t;
+    const lt = style === 'acoustic' ? Math.min(0.08, d * 0.9) : Math.min(0.045, d * 0.7);
+    const double = ['double', 'french'].includes(style) || (style === 'glass' && P.leaves === 2);
+    const open = (P.open || 0) * DEG, hingeRight = P.hinge === 'right';
+    const leaf = (lw, lh, kind) => {
+      const L = new THREE.Group(), st = 0.1;
+      if (kind === 'glass' || kind === 'french') {
+        L.add(box(lw, st, lt, leafMat, 0, st / 2, 0), box(lw, st, lt, leafMat, 0, lh - st / 2, 0), box(st, lh, lt, leafMat, -lw / 2 + st / 2, lh / 2, 0), box(st, lh, lt, leafMat, lw / 2 - st / 2, lh / 2, 0));
+        L.add(box(lw - 2 * st, lh - 2 * st, 0.008, glass, 0, lh / 2, 0));
+        if (kind === 'french') { const rows = 4; for (let r2 = 1; r2 < rows; r2++) L.add(box(lw - 2 * st, 0.025, lt * 0.8, leafMat, 0, st + ((lh - 2 * st) * r2) / rows, 0)); L.add(box(0.025, lh - 2 * st, lt * 0.8, leafMat, 0, lh / 2, 0)); }
+      } else if (kind === 'half') {
+        L.add(box(lw, lh * 0.5, lt, leafMat, 0, lh * 0.25, 0), box(lw, st, lt, leafMat, 0, lh - st / 2, 0), box(st, lh * 0.5, lt, leafMat, -lw / 2 + st / 2, lh * 0.75, 0), box(st, lh * 0.5, lt, leafMat, lw / 2 - st / 2, lh * 0.75, 0));
+        L.add(box(lw - 2 * st, lh * 0.5 - st, 0.008, glass, 0, lh * 0.5 + (lh * 0.5 - st) / 2, 0));
+      } else if (kind === 'barn') {
+        const n = Math.max(3, Math.round(lw / 0.14)), pw = lw / n;
+        for (let k = 0; k < n; k++) L.add(box(pw - 0.004, lh, lt, leafMat, -lw / 2 + pw * (k + 0.5), lh / 2, 0));
+        L.add(box(lw, 0.12, 0.02, leafMat, 0, lh * 0.15, lt / 2 + 0.01), box(lw, 0.12, 0.02, leafMat, 0, lh * 0.85, lt / 2 + 0.01));
+        const diag = box(Math.hypot(lw, lh * 0.7), 0.1, 0.02, leafMat, 0, lh / 2, lt / 2 + 0.01); diag.rotation.z = Math.atan2(lh * 0.7, lw); L.add(diag);
+      } else {
+        L.add(box(lw, lh, lt, leafMat, 0, lh / 2, 0));
+        if (kind === 'panel') { const pm = mat(it.color, it.finish); for (const [px, py, ph] of [[-1, 0.72, 0.42], [1, 0.72, 0.42], [-1, 0.27, 0.36], [1, 0.27, 0.36]]) L.add(box(lw * 0.34, lh * ph * 0.8, 0.012, pm, px * lw * 0.21, lh * py, lt / 2 + 0.006)); }
+        if (kind === 'vision' || kind === 'acoustic') L.add(box(Math.min(0.22, lw * 0.3), lh * 0.32, lt + 0.004, glass, 0, lh * 0.68, 0));
+        if (kind === 'acoustic') { const seal = mat('#141414', 'plastic'); L.add(box(lw, 0.02, lt + 0.006, seal, 0, 0.01, 0), box(0.012, lh, lt + 0.006, seal, -lw / 2 + 0.006, lh / 2, 0), box(0.012, lh, lt + 0.006, seal, lw / 2 - 0.006, lh / 2, 0)); }
+      }
+      return L;
+    };
+    const handle = (L, lw, lh, side) => {
+      const hx = side * (lw / 2 - 0.08), z = lt / 2 + 0.03, kind = P.handle || 'lever';
+      if (kind === 'none') return;
+      if (kind === 'bar') { L.add(cyl(0.014, 0.014, Math.min(1.2, lh * 0.55), metal, hx, lh * 0.5, z, 12)); L.add(box(0.02, 0.02, 0.05, metal, hx, lh * 0.5 + Math.min(1.2, lh * 0.55) / 2 - 0.04, lt / 2 + 0.012), box(0.02, 0.02, 0.05, metal, hx, lh * 0.5 - Math.min(1.2, lh * 0.55) / 2 + 0.04, lt / 2 + 0.012)); }
+      else if (kind === 'knob') L.add(sphere(0.03, metal, hx, lh * 0.47, z, 14, 10));
+      else if (kind === 'pull') L.add(box(0.02, 0.35, 0.025, metal, hx, lh * 0.5, z - 0.01));
+      else { L.add(box(0.13, 0.02, 0.02, metal, hx - side * 0.05, lh * 0.47, z), cyl(0.02, 0.02, 0.03, metal, hx, lh * 0.47, lt / 2 + 0.012, 12)); }
+      if (style === 'acoustic') L.add(box(0.03, 0.18, 0.03, metal, hx, lh * 0.47, lt / 2 + 0.05));
+    };
+    const kind = { flush: 'flush', panel: 'panel', glass: 'glass', half: 'half', vision: 'vision', acoustic: 'acoustic', double: P.glazing ? 'glass' : 'panel', french: 'french', sliding: 'glass', barn: 'barn' }[style] || 'flush';
+    if (isSliding || isBarn) {
+      const frac = P.open ? Math.min(1, P.open / 90) : 0;
+      const lw = isBarn ? ow + 0.12 : ow * 0.52, L = leaf(lw, isBarn ? oh + 0.04 : oh, kind);
+      L.position.set(isBarn ? frac * lw : -ow / 2 + lw / 2 + frac * (ow - lw), 0, isBarn ? d / 2 + lt / 2 + 0.03 : -lt * 0.6);
+      handle(L, lw, oh, isBarn ? -1 : 1);
+      g.add(L);
+      if (isSliding) { const F2 = leaf(lw, oh, kind); F2.position.set(ow / 2 - lw / 2, 0, lt * 0.6); g.add(F2); g.add(box(ow, 0.03, d * 0.8, fr, 0, oh - 0.015, 0)); }
+      if (isBarn) { g.add(box(w * 2.1, 0.03, 0.03, metal, w / 2, h + 0.08, d / 2 + 0.04)); for (const x of [-lw / 2 + 0.1, lw / 2 - 0.1]) L.add(cyl(0.035, 0.035, 0.02, metal, x, h + 0.08 - L.position.y, -0.0, 16)); }
+    } else if (double) {
+      for (const side of [-1, 1]) {
+        const lw = ow / 2, piv = new THREE.Group(); piv.position.set(side * ow / 2, 0, d / 2 - lt / 2);
+        const L = leaf(lw, oh, kind); L.position.x = -side * lw / 2; handle(L, lw, oh, -side);
+        piv.add(L); piv.rotation.y = side * open; g.add(piv);
+      }
+    } else {
+      const s2 = hingeRight ? 1 : -1, piv = new THREE.Group(); piv.position.set(s2 * ow / 2, 0, d / 2 - lt / 2);
+      const L = leaf(ow, oh, kind); L.position.x = -s2 * ow / 2; handle(L, ow, oh, -s2);
+      piv.add(L); piv.rotation.y = s2 * open; g.add(piv);
+      if (style === 'acoustic') for (const y of [0.25, 0.5, 0.85]) g.add(cyl(0.012, 0.012, 0.12, metal, s2 * (ow / 2), oh * y, d / 2, 10));
+    }
+    if (P.seals !== false && !isBarn && !isSliding) g.add(box(ow, 0.012, d * 0.82, mat('#222', 'plastic'), 0, 0.006, 0));
     return g;
   },
   window(it) {
-    const [w, h, d] = it.size, g = new THREE.Group(), fr = mat(it.color, it.finish), t = 0.06;
-    g.add(box(w, t, d, fr, 0, t / 2, 0), box(w, t, d, fr, 0, h - t / 2, 0), box(t, h, d, fr, -w / 2 + t / 2, h / 2, 0), box(t, h, d, fr, w / 2 - t / 2, h / 2, 0));
-    const panes = it.params.panes || 2, glass = mat('#cfe8ff', 'glass');
-    for (let i = 0; i < panes; i++) {
-      const pane = box(w - 2 * t, h - 2 * t, 0.01, glass, 0, h / 2, -d / 2 + (d / (panes + 1)) * (i + 1));
-      if (it.params.angled && i === 0) pane.rotation.x = 6 * DEG;
-      g.add(pane);
+    const [w, h, d] = it.size, g = new THREE.Group(), P = it.params, style = P.style || 'studio';
+    const fr = mat(it.color, it.finish), t = P.frame ?? 0.06;
+    const glass = mat(P.glassColor || FINISHES[P.glass || 'glass']?.color || '#dfeff7', P.glass || 'glass');
+    const pane = (pw, ph, x, y, z, rx = 0) => { const m = box(pw, ph, 0.008, glass, x, y, z); m.rotation.x = rx; g.add(m); };
+    if (style === 'round') {
+      const r = Math.min(w, h) / 2, ring = new THREE.Mesh(new THREE.TorusGeometry(r - t / 2, t / 2, 10, 48), fr); ring.position.set(0, h / 2, 0); ring.scale.z = d / t; g.add(ring);
+      const disc0 = new THREE.Mesh(new THREE.CircleGeometry(r - t, 48), glass); disc0.position.set(0, h / 2, 0); g.add(disc0);
+      return g;
     }
+    if (style === 'arch') {
+      const r = w / 2, sh = new THREE.Shape(), ih = Math.max(0.05, h - r);
+      sh.moveTo(-w / 2, 0); sh.lineTo(w / 2, 0); sh.lineTo(w / 2, ih); sh.absarc(0, ih, r, 0, Math.PI, false); sh.lineTo(-w / 2, 0);
+      const hole = new THREE.Path(); hole.moveTo(-w / 2 + t, t); hole.lineTo(w / 2 - t, t); hole.lineTo(w / 2 - t, ih); hole.absarc(0, ih, r - t, 0, Math.PI, false); hole.lineTo(-w / 2 + t, t); sh.holes.push(hole);
+      const geo = new THREE.ExtrudeGeometry(sh, { depth: d, bevelEnabled: false, curveSegments: 24 }); geo.translate(0, 0, -d / 2); g.add(new THREE.Mesh(geo, fr));
+      const gs = new THREE.Shape(); gs.moveTo(-w / 2 + t, t); gs.lineTo(w / 2 - t, t); gs.lineTo(w / 2 - t, ih); gs.absarc(0, ih, r - t, 0, Math.PI, false); gs.lineTo(-w / 2 + t, t);
+      const gm = new THREE.Mesh(new THREE.ShapeGeometry(gs, 24), glass); g.add(gm);
+      if (P.grid) { g.add(box(0.025, h - 2 * t, 0.02, fr, 0, h / 2, 0), box(w - 2 * t, 0.025, 0.02, fr, 0, ih, 0)); }
+      return g;
+    }
+    g.add(box(w, t, d, fr, 0, t / 2, 0), box(w, t, d, fr, 0, h - t / 2, 0), box(t, h, d, fr, -w / 2 + t / 2, h / 2, 0), box(t, h, d, fr, w / 2 - t / 2, h / 2, 0));
+    const iw = w - 2 * t, ih = h - 2 * t;
+    if (style === 'studio') {
+      const panes = P.panes || 2;
+      for (let i = 0; i < panes; i++) pane(iw, ih, 0, h / 2, -d / 2 + (d / (panes + 1)) * (i + 1), P.angled && i === 0 ? 6 * DEG : 0);
+      g.add(box(iw, 0.01, d - 0.02, mat('#141414', 'felt'), 0, t + 0.005, 0));
+    } else if (style === 'casement' || style === 'sliding') {
+      pane(iw / 2 - 0.01, ih, -iw / 4, h / 2, style === 'sliding' ? -0.015 : 0); pane(iw / 2 - 0.01, ih, iw / 4, h / 2, style === 'sliding' ? 0.015 : 0);
+      g.add(box(0.05, ih, d * 0.6, fr, 0, h / 2, 0));
+      if (style === 'casement') for (const s of [-1, 1]) g.add(box(0.012, 0.1, 0.03, mat('#bbb', 'metal'), s * 0.04, h / 2, d * 0.35));
+    } else {
+      pane(iw, ih, 0, h / 2, 0);
+      if (style === 'grid' || P.grid) { const cols = Math.max(2, Math.round(iw / 0.35)), rows = Math.max(2, Math.round(ih / 0.35)); for (let c = 1; c < cols; c++) g.add(box(0.025, ih, 0.025, fr, -iw / 2 + (iw * c) / cols, h / 2, 0)); for (let r = 1; r < rows; r++) g.add(box(iw, 0.025, 0.025, fr, 0, t + (ih * r) / rows, 0)); }
+    }
+    if (P.sill !== false) g.add(box(w + 0.06, 0.03, d + 0.06, mat(it.color2 || it.color, 'paint'), 0, -0.015, 0.03));
     return g;
   },
   partition(it) {
-    const [w, h, d] = it.size;
-    const g = new THREE.Group();
-    g.add(box(w, h, d, mat(it.color, it.finish), 0, h / 2, 0));
+    const [w, h, d] = it.size, g = new THREE.Group(), P = it.params, style = P.style || 'solid';
+    const m = mat(it.color, it.finish), glass = mat(FINISHES[P.glass || 'glass']?.color || '#dfeff7', P.glass || 'glass'), fr = mat(it.color2, 'blackSteel');
+    if (style === 'solid') g.add(box(w, h, d, m, 0, h / 2, 0));
+    else if (style === 'half') { const hh = P.halfHeight ?? 1.1; g.add(box(w, hh, d, m, 0, hh / 2, 0), box(w + 0.02, 0.03, d + 0.03, mat(it.color2, 'wood'), 0, hh + 0.015, 0)); }
+    else if (style === 'glassTop') { const hh = P.halfHeight ?? 1.1; g.add(box(w, hh, d, m, 0, hh / 2, 0)); g.add(box(w, h - hh, 0.012, glass, 0, hh + (h - hh) / 2, 0), box(w, 0.04, d, fr, 0, h - 0.02, 0), box(w, 0.04, d, fr, 0, hh + 0.02, 0)); }
+    else if (style === 'slatted') { const n = Math.max(2, Math.floor(w / 0.09)); for (let k = 0; k < n; k++) g.add(box(0.045, h, d, m, -w / 2 + (w / n) * (k + 0.5), h / 2, 0)); }
+    else if (style === 'glass' || style === 'crittall') {
+      g.add(box(w, h - 0.06, 0.012, glass, 0, h / 2, 0), box(w, 0.04, d, fr, 0, 0.02, 0), box(w, 0.04, d, fr, 0, h - 0.02, 0), box(0.04, h, d, fr, -w / 2 + 0.02, h / 2, 0), box(0.04, h, d, fr, w / 2 - 0.02, h / 2, 0));
+      if (style === 'crittall') { const cols = Math.max(2, Math.round(w / 0.5)), rows = Math.max(3, Math.round(h / 0.5)); for (let c = 1; c < cols; c++) g.add(box(0.025, h, d * 0.7, fr, -w / 2 + (w * c) / cols, h / 2, 0)); for (let r = 1; r < rows; r++) g.add(box(w, 0.025, d * 0.7, fr, 0, (h * r) / rows, 0)); }
+    }
     return g;
   },
+  cladding(it) {
+    const [w, h, d] = it.size, g = new THREE.Group(), P = it.params, style = P.style || 'flat', m = mat(it.color, it.finish);
+    if (style === 'flat') g.add(box(w, h, d, m, 0, h / 2, 0));
+    else if (style === 'vgroove' || style === 'battens') {
+      const pitch = P.pitch || 0.1, n = Math.max(2, Math.round(w / pitch)), pw = w / n;
+      if (style === 'battens') g.add(box(w, h, 0.01, mat(it.color2, 'paint'), 0, h / 2, -d / 2 + 0.005));
+      for (let k = 0; k < n; k++) g.add(box(style === 'battens' ? pw * 0.45 : pw - 0.004, h, style === 'battens' ? d - 0.01 : d, m, -w / 2 + pw * (k + 0.5), h / 2, style === 'battens' ? 0.005 : 0));
+    } else if (style === 'tiles' || style === 'hex') {
+      g.add(box(w, h, 0.006, mat(it.color2, 'paint'), 0, h / 2, -d / 2 + 0.003));
+      const s0 = P.tile || 0.3;
+      if (style === 'hex') {
+        const R = s0 / 2, hh = Math.sqrt(3) * R, geo = new THREE.CylinderGeometry(R * 0.96, R * 0.96, d - 0.006, 6); geo.rotateX(Math.PI / 2); geo.rotateZ(Math.PI / 6);
+        const pts = []; for (let c = 0; c * R * 1.5 <= w; c++) for (let r = 0; r * hh <= h; r++) { const x = -w / 2 + c * R * 1.5 + R, y = r * hh + (c % 2 ? hh / 2 : 0) + hh / 2; if (x + R <= w / 2 + 1e-3 && y + hh / 2 <= h + 1e-3) pts.push([x, y]); }
+        const im = new THREE.InstancedMesh(geo, m, Math.max(1, pts.length)); const o = new THREE.Object3D();
+        pts.forEach(([x, y], i) => { o.position.set(x, y, 0.003); o.updateMatrix(); im.setMatrixAt(i, o.matrix); }); im.count = pts.length; g.add(im);
+      } else { const list = []; for (let x = -w / 2; x < w / 2 - 1e-3; x += s0) for (let y = 0; y < h - 1e-3; y += s0) list.push([x + Math.min(s0, w / 2 - x) / 2, y + Math.min(s0, h - y) / 2, 0.003, Math.min(s0, w / 2 - x) - 0.006, Math.min(s0, h - y) - 0.006, d - 0.006]); g.add(instBoxes(list, m)); }
+    } else if (style === 'wainscot') {
+      const hh = Math.min(h, P.panelHeight ?? 1.0); g.add(box(w, hh, d, m, 0, hh / 2, 0), box(w + 0.01, 0.04, d + 0.02, m, 0, hh, 0));
+      const n = Math.max(1, Math.round(w / 0.6)); for (let k = 0; k < n; k++) g.add(box(w / n - 0.12, hh - 0.2, 0.012, m, -w / 2 + (w / n) * (k + 0.5), hh / 2, d / 2 + 0.006));
+    }
+    return g;
+  },
+  mirror(it) {
+    const [w, h, d] = it.size, g = new THREE.Group(), P = it.params;
+    if (P.round) { const r = Math.min(w, h) / 2; const f = new THREE.Mesh(new THREE.CylinderGeometry(r, r, d, 48), mat(it.color2, P.frameFinish || 'brass')); f.rotation.x = Math.PI / 2; f.position.y = h / 2; g.add(f); const mm = new THREE.Mesh(new THREE.CircleGeometry(r - 0.025, 48), mat('#e8eef2', 'mirror')); mm.position.set(0, h / 2, d / 2 + 0.001); g.add(mm); return g; }
+    g.add(box(w, h, d, mat(it.color2, P.frameFinish || 'blackSteel'), 0, h / 2, 0));
+    const mm = new THREE.Mesh(new THREE.PlaneGeometry(w - 0.05, h - 0.05), mat('#e8eef2', 'mirror')); mm.position.set(0, h / 2, d / 2 + 0.001); g.add(mm);
+    return g;
+  },
+  custom(it) { return buildCustom(it); },
   column(it) {
     const [w, h, d] = it.size, g = new THREE.Group();
     if (it.params.round) g.add(cyl(w / 2, w / 2, h, mat(it.color, it.finish), 0, h / 2, 0, 32));
@@ -737,6 +859,87 @@ const B = {
   },
 };
 
+// ---------------------------------------------------------------- custom shapes
+/** Normalised 2D profiles (x, y in -0.5…0.5) for the shape builder. */
+export const PROFILES = {
+  rect: { label: 'Rectangle', pts: () => [[-0.5, -0.5], [0.5, -0.5], [0.5, 0.5], [-0.5, 0.5]] },
+  rounded: { label: 'Rounded rect', round: true, pts: () => [[-0.5, -0.5], [0.5, -0.5], [0.5, 0.5], [-0.5, 0.5]] },
+  circle: { label: 'Circle / ellipse', pts: () => Array.from({ length: 48 }, (_, k) => [Math.cos((k / 48) * Math.PI * 2) / 2, Math.sin((k / 48) * Math.PI * 2) / 2]) },
+  triangle: { label: 'Triangle', pts: () => [[-0.5, -0.5], [0.5, -0.5], [0, 0.5]] },
+  rightTri: { label: 'Right triangle', pts: () => [[-0.5, -0.5], [0.5, -0.5], [-0.5, 0.5]] },
+  diamond: { label: 'Diamond', pts: () => [[0, -0.5], [0.5, 0], [0, 0.5], [-0.5, 0]] },
+  polygon: { label: 'Polygon (N sides)', sides: true, pts: (n = 6) => Array.from({ length: n }, (_, k) => { const a = (k / n) * Math.PI * 2 + Math.PI / 2 + (n % 2 ? 0 : Math.PI / n); return [Math.cos(a) / 2, Math.sin(a) / 2]; }) },
+  star: { label: 'Star', sides: true, pts: (n = 5) => Array.from({ length: n * 2 }, (_, k) => { const a = (k / (n * 2)) * Math.PI * 2 + Math.PI / 2, r = k % 2 ? 0.22 : 0.5; return [Math.cos(a) * r, Math.sin(a) * r]; }) },
+  arch: { label: 'Arch', pts: () => { const p = [[-0.5, -0.5], [0.5, -0.5], [0.5, 0]]; for (let k = 1; k < 24; k++) { const a = (k / 24) * Math.PI; p.push([Math.cos(a) / 2, Math.sin(a) / 2]); } p.push([-0.5, 0]); return p; } },
+  semicircle: { label: 'Half circle', pts: () => { const p = [[-0.5, -0.5], [0.5, -0.5]]; for (let k = 1; k < 32; k++) { const a = (k / 32) * Math.PI; p.push([Math.cos(a) / 2, -0.5 + Math.sin(a)]); } return p; } },
+  trapezoid: { label: 'Trapezoid', pts: () => [[-0.5, -0.5], [0.5, -0.5], [0.3, 0.5], [-0.3, 0.5]] },
+  lshape: { label: 'L-shape', pts: () => [[-0.5, -0.5], [0.5, -0.5], [0.5, -0.1], [-0.1, -0.1], [-0.1, 0.5], [-0.5, 0.5]] },
+  tshape: { label: 'T-shape', pts: () => [[-0.15, -0.5], [0.15, -0.5], [0.15, 0.2], [0.5, 0.2], [0.5, 0.5], [-0.5, 0.5], [-0.5, 0.2], [-0.15, 0.2]] },
+  cross: { label: 'Cross', pts: () => [[-0.15, -0.5], [0.15, -0.5], [0.15, -0.15], [0.5, -0.15], [0.5, 0.15], [0.15, 0.15], [0.15, 0.5], [-0.15, 0.5], [-0.15, 0.15], [-0.5, 0.15], [-0.5, -0.15], [-0.15, -0.15]] },
+  wave: { label: 'Wave', pts: () => { const p = []; for (let k = 0; k <= 24; k++) p.push([-0.5 + k / 24, -0.5]); for (let k = 24; k >= 0; k--) p.push([-0.5 + k / 24, 0.2 + Math.sin((k / 24) * Math.PI * 2) * 0.3]); return p; } },
+  custom: { label: 'Custom (draw)', pts: (n, it) => it?.params?.points?.length >= 3 ? it.params.points : [[-0.5, -0.5], [0.5, -0.5], [0.2, 0.5], [-0.4, 0.3]] },
+};
+/** Revolve (lathe) profiles: [radius 0…1, height 0…1]. */
+export const LATHES = {
+  cylinder: { label: 'Cylinder', pts: [[0, 0], [1, 0], [1, 1], [0, 1]] },
+  cone: { label: 'Cone', pts: [[0, 0], [1, 0], [0, 1]] },
+  dome: { label: 'Dome', pts: [[0, 0], ...Array.from({ length: 17 }, (_, k) => [Math.cos((k / 16) * Math.PI / 2), Math.sin((k / 16) * Math.PI / 2)])] },
+  sphere: { label: 'Sphere', pts: Array.from({ length: 25 }, (_, k) => { const a = -Math.PI / 2 + (k / 24) * Math.PI; return [Math.cos(a), (Math.sin(a) + 1) / 2]; }) },
+  vase: { label: 'Vase', pts: [[0, 0], [0.55, 0], [0.8, 0.15], [0.95, 0.4], [0.7, 0.75], [0.5, 0.9], [0.6, 1], [0, 1]] },
+  bowl: { label: 'Bowl', pts: [[0, 0], [0.5, 0], ...Array.from({ length: 12 }, (_, k) => [0.5 + 0.5 * Math.sin((k / 11) * Math.PI / 2), 1 - Math.cos((k / 11) * Math.PI / 2)]), [0, 1]] },
+  column: { label: 'Column', pts: [[0, 0], [1, 0], [1, 0.06], [0.8, 0.1], [0.8, 0.9], [1, 0.94], [1, 1], [0, 1]] },
+  hourglass: { label: 'Hourglass', pts: [[0, 0], [1, 0], [0.35, 0.5], [1, 1], [0, 1]] },
+  tube: { label: 'Tube (hollow)', hollow: true, pts: [[0.8, 0], [1, 0], [1, 1], [0.8, 1]] },
+};
+
+function profilePoints(it) {
+  const P = it.params, pr = PROFILES[P.profile] || PROFILES.rect;
+  return pr.pts(Math.max(3, P.sides || 6), it);
+}
+function shapeFrom(pts, W, H, round = 0) {
+  const sh = new THREE.Shape();
+  if (round > 0) {
+    const r = Math.min(round, W / 2 - 1e-3, H / 2 - 1e-3), x0 = -W / 2, y0 = -H / 2;
+    sh.moveTo(x0 + r, y0); sh.lineTo(x0 + W - r, y0); sh.quadraticCurveTo(x0 + W, y0, x0 + W, y0 + r); sh.lineTo(x0 + W, y0 + H - r); sh.quadraticCurveTo(x0 + W, y0 + H, x0 + W - r, y0 + H);
+    sh.lineTo(x0 + r, y0 + H); sh.quadraticCurveTo(x0, y0 + H, x0, y0 + H - r); sh.lineTo(x0, y0 + r); sh.quadraticCurveTo(x0, y0, x0 + r, y0);
+    return sh;
+  }
+  pts.forEach(([x, y], i) => (i ? sh.lineTo(x * W, y * H) : sh.moveTo(x * W, y * H)));
+  sh.closePath();
+  return sh;
+}
+export function buildCustom(it) {
+  const [w, h, d] = it.size, P = it.params, g = new THREE.Group(), m = mat(it.color, it.finish, { side: THREE.DoubleSide });
+  if ((P.op || 'extrude') === 'revolve') {
+    const L = LATHES[P.lathe || 'cylinder'] || LATHES.cylinder;
+    const pts = L.pts.map(([r, y]) => new THREE.Vector2(Math.max(0, r) * 0.5, y));
+    const geo = new THREE.LatheGeometry(pts, 48, 0, ((P.sweep ?? 360) * Math.PI) / 180);
+    const me = new THREE.Mesh(geo, m); me.scale.set(w, h, d); g.add(me);
+    return g;
+  }
+  const orient = P.orient || 'wall';
+  const W = w, H = orient === 'wall' ? h : d, depth = orient === 'wall' ? d : h;
+  const pr = PROFILES[P.profile] || PROFILES.rect;
+  const sh = shapeFrom(profilePoints(it), W, H, pr.round ? (P.radius ?? Math.min(W, H) * 0.15) : 0);
+  const frame = P.hollow || 0;
+  if (frame > 0 && frame < Math.min(W, H) / 2) {
+    // inner outline = profile scaled toward its centre
+    const sx = (W - 2 * frame) / W, sy = (H - 2 * frame) / H;
+    const inner = shapeFrom(pr.round ? null : profilePoints(it).map(([x, y]) => [x * sx, y * sy]), W, H, 0);
+    if (pr.round) { const r = Math.max(0, (P.radius ?? Math.min(W, H) * 0.15) - frame); const ih = shapeFrom(null, W - 2 * frame, H - 2 * frame, r || 1e-4); sh.holes.push(new THREE.Path(ih.getPoints(12).reverse())); }
+    else sh.holes.push(new THREE.Path(inner.getPoints().reverse()));
+  }
+  const bevel = Math.min(P.bevel || 0, depth / 2.2, Math.min(W, H) / 4);
+  const geo = new THREE.ExtrudeGeometry(sh, { depth: Math.max(0.001, depth - 2 * bevel), bevelEnabled: bevel > 0, bevelThickness: bevel, bevelSize: bevel, bevelSegments: 3, curveSegments: 24 });
+  geo.translate(0, 0, -(depth - 2 * bevel) / 2);
+  if (orient === 'wall') geo.translate(0, H / 2, 0);
+  else { geo.rotateX(-Math.PI / 2); geo.translate(0, depth / 2, 0); }
+  // fit UVs to metres so textures keep their real scale
+  const uv = geo.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) / 1.2, uv.getY(i) / 1.2);
+  g.add(new THREE.Mesh(geo, m));
+  return g;
+}
+
 function rackDraw(c, W, H) {
   c.fillStyle = '#1b1c1f'; c.fillRect(0, 0, W, H);
   const u = H / 14;
@@ -829,10 +1032,15 @@ export const CATALOG = [
   D({ type: 'sconce', name: 'Wall Sconce', cat: 'Lighting', mount: 'wall', wallY: 1.7, size: [0.18, 0.25, 0.15], color: '#c8a14a', finish: 'metal', light: true, build: B.sconce, params: LIGHT_PARAMS }),
   D({ type: 'neon', name: '"ON AIR" Sign', cat: 'Lighting', mount: 'wall', wallY: 1.95, size: [0.6, 0.2, 0.05], color: '#111111', light: true, build: B.neon, params: { ...LIGHT_PARAMS, lightColor: { ...LIGHT_PARAMS.lightColor, default: '#ff2a2a' }, text: { label: 'Text', type: 'text', default: 'ON AIR' } } }),
   // Architecture
-  D({ type: 'door', name: 'Acoustic Door', cat: 'Architecture', mount: 'wall', opening: true, size: [0.9, 2.1, 0.08], color: '#5d4030', color2: '#e9e6df', finish: 'wood', acoustic: 'wood_hard', build: B.door, params: { window: { label: 'Vision panel', type: 'bool', default: false }, seals: { label: 'Drop seal', type: 'bool', default: true }, cutWall: { label: 'Cut opening in wall', type: 'bool', default: true } } }),
-  D({ type: 'window', name: 'Studio Window (double)', cat: 'Architecture', mount: 'wall', wallY: 0.9, opening: true, size: [1.4, 1.0, 0.2], color: '#2a211c', finish: 'wood', acoustic: 'glass', build: B.window, params: { panes: { label: 'Panes', type: 'select', options: [1, 2, 3], default: 2 }, angled: { label: 'Angled pane', type: 'bool', default: true }, cutWall: { label: 'Cut opening in wall', type: 'bool', default: true } } }),
-  D({ type: 'opening', name: 'Wall Opening / Pass-through', cat: 'Architecture', mount: 'wall', opening: true, size: [1.2, 2.1, 0.2], color: '#c9c5bd', area: AREA.none, build: (it) => { const [w, h, d] = it.size, g = new THREE.Group(); const m = mat(it.color, 'paint', { opacity: 0.0001 }); g.add(box(w, h, d, m, 0, h / 2, 0)); return g; }, params: { cutWall: { label: 'Cut opening in wall', type: 'bool', default: true } }, desc: 'An open doorway / pass-through / niche cut into a wall.' }),
-  D({ type: 'partition', name: 'Partition Wall', cat: 'Architecture', size: [2.0, 2.4, 0.12], color: '#ece8df', finish: 'paint', acoustic: 'drywall', area: (s) => 2 * s[0] * s[1], build: B.partition }),
+  D({ type: 'door', name: 'Door', cat: 'Doors & Windows', mount: 'wall', opening: true, size: [0.9, 2.1, 0.1], color: '#5d4030', color2: '#e9e6df', finish: 'walnut', acoustic: 'wood_hard', build: B.door, params: { style: { label: 'Style', type: 'select', options: ['flush', 'panel', 'acoustic', 'vision', 'half', 'glass', 'double', 'french', 'sliding', 'barn'], default: 'acoustic' }, hinge: { label: 'Hinge side', type: 'select', options: ['left', 'right'], default: 'left' }, open: { label: 'Open angle (°) / slide', type: 'range', min: 0, max: 90, step: 1, default: 0 }, handle: { label: 'Handle', type: 'select', options: ['lever', 'bar', 'knob', 'pull', 'none'], default: 'lever' }, glass: { label: 'Glass type', type: 'select', options: ['glass', 'frosted', 'tinted', 'bronzeGlass', 'reflective', 'fluted', 'acousticGlass'], default: 'glass' }, glazing: { label: 'Glazed (double)', type: 'bool', default: false }, frameFinish: { label: 'Frame material', type: 'finish', default: 'paint' }, hardware: { label: 'Hardware colour', type: 'color', default: '#b9bcbf' }, seals: { label: 'Drop seal', type: 'bool', default: true }, cutWall: { label: 'Cut opening in wall', type: 'bool', default: true } }, desc: 'Studio, panel, glass, French, double, sliding or barn door. Pick style, glass, handle, hinge side and swing.' }),
+  D({ type: 'doubleDoor', name: 'Double Door', cat: 'Doors & Windows', mount: 'wall', opening: true, size: [1.6, 2.1, 0.1], color: '#ece8df', color2: '#ece8df', finish: 'satin', acoustic: 'wood_hard', build: B.door, params: { style: { label: 'Style', type: 'select', options: ['double', 'french', 'sliding', 'barn'], default: 'french' }, open: { label: 'Open angle (°) / slide', type: 'range', min: 0, max: 90, step: 1, default: 0 }, handle: { label: 'Handle', type: 'select', options: ['lever', 'bar', 'knob', 'pull', 'none'], default: 'bar' }, glass: { label: 'Glass type', type: 'select', options: ['glass', 'frosted', 'tinted', 'bronzeGlass', 'reflective', 'fluted', 'acousticGlass'], default: 'glass' }, glazing: { label: 'Glazed', type: 'bool', default: true }, frameFinish: { label: 'Frame material', type: 'finish', default: 'paint' }, hardware: { label: 'Hardware colour', type: 'color', default: '#2a2b2e' }, seals: { label: 'Drop seal', type: 'bool', default: true }, cutWall: { label: 'Cut opening in wall', type: 'bool', default: true } } }),
+  D({ type: 'window', name: 'Window', cat: 'Doors & Windows', mount: 'wall', wallY: 1.4, opening: true, size: [1.4, 1.0, 0.2], color: '#2a211c', color2: '#ece8df', finish: 'walnut', acoustic: 'glass', build: B.window, params: { style: { label: 'Style', type: 'select', options: ['studio', 'fixed', 'grid', 'casement', 'sliding', 'arch', 'round'], default: 'studio' }, glass: { label: 'Glass type', type: 'select', options: ['glass', 'frosted', 'tinted', 'bronzeGlass', 'reflective', 'fluted', 'acousticGlass'], default: 'acousticGlass' }, panes: { label: 'Panes (studio)', type: 'select', options: [1, 2, 3], default: 2 }, angled: { label: 'Angled pane', type: 'bool', default: true }, grid: { label: 'Glazing bars', type: 'bool', default: false }, frame: { label: 'Frame width (m)', type: 'number', min: 0.02, max: 0.2, step: 0.005, default: 0.06 }, sill: { label: 'Sill', type: 'bool', default: true }, cutWall: { label: 'Cut opening in wall', type: 'bool', default: true } }, desc: 'Studio (double/triple, angled), fixed, grid, casement, sliding, arched or round window — choose the glass type too.' }),
+  D({ type: 'skylightWin', name: 'Tall / Floor-to-ceiling Window', cat: 'Doors & Windows', mount: 'wall', opening: true, size: [2.4, 2.3, 0.15], color: '#2a2b2e', color2: '#2a2b2e', finish: 'blackSteel', acoustic: 'glass', build: B.window, params: { style: { label: 'Style', type: 'select', options: ['fixed', 'grid', 'sliding', 'studio'], default: 'grid' }, glass: { label: 'Glass type', type: 'select', options: ['glass', 'frosted', 'tinted', 'bronzeGlass', 'reflective', 'fluted', 'acousticGlass'], default: 'glass' }, grid: { label: 'Glazing bars', type: 'bool', default: true }, frame: { label: 'Frame width (m)', type: 'number', min: 0.02, max: 0.2, step: 0.005, default: 0.05 }, sill: { label: 'Sill', type: 'bool', default: false }, cutWall: { label: 'Cut opening in wall', type: 'bool', default: true } } }),
+  D({ type: 'opening', name: 'Wall Opening / Pass-through', cat: 'Doors & Windows', mount: 'wall', opening: true, size: [1.2, 2.1, 0.2], color: '#c9c5bd', area: AREA.none, build: (it) => { const [w, h, d] = it.size, g = new THREE.Group(); const m = mat(it.color, 'paint', { opacity: 0.0001 }); g.add(box(w, h, d, m, 0, h / 2, 0)); return g; }, params: { cutWall: { label: 'Cut opening in wall', type: 'bool', default: true } }, desc: 'An open doorway / pass-through / niche cut into a wall.' }),
+  D({ type: 'partition', name: 'Partition / Wall', cat: 'Walls & Glass', size: [2.0, 2.4, 0.12], color: '#ece8df', color2: '#2a2b2e', finish: 'paint', acoustic: 'drywall', area: (s) => 2 * s[0] * s[1], build: B.partition, params: { style: { label: 'Style', type: 'select', options: ['solid', 'half', 'glassTop', 'slatted', 'glass', 'crittall'], default: 'solid' }, halfHeight: { label: 'Lower part height (m)', type: 'number', min: 0.3, max: 2.4, step: 0.05, default: 1.1 }, glass: { label: 'Glass type', type: 'select', options: ['glass', 'frosted', 'tinted', 'bronzeGlass', 'reflective', 'fluted', 'acousticGlass'], default: 'glass' } }, desc: 'Solid, half-height, glass-topped, slatted, frameless glass or steel-framed (Crittall-style) wall.' }),
+  D({ type: 'glassWall', name: 'Glass Wall / Screen', cat: 'Walls & Glass', size: [2.4, 2.4, 0.06], color: '#ece8df', color2: '#2a2b2e', finish: 'paint', acoustic: 'glass', area: (s) => 2 * s[0] * s[1], build: B.partition, params: { style: { label: 'Style', type: 'select', options: ['glass', 'crittall', 'glassTop'], default: 'crittall' }, halfHeight: { label: 'Lower part height (m)', type: 'number', min: 0.3, max: 2.4, step: 0.05, default: 0.9 }, glass: { label: 'Glass type', type: 'select', options: ['glass', 'frosted', 'tinted', 'bronzeGlass', 'reflective', 'fluted', 'acousticGlass'], default: 'glass' } }, desc: 'Glass partition between control room and live room — choose clear, frosted, tinted, fluted or laminated acoustic glass.' }),
+  D({ type: 'cladding', name: 'Wall Cladding / Feature Wall', cat: 'Walls & Glass', mount: 'wall', size: [2.4, 2.4, 0.02], color: '#c49a6c', color2: '#1d1d1d', finish: 'oak', acoustic: 'plywood', build: B.cladding, params: { style: { label: 'Style', type: 'select', options: ['flat', 'vgroove', 'battens', 'tiles', 'hex', 'wainscot'], default: 'vgroove' }, pitch: { label: 'Board / batten pitch (m)', type: 'number', min: 0.03, max: 0.4, step: 0.005, default: 0.1 }, tile: { label: 'Tile size (m)', type: 'number', min: 0.05, max: 1.2, step: 0.01, default: 0.3 }, panelHeight: { label: 'Wainscot height (m)', type: 'number', min: 0.3, max: 2.4, step: 0.05, default: 1.0 } }, desc: 'Cover any wall area with wood boards, battens, tiles, hex tiles, stone, brick, wallpaper or wainscot — pick any material.' }),
+  D({ type: 'mirror', name: 'Mirror', cat: 'Walls & Glass', mount: 'wall', wallY: 1.4, size: [0.8, 1.2, 0.03], color: '#e8eef2', color2: '#2a2b2e', finish: 'mirror', acoustic: 'glass', build: B.mirror, params: { round: { label: 'Round', type: 'bool', default: false }, frameFinish: { label: 'Frame material', type: 'finish', default: 'blackSteel' } } }),
   D({ type: 'soffit', name: 'Speaker Soffit Wall', cat: 'Architecture', mount: 'wall', size: [3.0, 2.4, 0.6], color: '#2f3236', finish: 'fabric', acoustic: 'none', build: B.soffit, params: { speakerHeight: { label: 'Speaker height (m)', type: 'number', min: 0.5, max: 2.2, step: 0.05, default: 1.25 } }, desc: 'Flush-mounted main monitors — removes front-wall SBIR.' }),
   D({ type: 'column', name: 'Column / Pillar', cat: 'Architecture', size: [0.3, 2.4, 0.3], color: '#ece8df', acoustic: 'concrete', area: (s) => 4 * s[0] * s[1], build: B.column, params: { round: { label: 'Round', type: 'bool', default: false } } }),
   D({ type: 'riser', name: 'Riser / Floating Floor', cat: 'Architecture', size: [2.0, 0.2, 2.0], color: '#c49a6c', color2: '#2a2a2a', finish: 'wood', build: B.riser }),
@@ -841,6 +1049,9 @@ export const CATALOG = [
   // Decor
   D({ type: 'plant', name: 'Plant', cat: 'Decor', size: [0.5, 1.2, 0.5], color: '#3f8f4f', color2: '#e9e6df', finish: 'concrete', build: B.plant }),
   // Shapes
+  D({ type: 'custom', name: 'Custom Shape', cat: 'Shapes', size: [0.8, 0.8, 0.8], color: '#b0b4b8', finish: 'paint', acoustic: 'wood_hard', build: B.custom, custom: true, params: { op: { label: 'Operation', type: 'hidden', default: 'extrude' }, orient: { label: 'Orientation', type: 'hidden', default: 'floor' }, profile: { type: 'hidden', default: 'polygon' }, sides: { type: 'hidden', default: 6 } }, desc: 'Build any shape: pick or draw a profile, then extrude or revolve it to exact dimensions.' }),
+  D({ type: 'customWall', name: 'Custom Wall Panel', cat: 'Shapes', mount: 'wall', size: [0.6, 0.6, 0.05], color: '#3b4a5a', finish: 'fabric', acoustic: 'fabric_50', build: B.custom, custom: true, hidden: true, params: { op: { type: 'hidden', default: 'extrude' }, orient: { type: 'hidden', default: 'wall' }, profile: { type: 'hidden', default: 'polygon' }, sides: { type: 'hidden', default: 6 } } }),
+  D({ type: 'customCeiling', name: 'Custom Ceiling Shape', cat: 'Shapes', mount: 'ceiling', drop: 0.25, size: [1.2, 0.08, 1.2], color: '#e9e6df', finish: 'fabric', acoustic: 'fabric_100', area: AREA.top, build: B.custom, custom: true, hidden: true, params: { op: { type: 'hidden', default: 'extrude' }, orient: { type: 'hidden', default: 'floor' }, profile: { type: 'hidden', default: 'circle' } } }),
   D({ type: 'shapeBox', name: 'Box', cat: 'Shapes', size: [1, 1, 1], color: '#b0b4b8', acoustic: 'wood_hard', build: B.shapeBox, params: { rounded: { label: 'Corner radius (m)', type: 'number', min: 0, max: 0.3, step: 0.005, default: 0 } } }),
   D({ type: 'shapeBoard', name: 'Board / Panel', cat: 'Shapes', mount: 'wall', size: [1.2, 0.6, 0.02], color: '#c49a6c', finish: 'wood', acoustic: 'plywood', build: B.shapeBox, params: {} }),
   D({ type: 'shapeCylinder', name: 'Cylinder', cat: 'Shapes', size: [0.6, 1, 0.6], color: '#b0b4b8', acoustic: 'wood_hard', area: AREA.cyl, build: B.shapeCylinder }),

@@ -282,7 +282,7 @@ async function buildPdf(app, o) {
   await tick('Saving…');
   doc.save(`${app.safeName()}-design.pdf`);
   app.toast(`PDF exported (${pageNo} pages)`, 'ok');
-  document.getElementById('modal').hidden = true;
+  app.closeModals();
 }
 
 function hexRgb(hex) {

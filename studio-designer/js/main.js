@@ -7,8 +7,9 @@ import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 import { OBJExporter } from 'three/addons/exporters/OBJExporter.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
-import { CATALOG, CATEGORIES, BY_TYPE, buildItem, areaOf, defaultParams } from './catalog.js';
-import { mat, FINISHES, imageTexture, COLOR_NAMES } from './materials.js';
+import { CATALOG, CATEGORIES, BY_TYPE, buildItem, areaOf, defaultParams, PROFILES, LATHES } from './catalog.js';
+import { openShapeBuilder } from './shapebuilder.js';
+import { mat, FINISHES, FINISH_CATS, FABRIC_COLORS, finishSwatch, isGlass, imageTexture, COLOR_NAMES } from './materials.js';
 import * as AC from './acoustics.js';
 import * as G from './geometry.js';
 import { runPrompt, PROMPT_EXAMPLES } from './prompt.js';
@@ -134,16 +135,26 @@ function openingsOn(e) {
     const u0 = clamp(u - hw, 0.02, e.len - 0.02), u1 = clamp(u + hw, 0.02, e.len - 0.02);
     const top = Math.min(G.heightAt(R(), e.a[0] + e.dir[0] * u0, e.a[1] + e.dir[1] * u0), G.heightAt(R(), e.a[0] + e.dir[0] * u1, e.a[1] + e.dir[1] * u1));
     const y0 = clamp(it.pos[1], 0, top - 0.05), y1 = clamp(it.pos[1] + it.size[1], y0 + 0.02, top - 0.02);
-    if (u1 - u0 > 0.05 && y1 - y0 > 0.05) out.push({ u0, u1, y0, y1, id: it.id });
+    const st = it.params?.style;
+    const shape = def.type === 'window' && st === 'round' ? 'round' : def.type === 'window' && st === 'arch' ? 'arch' : 'rect';
+    if (u1 - u0 > 0.05 && y1 - y0 > 0.05) out.push({ u0, u1, y0, y1, id: it.id, shape });
   }
   return out;
 }
+/** Outline of a wall opening in (u, y) wall coordinates. */
+function holePts(o) {
+  const w = o.u1 - o.u0, hgt = o.y1 - o.y0, cu = (o.u0 + o.u1) / 2;
+  if (o.shape === 'round') { const r = Math.min(w, hgt) / 2, cy = (o.y0 + o.y1) / 2; return Array.from({ length: 32 }, (_, k) => { const a = (k / 32) * Math.PI * 2; return [cu + Math.cos(a) * r, cy + Math.sin(a) * r]; }); }
+  if (o.shape === 'arch') { const r = w / 2, top = Math.max(o.y0 + 0.02, o.y1 - r); const pts = [[o.u0, o.y0], [o.u1, o.y0], [o.u1, top]]; for (let k = 1; k < 16; k++) { const a = (k / 16) * Math.PI; pts.push([cu + Math.cos(a) * r, top + Math.sin(a) * r]); } pts.push([o.u0, top]); return pts; }
+  return [[o.u0, o.y0], [o.u1, o.y0], [o.u1, o.y1], [o.u0, o.y1]];
+}
+const polyArea = (pts) => Math.abs(pts.reduce((a, p, i) => { const q = pts[(i + 1) % pts.length]; return a + p[0] * q[1] - q[0] * p[1]; }, 0)) / 2;
 function surfaceArea(id) {
   if (id === 'floor') return G.floorArea(R());
   if (id === 'ceiling') return G.ceilingArea(R());
   const e = wallEdges().find((x) => x.id === id);
   if (!e) return 0;
-  return Math.max(0, G.wallArea(R(), e) - openingsOn(e).reduce((a, o) => a + (o.u1 - o.u0) * (o.y1 - o.y0), 0));
+  return Math.max(0, G.wallArea(R(), e) - openingsOn(e).reduce((a, o) => a + polyArea(holePts(o)), 0));
 }
 
 // ===================================================================== units
@@ -247,7 +258,7 @@ function wallFaceGeometry(e, top, holes, map, photo) {
   sh.moveTo(0, 0); sh.lineTo(e.len, 0);
   for (let k = top.length - 1; k >= 0; k--) sh.lineTo(top[k][0], top[k][1]);
   sh.closePath();
-  for (const o of holes) { const hp = new THREE.Path(); hp.moveTo(o.u0, o.y0); hp.lineTo(o.u0, o.y1); hp.lineTo(o.u1, o.y1); hp.lineTo(o.u1, o.y0); hp.closePath(); sh.holes.push(hp); }
+  for (const o of holes) { const pts = holePts(o).slice().reverse(); const hp = new THREE.Path(); pts.forEach(([u, y], i) => (i ? hp.lineTo(u, y) : hp.moveTo(u, y))); hp.closePath(); sh.holes.push(hp); }
   const g = new THREE.ShapeGeometry(sh);
   const pos = g.attributes.position, uv = g.attributes.uv, hmax = Math.max(...top.map((t) => t[1]));
   for (let i = 0; i < pos.count; i++) {
@@ -296,20 +307,29 @@ function buildRoom() {
     const og = wallFaceGeometry(e, top, holes, outer, false);
     const idx = og.index.array; for (let k = 0; k < idx.length; k += 3) { const tmp = idx[k + 1]; idx[k + 1] = idx[k + 2]; idx[k + 2] = tmp; }
     og.computeVertexNormals();
-    const shell = mk(og, shellMat, e.id); shell.castShadow = true; g.add(shell);
+    const glassWall = isGlass(sf.finish);
+    const shell = mk(og, glassWall ? surfaceMaterial(e.id) : shellMat, e.id); shell.castShadow = !glassWall; g.add(shell);
     const quads = [];
     for (let k = 0; k < top.length - 1; k++) {
       const [u0, y0] = top[k], [u1, y1] = top[k + 1], i0 = inner(u0), i1 = inner(u1), o0 = outer(u0), o1 = outer(u1);
       quads.push([[i0[0], y0, i0[1]], [i1[0], y1, i1[1]], [o1[0], y1, o1[1]], [o0[0], y0, o0[1]]]);
     }
     for (const o of holes) {
-      const P3 = (u, y, f) => { const q = f(u); return [q[0], y, q[1]]; };
-      quads.push([P3(o.u0, o.y0, inner), P3(o.u1, o.y0, inner), P3(o.u1, o.y0, outer), P3(o.u0, o.y0, outer)]);
-      quads.push([P3(o.u0, o.y1, inner), P3(o.u1, o.y1, inner), P3(o.u1, o.y1, outer), P3(o.u0, o.y1, outer)]);
-      quads.push([P3(o.u0, o.y0, inner), P3(o.u0, o.y1, inner), P3(o.u0, o.y1, outer), P3(o.u0, o.y0, outer)]);
-      quads.push([P3(o.u1, o.y0, inner), P3(o.u1, o.y1, inner), P3(o.u1, o.y1, outer), P3(o.u1, o.y0, outer)]);
+      const P3 = (u, y, f) => { const q = f(u); return [q[0], y, q[1]]; }, hp = holePts(o);
+      hp.forEach(([u, y], k) => { const [u2, y2] = hp[(k + 1) % hp.length]; quads.push([P3(u, y, inner), P3(u2, y2, inner), P3(u2, y2, outer), P3(u, y, outer)]); });
     }
-    if (quads.length) g.add(mk(quadsGeometry(quads), shellMat, e.id));
+    // two-tone wall: lower material up to the dado height (follows openings)
+    if (sf.dado?.on && sf.dado.height > 0.05) {
+      const dh = Math.min(sf.dado.height, Math.min(...top.map((q) => q[1])) - 0.01);
+      const dHoles = holes.filter((o) => o.y0 < dh - 0.02).map((o) => ({ ...o, y1: Math.min(o.y1, dh - 0.005), shape: o.y1 > dh ? 'rect' : o.shape }));
+      const off = (u) => { const q = inner(u); return [q[0] + e.n[0] * 0.004, q[1] + e.n[1] * 0.004]; };
+      g.add(mk(wallFaceGeometry(e, [[0, dh], [e.len, dh]], dHoles, off, false), mat(sf.dado.color, sf.dado.finish), e.id));
+      if (sf.dado.rail !== false) {
+        const rail = new THREE.Mesh(new THREE.BoxGeometry(e.len, 0.045, 0.025), mat(sf.dado.color, sf.dado.finish));
+        rail.position.set(e.mid[0] + e.n[0] * 0.0125, dh, e.mid[1] + e.n[1] * 0.0125); rail.rotation.y = -Math.atan2(e.dir[1], e.dir[0]); rail.userData.surface = e.id; g.add(rail);
+      }
+    }
+    if (quads.length) g.add(mk(quadsGeometry(quads), glassWall ? mat('#2a2b2e', 'blackSteel', { side: THREE.DoubleSide }) : shellMat, e.id));
     roomGroup.add(g); wallObjs[e.id] = g;
   });
   // ceiling (flat, sloped, pitched, vaulted or domed)
@@ -639,7 +659,7 @@ function placeSpeaker(it, i) {
   it.name = `${defOf(it.type).name} ${i % 2 ? 'R' : 'L'}`;
 }
 
-function addMany(type, { qty = 1, loc = null, color = null, size = null, auto = false, extra = {} } = {}) {
+function addMany(type, { qty = 1, loc = null, color = null, size = null, auto = false, extra = {}, params = null, finish = null } = {}) {
   const def = defOf(type);
   if (!def) return [];
   let points = null;
@@ -658,6 +678,8 @@ function addMany(type, { qty = 1, loc = null, color = null, size = null, auto = 
     const it = makeItem(type);
     if (color) it.color = color;
     if (size) it.size = [size.w ?? it.size[0], size.h ?? it.size[1], size.d ?? it.size[2]];
+    if (params) it.params = { ...it.params, ...params };
+    if (finish) { it.finish = finish; if (!color && FINISHES[finish]?.color) it.color = FINISHES[finish].color; }
     if (auto) it.auto = true;
     placeItem(it, loc, def.speaker && !loc ? startIdx + i : i, qty, { points, ...extra });
     P().items.push(it);
@@ -1507,24 +1529,28 @@ function toast(msg, kind = 'info') {
   setTimeout(() => el.classList.add('out'), 3200);
   setTimeout(() => el.remove(), 3700);
 }
+/** Dialogs stack, so e.g. the material picker can open on top of the shape builder. */
 function modal(title, body, actions = [], { wide = false } = {}) {
-  const wrap = $('#modal');
-  wrap.innerHTML = '';
-  const close = () => { wrap.hidden = true; wrap.innerHTML = ''; wrap.dispatchEvent(new Event('closed')); };
+  const layer = h('div', { class: 'modal-layer' });
+  const close = () => { if (!layer.isConnected) return; layer.remove(); layer.dispatchEvent(new Event('closed')); };
   const box = h('div', { class: 'modal-box' + (wide ? ' wide' : '') },
     h('div', { class: 'modal-head' }, h('h2', {}, title), h('button', { class: 'icon-btn', title: 'Close', onclick: close, html: '&times;' })),
     h('div', { class: 'modal-body' }, body),
     actions.length ? h('div', { class: 'modal-actions' }, actions.map((a) => h('button', { class: a.primary ? 'btn primary' : 'btn', onclick: () => { if (a.onClick?.() !== false) close(); } }, a.label))) : null);
-  wrap.append(box); wrap.hidden = false;
-  wrap.onclick = (e) => { if (e.target === wrap) close(); };
-  return { close, box };
+  layer.append(box);
+  layer.addEventListener('pointerdown', (e) => { if (e.target === layer) layer._downOnBackdrop = true; });
+  layer.addEventListener('click', (e) => { if (e.target === layer && layer._downOnBackdrop) close(); layer._downOnBackdrop = false; });
+  layer._close = close;
+  document.body.append(layer);
+  return { close, box, el: layer };
 }
+function closeModals() { [...document.querySelectorAll('.modal-layer')].forEach((l) => l._close?.()); }
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { const top = [...document.querySelectorAll('.modal-layer')].pop(); if (top) { e.stopImmediatePropagation(); top._close(); } } }, true);
 function confirmDialog(title, text) {
   return new Promise((res) => {
     let answered = false;
     const m = modal(title, h('p', {}, text), [{ label: 'No', onClick: () => { answered = true; res(false); } }, { label: 'Yes', primary: true, onClick: () => { answered = true; res(true); } }]);
-    $('#modal').addEventListener('closed', () => { if (!answered) res(false); }, { once: true });
-    void m;
+    m.el.addEventListener('closed', () => { if (!answered) res(false); }, { once: true });
   });
 }
 
@@ -1544,19 +1570,71 @@ function numField(label, meters, onChange, { step = 0.01, min = -100, max = 100,
   inp.addEventListener('change', () => { const v = parseFloat(inp.value); if (!Number.isNaN(v)) onChange(unit ? fromUnit(v) : v); });
   return h('label', { class: 'field' }, h('span', {}, label + (unit ? ` (${S.units})` : '')), inp);
 }
-function colorField(label, value, onChange) {
+const PALETTES = {
+  Studio: ['#141414', '#1d1d1f', '#2a2b2e', '#2f3236', '#3b3e42', '#3b4a5a', '#5a6470', '#8a8d91', '#c8cacc', '#ece8df', '#f4f4f2', '#ffffff'],
+  Earth: ['#2a211c', '#4a3b30', '#5d4030', '#6b4a32', '#8a6a4a', '#a77b52', '#c49a6c', '#d8c3a0', '#d9c7a7', '#b8895a', '#a4502b', '#c0654a'],
+  Jewel: ['#1d2a44', '#2a4fb0', '#1f4f5c', '#1f7f80', '#1f7a57', '#2e4d36', '#5a1a1f', '#6d1f2c', '#5b2a4f', '#6b3fa0', '#c8a14a', '#e07b2a'],
+  Soft: ['#9caf88', '#a8dcc4', '#8cc4e8', '#b7a6d9', '#e8c4c0', '#e59ab3', '#efe6cf', '#d6c39e', '#c9d3cf', '#bfae8e', '#e8c547', '#e8735f'],
+};
+function recentColors() { try { return JSON.parse(localStorage.getItem('rt.recentColors') || '[]'); } catch { return []; } }
+function pushRecent(c) { try { const r = [c, ...recentColors().filter((x) => x !== c)].slice(0, 12); localStorage.setItem('rt.recentColors', JSON.stringify(r)); } catch { /* storage unavailable */ } }
+function colorField(label, value, onChange, { fabric = false } = {}) {
   const inp = h('input', { type: 'color', value });
-  inp.addEventListener('input', () => onChange(inp.value, false));
-  inp.addEventListener('change', () => onChange(inp.value, true));
-  const sw = h('div', { class: 'swatches' }, ['#1a1a1a', '#2f3236', '#3b4a5a', '#1d2a44', '#5a1a1f', '#6b4a32', '#c49a6c', '#d8c3a0', '#9caf88', '#ece8df', '#f4f4f2', '#e07b2a'].map((c) => h('button', { class: 'sw', style: { background: c }, title: c, onclick: () => { inp.value = c; onChange(c, true); } })));
-  return h('div', { class: 'field color-field' }, h('span', {}, label), h('div', { class: 'row' }, inp, h('code', {}, value)), sw);
+  const code = h('input', { class: 'hex', value, maxlength: 7, title: 'Hex colour' });
+  const set = (c, done = true) => { inp.value = c; code.value = c; onChange(c, done); if (done) pushRecent(c); };
+  inp.addEventListener('input', () => { code.value = inp.value; onChange(inp.value, false); });
+  inp.addEventListener('change', () => set(inp.value));
+  code.addEventListener('change', () => { const v = code.value.trim(); const c = /^#?[0-9a-f]{6}$/i.test(v) ? (v[0] === '#' ? v : '#' + v) : COLOR_NAMES[v.toLowerCase()]; if (c) set(c); else code.value = inp.value; });
+  let tab = localStorage.getItem('rt.palTab') || 'Studio';
+  const grid = h('div', { class: 'swatches' });
+  const tabs = h('div', { class: 'pal-tabs' });
+  const draw = () => {
+    grid.innerHTML = ''; tabs.innerHTML = '';
+    const names = [...(fabric ? ['Fabric'] : []), ...Object.keys(PALETTES), ...(recentColors().length ? ['Recent'] : [])];
+    if (!names.includes(tab)) tab = names[0];
+    for (const n of names) tabs.append(h('button', { class: 'pal-tab' + (n === tab ? ' active' : ''), onclick: () => { tab = n; try { localStorage.setItem('rt.palTab', n); } catch { /* ignore */ } draw(); } }, n));
+    const list = tab === 'Fabric' ? FABRIC_COLORS : tab === 'Recent' ? recentColors().map((c) => [c, c]) : PALETTES[tab].map((c) => [c, c]);
+    for (const [name, c] of list) grid.append(h('button', { class: 'sw', style: { background: c }, title: name === c ? c : `${name} ${c}`, onclick: () => set(c) }));
+  };
+  draw();
+  return h('div', { class: 'field color-field' }, h('span', {}, label), h('div', { class: 'row' }, inp, code), tabs, grid);
 }
+
+// ---------------------------------------------------------------- material picker
+function materialField(label, finish, color, onPick, { cats = null } = {}) {
+  const f = FINISHES[finish] || FINISHES.paint;
+  const btn = h('button', { class: 'mat-btn', onclick: () => openMaterialPicker({ finish, color, cats, onPick }) },
+    h('img', { src: finishSwatch(finish, color, 48), alt: '' }), h('span', {}, h('b', {}, f.label), h('small', {}, f.cat)), h('i', {}, 'Change ▸'));
+  return h('div', { class: 'field' }, h('span', {}, label), btn);
+}
+function openMaterialPicker({ finish, color, cats, onPick }) {
+  let cat = FINISHES[finish]?.cat || FINISH_CATS[0];
+  if (cats && !cats.includes(cat)) cat = cats[0];
+  let keepColor = !!JSON.parse(localStorage.getItem('rt.keepColor') || 'false');
+  const tabs = h('div', { class: 'mat-tabs' }), grid = h('div', { class: 'mat-grid' }), q = h('input', { type: 'search', placeholder: 'Search materials…' });
+  const draw = () => {
+    tabs.innerHTML = ''; grid.innerHTML = '';
+    for (const c of cats || FINISH_CATS) tabs.append(h('button', { class: 'pal-tab' + (c === cat && !q.value ? ' active' : ''), onclick: () => { cat = c; q.value = ''; draw(); } }, c));
+    const term = q.value.trim().toLowerCase();
+    const list = Object.entries(FINISHES).filter(([k, f]) => (!cats || cats.includes(f.cat)) && (term ? (f.label + ' ' + f.cat + ' ' + k).toLowerCase().includes(term) : f.cat === cat));
+    for (const [k, f] of list) {
+      const c = keepColor || !f.color ? color : f.color;
+      grid.append(h('button', { class: 'mat-card' + (k === finish ? ' sel' : ''), onclick: () => { onPick({ finish: k, color: keepColor || !f.color ? null : f.color }); m.close(); } },
+        h('img', { src: finishSwatch(k, c, 72), alt: '' }), h('span', {}, f.label)));
+    }
+  };
+  q.addEventListener('input', draw);
+  const keep = h('label', { class: 'check' }, h('input', { type: 'checkbox', checked: keepColor, onchange: (e) => { keepColor = e.target.checked; try { localStorage.setItem('rt.keepColor', JSON.stringify(keepColor)); } catch { /* ignore */ } draw(); } }), ' Keep my current colour (only change the material)');
+  const m = modal('Choose material', h('div', { class: 'mat-picker' }, h('div', { class: 'row gap' }, q), tabs, grid, keep), [], { wide: true });
+  draw();
+}
+
 function selectField(label, value, options, onChange) {
   const sel = h('select', { onchange: (e) => onChange(e.target.value) }, options.map(([v, l]) => h('option', { value: v, selected: String(v) === String(value) }, l)));
   return h('label', { class: 'field' }, h('span', {}, label), sel);
 }
 function section(title, ...kids) { return h('details', { class: 'sec', open: true }, h('summary', {}, title), h('div', { class: 'sec-body' }, ...kids)); }
-const finishOptions = () => Object.entries(FINISHES).map(([k, f]) => [k, f.label]);
+const finishOptions = () => Object.entries(FINISHES).map(([k, f]) => [k, `${f.cat} — ${f.label}`]);
 const acousticOptions = () => Object.entries(AC.ACOUSTIC_MATERIALS).map(([k, m]) => [k, m.name]);
 
 function renderPanels(light = false) {
@@ -1577,6 +1655,11 @@ function renderLibrary() {
   const draw = () => {
     const q = search.value.trim().toLowerCase();
     list.innerHTML = '';
+    const mine = myShapes().filter((m) => !q || m.name.toLowerCase().includes(q));
+    if (mine.length) list.append(h('details', { class: 'lib-cat', open: true }, h('summary', {}, 'My Shapes', h('small', {}, mine.length)),
+      h('div', { class: 'lib-grid' }, mine.map((m) => h('div', { class: 'lib-card my-shape', title: `${m.name} — ${m.size.map((v) => fmt(v)).join(' × ')}`, onclick: () => { addCustomItem(m); closeDrawers(); } },
+        h('img', { src: profileThumb(m), alt: '' }), h('span', {}, m.name),
+        h('button', { class: 'icon-btn tiny del', title: 'Remove from My Shapes', html: '&times;', onclick: (e) => { e.stopPropagation(); setMyShapes(myShapes().filter((x) => x.name !== m.name)); renderLibrary(); } }))))));
     for (const cat of CATEGORIES) {
       const defs = CATALOG.filter((d) => d.cat === cat && !d.hidden && (!q || (d.name + ' ' + d.cat + ' ' + (d.desc || '')).toLowerCase().includes(q)));
       if (!defs.length) continue;
@@ -1584,13 +1667,26 @@ function renderLibrary() {
         h('div', { class: 'lib-grid' }, defs.map((d) => h('button', {
           class: 'lib-card', draggable: true, title: d.desc || d.name, 'data-type': d.type,
           ondragstart: (e) => { e.dataTransfer.setData('text/x-roomtone', d.type); e.dataTransfer.effectAllowed = 'copy'; },
-          onclick: () => { addMany(d.type, {}); if (S.tool === 'select') setTool('move'); closeDrawers(); },
+          onclick: () => { if (d.custom) { openBuilder({ preset: { type: d.type, size: d.size, color: d.color, finish: d.finish, acoustic: d.acoustic, params: defaultParams(d) } }); return; } addMany(d.type, {}); if (S.tool === 'select') setTool('move'); closeDrawers(); },
         }, h('img', { src: S.thumbs[d.type] || '', alt: '', 'data-thumb': d.type }), h('span', {}, d.name))))));
     }
   };
   search.addEventListener('input', draw);
-  pane.append(h('div', { class: 'pane-head' }, search, h('p', { class: 'hint' }, 'Click to add · drag onto a wall, floor or ceiling to place')), list);
+  pane.append(h('div', { class: 'pane-head' }, search,
+    h('div', { class: 'row gap' }, h('button', { class: 'btn small primary', onclick: () => openBuilder() }, '✦ Shape builder'), h('button', { class: 'btn small', onclick: () => openBuilder({ preset: { type: 'customWall', size: [0.6, 0.6, 0.05], color: '#3b4a5a', finish: 'fabric', acoustic: 'fabric_50', params: { op: 'extrude', orient: 'wall', profile: 'polygon', sides: 6 } } }) }, '⬡ Custom panel')),
+    h('p', { class: 'hint' }, 'Click to add · drag onto a wall, floor or ceiling to place')), list);
   draw();
+}
+function profileThumb(m) {
+  const c = document.createElement('canvas'); c.width = c.height = 112; const g = c.getContext('2d');
+  const gr = g.createRadialGradient(56, 45, 5, 56, 56, 80); gr.addColorStop(0, '#2c323a'); gr.addColorStop(1, '#1a1d22'); g.fillStyle = gr; g.fillRect(0, 0, 112, 112);
+  g.fillStyle = m.color; g.strokeStyle = 'rgba(255,255,255,0.4)'; g.lineWidth = 1.5;
+  const P2 = m.params || {};
+  g.beginPath();
+  if (P2.op === 'revolve') { const L = LATHES[P2.lathe] || LATHES.cylinder; L.pts.forEach(([r, y], i) => { const x = 56 + r * 38, yy = 96 - y * 80; i ? g.lineTo(x, yy) : g.moveTo(x, yy); }); for (let i = L.pts.length - 1; i >= 0; i--) { const [r, y] = L.pts[i]; g.lineTo(56 - r * 38, 96 - y * 80); } }
+  else { const pts = (PROFILES[P2.profile] || PROFILES.rect).pts(P2.sides || 6, { params: P2 }); const a = (P2.orient === 'wall' ? m.size[1] : m.size[2]) / m.size[0], W = a > 1 ? 80 / a : 80, H = a > 1 ? 80 : 80 * a; pts.forEach(([x, y], i) => (i ? g.lineTo(56 + x * W, 56 - y * H) : g.moveTo(56 + x * W, 56 - y * H))); }
+  g.closePath(); g.fill(); g.stroke();
+  return c.toDataURL();
 }
 async function generateThumbs() {
   const tr = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
@@ -1677,11 +1773,23 @@ function setSurface(name, patch) {
   for (const id of ids) Object.assign(surf(id), patch);
   buildRoom();
 }
+function dadoEditor(name, sf) {
+  const dd = sf.dado || { on: false, height: 1.0, color: '#3b4a5a', finish: 'oak' };
+  const upd = (patch) => { sf.dado = { ...dd, ...patch }; buildRoom(); commit(); };
+  return h('details', { class: 'sub', open: !!dd.on }, h('summary', {}, 'Two-tone / lower wall (dado, wainscot)'),
+    h('label', { class: 'check' }, h('input', { type: 'checkbox', checked: !!dd.on, onchange: (e) => { upd({ on: e.target.checked }); renderPanels(); } }), ' Different material below'),
+    dd.on ? h('div', {},
+      numField('Height', dd.height, (v) => upd({ height: clamp(v, 0.1, 6) }), { min: 0.1, max: 6 }),
+      materialField('Lower material', dd.finish, dd.color, ({ finish, color }) => { upd({ finish, ...(color ? { color } : {}) }); renderPanels(); }),
+      colorField('Lower colour', dd.color, (c, done) => { sf.dado = { ...dd, color: c }; buildRoom(); if (done) commit(); }),
+      h('label', { class: 'check' }, h('input', { type: 'checkbox', checked: dd.rail !== false, onchange: (e) => upd({ rail: e.target.checked }) }), ' Dado rail')) : null);
+}
 function surfaceEditor(name, compact = false) {
   const sf = surf(name);
   const kids = [
-    colorField('Colour', sf.color, (c, done) => { sf.color = c; buildRoom(); if (done) commit(); }),
-    selectField('Finish', sf.finish, finishOptions(), (v) => { sf.finish = v; buildRoom(); commit(); }),
+    materialField('Material', sf.finish, sf.color, ({ finish, color }) => { sf.finish = finish; if (color) sf.color = color; const ac = FINISHES[finish]?.ac; if (ac) sf.acoustic = name === 'floor' && ac === 'plywood' ? 'wood_floor' : ac; buildRoom(); commit(); renderPanels(); }, { cats: name === 'floor' ? ['Flooring', 'Wood', 'Stone & masonry', 'Tile', 'Fabric & upholstery', 'Paint & plaster', 'Metal', 'Other'] : null }),
+    colorField('Colour', sf.color, (c, done) => { sf.color = c; buildRoom(); if (done) commit(); }, { fabric: ['Fabric & upholstery', 'Wallcovering'].includes(FINISHES[sf.finish]?.cat) }),
+    name !== 'floor' && name !== 'ceiling' ? dadoEditor(name, sf) : null,
     selectField('Acoustic material', sf.acoustic, acousticOptions(), (v) => { sf.acoustic = v; commit(); }),
     h('div', { class: 'row gap' },
       h('button', { class: 'btn small', onclick: () => openScanner(scannerApi(), { target: name }) }, '📷 Photo from camera'),
@@ -1690,7 +1798,7 @@ function surfaceEditor(name, compact = false) {
   if (sf.photo) kids.push(h('label', { class: 'check' }, h('input', { type: 'checkbox', checked: sf.showPhoto !== false, onchange: (e) => { sf.showPhoto = e.target.checked; buildRoom(); commit(); } }), ' Show photo on surface'), h('button', { class: 'btn small ghost', onclick: () => { sf.photo = null; buildRoom(); commit(); renderPanels(); } }, 'Remove photo'));
   const area = surfaceArea(name);
   kids.push(h('p', { class: 'hint' }, `Area ${area.toFixed(2)} m² · α@500Hz ${(AC.ACOUSTIC_MATERIALS[sf.acoustic]?.a[2] ?? 0).toFixed(2)}`));
-  return compact ? h('div', {}, kids) : section(surfLabel(name), ...kids);
+  return compact ? h('div', {}, kids.filter(Boolean)) : section(surfLabel(name), ...kids.filter(Boolean));
 }
 function renderRoom() {
   const pane = $('#pane-room'); pane.innerHTML = '';
@@ -1967,7 +2075,7 @@ function renderProps() {
   if (items.length > 1) {
     pane.append(h('div', { class: 'pane-title' }, h('h3', {}, `${items.length} items selected`)),
       colorField('Colour (all)', items[0].color, (c, done) => { items.forEach((i) => updateItem(i, { color: c })); if (done) commit(); }),
-      selectField('Finish (all)', items[0].finish, finishOptions(), (v) => { items.forEach((i) => updateItem(i, { finish: v })); commit(); }),
+      materialField('Material (all)', items[0].finish, items[0].color, ({ finish, color }) => { items.forEach((i) => updateItem(i, { finish, ...(color ? { color } : {}) })); commit(); renderProps(); }),
       section('Align & distribute', h('div', { class: 'align-grid' },
         ...[['x', 'Left/Right'], ['z', 'Front/Back'], ['y', 'Height']].map(([ax, l]) => h('div', {}, h('small', {}, l), h('div', { class: 'row gap' }, h('button', { class: 'btn small', onclick: () => alignItems(ax, 'min') }, 'min'), h('button', { class: 'btn small', onclick: () => alignItems(ax, 'mid') }, 'centre'), h('button', { class: 'btn small', onclick: () => alignItems(ax, 'max') }, 'max'), h('button', { class: 'btn small', onclick: () => alignItems(ax, 'distribute') }, 'spread')))))),
       actionRow(items));
@@ -1979,6 +2087,7 @@ function renderProps() {
     h('div', { class: 'pane-title' }, h('img', { src: S.thumbs[it.type] || '' }), h('div', {}, h('input', { class: 'name-input', value: it.name, onchange: (e) => { it.name = e.target.value; commit(); renderLayers(); } }), h('small', {}, def.cat))),
     def.desc ? h('p', { class: 'desc' }, def.desc) : null,
     actionRow(items),
+    def.custom ? h('button', { class: 'btn block', onclick: () => openBuilder({ item: it }) }, '✏️ Edit shape (profile, extrude / revolve)…') : null,
     section('Position & rotation',
       h('div', { class: 'grid3' },
         numField('X', it.pos[0], (v) => { updateItem(it, { pos: [v, it.pos[1], it.pos[2]] }); commit(); }),
@@ -1995,10 +2104,10 @@ function renderProps() {
         numField('Height', it.size[1], (v) => { updateItem(it, { size: [it.size[0], Math.max(0.005, v), it.size[2]] }); commit(); }, { min: 0.005 }),
         numField('Depth', it.size[2], (v) => { updateItem(it, { size: [it.size[0], it.size[1], Math.max(0.005, v)] }); commit(); }, { min: 0.005 })),
       h('div', { class: 'row gap wrap' }, h('small', {}, 'Presets:'), ...sizePresets(def).map(([l, s]) => h('button', { class: 'btn small', onclick: () => { updateItem(it, { size: s }); commit(); renderProps(); } }, l)))),
-    section('Appearance',
-      colorField('Main colour', it.color, (c, done) => { updateItem(it, { color: c }); if (done) commit(); }),
-      colorField('Secondary / frame', it.color2 || '#222222', (c, done) => { updateItem(it, { color2: c }); if (done) commit(); }),
-      selectField('Finish', it.finish, finishOptions(), (v) => { updateItem(it, { finish: v }); commit(); })),
+    section('Materials & colours',
+      materialField('Material', it.finish, it.color, ({ finish, color }) => { updateItem(it, { finish, ...(color ? { color } : {}) }); commit(); renderProps(); }),
+      colorField('Main colour', it.color, (c, done) => { updateItem(it, { color: c }); if (done) commit(); }, { fabric: ['Fabric & upholstery', 'Wallcovering'].includes(FINISHES[it.finish]?.cat) }),
+      colorField('Secondary / frame colour', it.color2 || '#222222', (c, done) => { updateItem(it, { color2: c }); if (done) commit(); })),
     Object.keys(def.params || {}).length ? section('Options', paramFields(it, def)) : null,
     section('Acoustics',
       selectField('Acoustic behaviour', it.acoustic, acousticOptions(), (v) => { updateItem(it, { acoustic: v }, false); commit(); renderProps(); }),
@@ -2030,6 +2139,8 @@ function paramFields(it, def) {
   for (const [k, p] of Object.entries(def.params)) {
     const v = it.params[k] ?? p.default;
     const set = (val) => { updateItem(it, { params: { [k]: val } }); commit(); };
+    if (p.type === 'hidden') continue;
+    if (p.type === 'finish') { out.push(materialField(p.label, v, it.color2 || '#888888', ({ finish, color }) => { updateItem(it, { params: { [k]: finish }, ...(color ? { color2: color } : {}) }); commit(); renderProps(); })); continue; }
     if (p.type === 'bool') out.push(h('label', { class: 'check' }, h('input', { type: 'checkbox', checked: !!v, onchange: (e) => set(e.target.checked) }), ' ' + p.label));
     else if (p.type === 'select') out.push(selectField(p.label, v, p.options.map((o) => [o, String(o)]), (val) => set(typeof p.default === 'number' ? +val : val)));
     else if (p.type === 'number') out.push(numField(p.label, v, (val) => set(val), { unit: false, step: p.step, min: p.min, max: p.max }));
@@ -2208,6 +2319,31 @@ function runPromptText(text) {
   renderPanels();
 }
 
+// ===================================================================== shape builder glue
+function myShapes() { try { return JSON.parse(localStorage.getItem('rt.myShapes') || '[]'); } catch { return []; } }
+function setMyShapes(list) { try { localStorage.setItem('rt.myShapes', JSON.stringify(list)); } catch { toast('Could not save to My Shapes (storage full or blocked)', 'error'); } }
+function addCustomItem(out) {
+  const it = makeItem(out.type, { name: out.name, size: out.size.slice(), color: out.color, finish: out.finish, acoustic: out.acoustic, params: { ...defaultParams(defOf(out.type)), ...JSON.parse(JSON.stringify(out.params)) } });
+  placeItem(it, null);
+  P().items.push(it); rebuildItem(it); select([it.id]); commit();
+  if (S.tool === 'select') setTool('move');
+  return it;
+}
+function shapeApi() {
+  return {
+    h, modal, toast, fmt, numField, colorField, materialField, selectField, acousticOptions,
+    saveMyShape: (out) => { const list = myShapes().filter((x) => x.name !== out.name); list.unshift(out); setMyShapes(list.slice(0, 60)); renderLibrary(); toast(`Saved “${out.name}” to My Shapes`, 'ok'); },
+    onCreate: (out) => addCustomItem(out),
+    onUpdate: (it, out) => {
+      const moved = it.type !== out.type;
+      Object.assign(it, { name: out.name, type: out.type, size: out.size.slice(), color: out.color, finish: out.finish, acoustic: out.acoustic, params: { ...it.params, ...out.params } });
+      if (moved) placeItem(it, null);
+      rebuildItem(it); limitLights(); commit(); renderProps(); updateHelpers();
+    },
+  };
+}
+function openBuilder(opts = {}) { openShapeBuilder(shapeApi(), opts); closeDrawers(); }
+
 // ===================================================================== scanner & export glue
 function scannerApi() {
   return {
@@ -2229,7 +2365,7 @@ function exportApi() {
   return {
     h, toast, modal, project: P, room: R, analysis, scheduleRows, renderToDataURL, viewNames: VIEW_NAMES,
     fmt, acousticName: (k) => AC.ACOUSTIC_MATERIALS[k]?.name || k, finishName: (k) => FINISHES[k]?.label || k, surfaceList: () => surfaceIds().map((id) => ({ id, label: surfLabel(id), s: surf(id) })), floorArea: () => G.floorArea(R()), wallCount: () => wallEdges().length, ceilingName: () => G.CEILINGS[R().ceiling?.type || 'flat'], hmax: () => S.hmax,
-    safeName, download, bands: AC.BANDS, noteName, colorNames: COLOR_NAMES, defOf,
+    safeName, download, closeModals, bands: AC.BANDS, noteName, colorNames: COLOR_NAMES, defOf,
   };
 }
 
@@ -2354,10 +2490,10 @@ function showWelcome() {
   modal('Welcome to RoomTone Studio Designer', h('div', { class: 'welcome' },
     h('p', {}, 'Plan studios, treatment and aesthetics in 3D — fully offline. We started you with a small home studio.'),
     h('div', { class: 'welcome-grid' },
-      h('button', { class: 'wcard', onclick: () => { $('#modal').hidden = true; autoTreat('mixing'); S.rightTab = 'acoustics'; renderRightTabs(); } }, h('b', {}, '✨ Auto-treat it'), h('span', {}, 'Bass traps, reflection panels, cloud & diffusers placed from real acoustics maths')),
-      h('button', { class: 'wcard', onclick: () => { $('#modal').hidden = true; S.leftTab = 'room'; renderLeftTabs(); document.body.classList.add('show-left'); } }, h('b', {}, '📐 Set my room size'), h('span', {}, 'Templates for mix rooms, booths, live rooms, podcast & theater')),
-      h('button', { class: 'wcard', onclick: () => { $('#modal').hidden = true; openScanner(scannerApi(), {}); } }, h('b', {}, '📷 Scan my room'), h('span', {}, 'Photograph walls, sample colours, or import a LiDAR scan')),
-      h('button', { class: 'wcard', onclick: () => { $('#modal').hidden = true; promptEl.focus(); } }, h('b', {}, '💬 Describe it'), h('span', {}, 'Type e.g. “add bass traps in all corners and paint walls navy”'))),
+      h('button', { class: 'wcard', onclick: () => { closeModals(); autoTreat('mixing'); S.rightTab = 'acoustics'; renderRightTabs(); } }, h('b', {}, '✨ Auto-treat it'), h('span', {}, 'Bass traps, reflection panels, cloud & diffusers placed from real acoustics maths')),
+      h('button', { class: 'wcard', onclick: () => { closeModals(); S.leftTab = 'room'; renderLeftTabs(); document.body.classList.add('show-left'); } }, h('b', {}, '📐 Set my room size'), h('span', {}, 'Templates for mix rooms, booths, live rooms, podcast & theater')),
+      h('button', { class: 'wcard', onclick: () => { closeModals(); openScanner(scannerApi(), {}); } }, h('b', {}, '📷 Scan my room'), h('span', {}, 'Photograph walls, sample colours, or import a LiDAR scan')),
+      h('button', { class: 'wcard', onclick: () => { closeModals(); promptEl.focus(); } }, h('b', {}, '💬 Describe it'), h('span', {}, 'Type e.g. “add bass traps in all corners and paint walls navy”'))),
     h('p', { class: 'hint' }, 'Tip: press ? or the Help button any time for shortcuts.')));
 }
 document.addEventListener('keydown', (e) => { if (e.key === '?' && !['INPUT', 'TEXTAREA'].includes(e.target.tagName)) showHelp(); });
