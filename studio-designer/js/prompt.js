@@ -219,6 +219,7 @@ function handle(s, verb, api) {
     const map = { top: 'top', plan: 'top', front: 'front', back: 'back', rear: 'back', left: 'left', right: 'right', '3d': 'persp', perspective: 'persp', quad: 'quad', walk: 'walk', walkthrough: 'walk', 'first person': 'walk', listener: 'listener', listening: 'listener' };
     api.setView(map[v]); return { ok: true, msg: `Switched to ${v} view` };
   }
+  if (/\b(room modes?|modes?|mode calculator|amroc|bonello|standing waves?|best seat|best listening position|trap tuning)\b/.test(s) && !/\b(add|place)\b/.test(s) && !/\broom\s+\d/.test(s)) { api.openModes(); return { ok: true, msg: 'Opened the Room Mode Calculator' }; }
   if (/\b(analy[sz]e|check|rt60|reverb|room modes?|acoustics?)\b/.test(s) && !/\b(add|place)\b/.test(s)) { api.showAcoustics(); return { ok: true, msg: 'Showing acoustic analysis' }; }
 
   // ---- room shape / ceiling / curved walls

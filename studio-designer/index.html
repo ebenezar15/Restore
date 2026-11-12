@@ -67,6 +67,7 @@
         <button class="icon-btn" data-tool="measure" title="Tape measure (T)"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 17L17 3l4 4L7 21zM7 13l2 2M10 10l2 2M13 7l2 2"/></svg></button>
         <button class="icon-btn active" data-action="snap" title="Snap to grid / 15°">⌗</button>
         <button class="icon-btn" data-action="xray" title="X-ray walls">◫</button>
+        <button class="icon-btn units-btn" data-action="units" title="Switch metres / feet">m</button>
       </div>
 
       <div class="group views">
@@ -81,6 +82,7 @@
       </div>
 
       <div class="group right">
+        <button class="btn" data-action="modes" title="Room mode calculator (K)">🎛 Modes</button>
         <button class="btn accent" data-action="treat" title="Place treatment automatically">✨ Auto-treat</button>
         <button class="btn" data-action="pdf">PDF</button>
         <button class="icon-btn" data-action="help" title="Help (?)">?</button>
@@ -104,6 +106,7 @@
       <div id="view-label">3D Perspective</div>
       <div id="quad-labels" hidden><span>3D</span><span>Plan</span><span>Front</span><span>Left</span></div>
       <div id="section-ctl" hidden></div>
+      <div id="mode-chip" hidden></div>
       <div id="walk-pad" hidden>
         <p>Drag to look · WASD / arrows to walk · Q/E down/up</p>
         <div class="pad">

@@ -26,6 +26,7 @@ export function openPdfDialog(app) {
     cb('schedule', 'Item schedule / bill of materials'),
     cb('materials', 'Colour & material board'),
     cb('acoustics', 'Acoustic report (RT60, modes, reflections)'),
+    cb('modes', 'Room modes & low-frequency treatment zones'),
     h('div', { class: 'grid2' },
       h('label', { class: 'field' }, h('span', {}, 'Designer'), h('input', { name: 'designer', value: p.designer })),
       h('label', { class: 'field' }, h('span', {}, 'Client'), h('input', { name: 'client', value: p.client }))),
@@ -276,6 +277,61 @@ async function buildPdf(app, o) {
         doc.setTextColor(...(A.treated[i] ? [40, 140, 90] : [200, 50, 60]));
         doc.text(txt(`${A.treated[i] ? 'treated  ' : 'UNTREATED'}  ${r.surface.padEnd(8)} delay ${r.delayMs.toFixed(1)} ms  level ${r.levelDb.toFixed(1)} dB  at (${r.point.map((v) => v.toFixed(2)).join(', ')})`), x, y); y += 4.2;
       });
+    }
+  }
+
+  // ---------------------------------------------------------------- room modes
+  if (o.modes) {
+    await tick('Room modes…');
+    const D = app.modeData(), rep = D.rep;
+    const a = frame('Room modes & low-frequency treatment');
+    const colW = a.w / 2 - 5;
+    let x = a.x, y = a.y + 4;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(20);
+    doc.text(txt(`Room modes - ${rep.R.L.toFixed(2)} L x ${rep.R.W.toFixed(2)} W x ${rep.R.H.toFixed(2)} H m, c = ${rep.c.toFixed(1)} m/s`), x, y + 2); y += 7;
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(60);
+    doc.text(txt(`Schroeder ${rep.schroeder.toFixed(0)} Hz - Bonello ${rep.bon.pass ? 'pass' : 'fail'} - Bolt area ${rep.bolt.inBolt ? 'inside' : 'outside'} (1 : ${rep.bolt.r1.toFixed(2)} : ${rep.bolt.r2.toFixed(2)})`), x, y); y += 6;
+    // table of modes
+    const head = ['Hz', 'Type', 'L W H', 'Note'], cw = [16, 24, 18, 18];
+    doc.setFillColor(235, 238, 242); doc.rect(x, y - 3.8, cw.reduce((p, q) => p + q, 0) * 2 + 6, 5.5, 'F');
+    doc.setFont('helvetica', 'bold'); doc.setTextColor(30);
+    for (let col = 0; col < 2; col++) { let xx = x + col * (cw.reduce((p, q) => p + q, 0) + 6) + 1; head.forEach((t, i) => { doc.text(t, xx, y); xx += cw[i]; }); }
+    doc.setFont('helvetica', 'normal'); y += 5;
+    const list = rep.modes.filter((m) => m.type !== 'oblique').slice(0, 56), rowsPer = Math.ceil(list.length / 2);
+    list.forEach((m, i) => {
+      const col = Math.floor(i / rowsPer), row = i % rowsPer; let xx = x + col * (cw.reduce((p, q) => p + q, 0) + 6) + 1; const yy = y + row * 3.9;
+      if (yy > a.y + a.h * 0.62) return;
+      doc.setTextColor(...(m.type === 'axial' ? [190, 40, 60] : [170, 110, 20]));
+      [m.f.toFixed(1), m.type, m.n.join(' '), app.noteName(m.f)].forEach((t, k) => { doc.text(String(t), xx, yy); xx += cw[k]; });
+    });
+    // spectrum strip
+    let sy = a.y + a.h * 0.68;
+    doc.setTextColor(20); doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.text('Modal spectrum (20-300 Hz)', x, sy); sy += 3;
+    const sx = (f) => x + ((Math.log(f) - Math.log(20)) / (Math.log(300) - Math.log(20))) * colW, sh = 22;
+    doc.setDrawColor(200); doc.rect(x, sy, colW, sh);
+    for (const m of rep.modes) { const hh = sh * (m.type === 'axial' ? 0.95 : m.type === 'tangential' ? 0.6 : 0.35); doc.setDrawColor(...(m.type === 'axial' ? [220, 60, 80] : m.type === 'tangential' ? [230, 160, 40] : [90, 140, 230])); doc.line(sx(m.f), sy + sh, sx(m.f), sy + sh - hh); }
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.setTextColor(110);
+    for (const f of [20, 30, 50, 80, 100, 150, 200, 300]) doc.text(String(f), sx(f), sy + sh + 3.5, { align: 'center' });
+    doc.setDrawColor(40, 160, 110); doc.setLineDashPattern([1, 1], 0); doc.line(sx(Math.min(300, rep.schroeder)), sy, sx(Math.min(300, rep.schroeder)), sy + sh); doc.setLineDashPattern([], 0);
+    // right column: response + treatment
+    x = a.x + colW + 10; y = a.y + 4;
+    doc.setTextColor(20); doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.text('Simulated bass response at the listening position', x, y + 2); y += 6;
+    const rh = 50, rx = (f) => x + 8 + ((Math.log(f) - Math.log(20)) / (Math.log(300) - Math.log(20))) * (colW - 10), ry = (d) => y + ((20 - Math.max(-30, Math.min(20, d))) / 50) * rh;
+    doc.setDrawColor(220); doc.setFontSize(6.5); doc.setTextColor(120); doc.setFont('helvetica', 'normal');
+    for (const d of [20, 10, 0, -10, -20, -30]) { doc.line(x + 8, ry(d), x + colW - 2, ry(d)); doc.text(String(d), x + 6, ry(d) + 1, { align: 'right' }); }
+    for (const f of [20, 50, 100, 200, 300]) doc.text(String(f), rx(f), y + rh + 4, { align: 'center' });
+    const plot = (arr, col, w) => { doc.setDrawColor(...col); doc.setLineWidth(w); for (let i = 1; i < arr.length; i++) doc.line(rx(D.fs[i - 1]), ry(arr[i - 1]), rx(D.fs[i]), ry(arr[i])); doc.setLineWidth(0.2); };
+    plot(D.bare, [160, 160, 160], 0.3); plot(D.resp, [30, 150, 140], 0.6);
+    doc.setFontSize(7); doc.setTextColor(30, 150, 140); doc.text('with treatment', x + colW - 2, y + 3, { align: 'right' }); doc.setTextColor(140); doc.text('bare room', x + colW - 2, y + 7, { align: 'right' });
+    y += rh + 10;
+    doc.setTextColor(20); doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.text('Problem frequencies & where to treat', x, y); y += 5;
+    doc.setFontSize(8);
+    for (const p of D.treat) {
+      if (y > a.y + a.h - 6) break;
+      doc.setFont('helvetica', 'bold'); doc.setTextColor(...(p.sev > 1.5 ? [200, 50, 60] : p.sev > 0.8 ? [190, 120, 20] : [60, 90, 140]));
+      doc.text(txt(`${p.m.f.toFixed(1)} Hz (${p.note}) - ${p.desc}${p.tags.length ? ' - ' + p.tags.join(', ') : ''}`), x, y); y += 3.6;
+      doc.setFont('helvetica', 'normal'); doc.setTextColor(60);
+      const ls = doc.splitTextToSize(txt(p.t.how), colW); doc.text(ls, x + 2, y); y += ls.length * 3.4 + 1.6;
     }
   }
 

@@ -71,6 +71,19 @@ The camera needs `https://` or `localhost`. On phones, "Upload photo" also opens
   - Image-source first-reflection points, drawn in 3D and marked green when treated and red when not.
   - SBIR null frequencies, the stereo listening triangle and the 38 % rule.
   - Plain-language recommendations.
+- **🎛 Room Mode Calculator (AMROC-style, `K`):**
+  - **Inputs:** length, width and height in **metres or feet**, temperature (°C/°F, which sets the speed of sound), and a range up to 150–500 Hz.
+  - **Mode table:** every axial, tangential and oblique mode with its indices, a description, the musical note and cents, wavelength, spacing and flags for coincident modes. Play any mode as a tone, or export the table as CSV.
+  - **Spectrum and Bonello:** a modal spectrum with the Schroeder frequency marked and coincidence/gap markers, plus a Bonello ⅓-octave check (pass/fail).
+  - **Pressure maps:** each mode shown in plan, side or front section with the speaker and listener positions. The same map can be overlaid in the 3D room as a slice you can move, and you can step through modes there.
+  - **Response and best seat:** a modal simulation of the bass response at the listening position (both, left or right speaker), compared with the bare room. It includes tuned traps, and shows the low-frequency RT60 per ⅓-octave.
+  - **Best listening position finder:** a smoothness heat map, a recommended seat, and one click to move the listener, chair, desk and speakers there.
+  - **Treatment zones:** problem frequencies ranked for *your* speaker and listener positions (peaks or nulls at the listener, coincident modes), with where to treat and how. One click adds tuned traps or the recommended low-frequency treatment.
+  - **Trap designer:** membrane/panel traps (with a panel mass list), perforated Helmholtz panels, slot resonators and porous quarter-wave depth. Results can be added straight to the room.
+  - **Room ratios:** a Bolt-area chart with Sepmeyer, Louden, IEC and golden ratios, and "try" buttons.
+  - **Tone generator:** sine tones and sweeps for finding modes by ear in the real room.
+  - **PDF page:** a "Room modes & low-frequency treatment" page in the export.
+- **Units:** a quick **m / ft** toggle in the toolbar applies everywhere.
 - **✨ Auto-treat** presets for mixing, mastering, tracking, podcast and home theater. They place bass traps, panels at the computed reflection points, a cloud, diffusion and more.
 - **Prompt bar (offline, no AI service):** for example `room 4.5 x 6 x 2.8`, `add a barn door on the right wall`, `add 6 hexagon panels on the back wall`, `make the floor herringbone`, `add a velvet sofa`, `add bass traps in all corners and a cloud above the listener`, `paint walls charcoal and floor oak`, `move selected 0.3 left`, `lights warm`, `treat room for mastering`, `top view`, `export pdf`. Feet and centimetres are understood. Voice input works where the browser supports it.
 - **Scan and import:**
@@ -87,7 +100,7 @@ The camera needs `https://` or `localhost`. On phones, "Upload photo" also opens
 
 ## Keyboard
 
-`V` select · `O` edit room outline · `M` move · `R` rotate · `S` scale · `T` measure · `1–6` views · `7` quad · `8` walk · `F` focus · arrows nudge (Shift ×10) · `[` `]` rotate 15° · `Ctrl+D` duplicate · `Ctrl+Z/Y` undo/redo · `Del` delete · `/` prompt · `?` help
+`V` select · `O` edit room outline · `K` room modes · `M` move · `R` rotate · `S` scale · `T` measure · `1–6` views · `7` quad · `8` walk · `F` focus · arrows nudge (Shift ×10) · `[` `]` rotate 15° · `Ctrl+D` duplicate · `Ctrl+Z/Y` undo/redo · `Del` delete · `/` prompt · `?` help
 
 ## Code layout
 
@@ -97,6 +110,7 @@ css/app.css           UI theme (responsive; drawers on phones/tablets)
 js/main.js            scene, views, tools, placement, panels, history, I/O
 js/catalog.js         item definitions + procedural 3D builders
 js/acoustics.js       RT60, modes, ratios, reflections, SBIR
+js/modes.js           room-mode calculator, modal simulation, trap tuning, tone generator
 js/geometry.js        room outlines, ceiling profiles, areas & volume, shape presets
 js/prompt.js          offline natural-language command interpreter
 js/scan.js            camera capture, colour sampling, guided scan

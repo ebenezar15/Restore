@@ -9,6 +9,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
 import { CATALOG, CATEGORIES, BY_TYPE, buildItem, areaOf, defaultParams, PROFILES, LATHES } from './catalog.js';
 import { openShapeBuilder } from './shapebuilder.js';
+import { openModeCalculator, modeReport, computeModes, speedOfSound, psi, divergeColor, treatmentFor, modalResponse, logFreqs, describeMode, noteOf } from './modes.js';
 import { mat, FINISHES, FINISH_CATS, FABRIC_COLORS, finishSwatch, isGlass, imageTexture, COLOR_NAMES } from './materials.js';
 import * as AC from './acoustics.js';
 import * as G from './geometry.js';
@@ -1530,10 +1531,10 @@ function toast(msg, kind = 'info') {
   setTimeout(() => el.remove(), 3700);
 }
 /** Dialogs stack, so e.g. the material picker can open on top of the shape builder. */
-function modal(title, body, actions = [], { wide = false } = {}) {
+function modal(title, body, actions = [], { wide = false, xwide = false } = {}) {
   const layer = h('div', { class: 'modal-layer' });
   const close = () => { if (!layer.isConnected) return; layer.remove(); layer.dispatchEvent(new Event('closed')); };
-  const box = h('div', { class: 'modal-box' + (wide ? ' wide' : '') },
+  const box = h('div', { class: 'modal-box' + (wide ? ' wide' : '') + (xwide ? ' xwide' : '') },
     h('div', { class: 'modal-head' }, h('h2', {}, title), h('button', { class: 'icon-btn', title: 'Close', onclick: close, html: '&times;' })),
     h('div', { class: 'modal-body' }, body),
     actions.length ? h('div', { class: 'modal-actions' }, actions.map((a) => h('button', { class: a.primary ? 'btn primary' : 'btn', onclick: () => { if (a.onClick?.() !== false) close(); } }, a.label))) : null);
@@ -2180,6 +2181,7 @@ function renderAcoustics() {
       kpi('Volume', rt.V.toFixed(1) + ' m³', `${(rt.V * 35.315).toFixed(0)} ft³`),
       kpi('Schroeder', rt.schroeder.toFixed(0) + ' Hz', 'modal region below'),
       kpi('Treated area', (A.coverage * 100).toFixed(0) + ' %', 'of room surface')),
+    h('button', { class: 'btn primary block mc-open', onclick: () => openModes() }, '🎛 Room Mode Calculator — modes, Bonello, pressure maps, best seat, trap tuning'),
     section('Recommendations', h('ul', { class: 'advice' }, A.advice.map((a) => h('li', { class: a.lvl }, a.text))),
       h('div', { class: 'row gap wrap' },
         h('button', { class: 'btn small primary', onclick: () => { autoTreat('mixing'); renderAcoustics(); } }, 'Auto-treat: mixing'),
@@ -2289,7 +2291,7 @@ function promptApi() {
     select: (ids) => select(ids), removeItems, updateItem, commit: () => commit(),
     addMany: (type, o) => addMany(type, o), placeMany: (list, loc) => { list.forEach((it, i) => { placeItem(it, loc, i, list.length); syncTransform(it); rebuildItem(it); }); updateHelpers(); },
     setRoom, setSurface: (n, p) => setSurface(n, p), setView, autoTreat, undo, redo, duplicate, mirror,
-    openPdf: () => openPdfDialog(exportApi()), exportGLB, showAcoustics: () => { S.rightTab = 'acoustics'; renderRightTabs(); document.body.classList.add('show-right'); },
+    openPdf: () => openPdfDialog(exportApi()), exportGLB, openModes: () => openModes(), showAcoustics: () => { S.rightTab = 'acoustics'; renderRightTabs(); document.body.classList.add('show-right'); },
     findTemplate: (s) => Object.keys(TEMPLATES).find((k) => s.includes(k.toLowerCase()) || s.includes(k.toLowerCase().split(' ')[0] + ' ' + (k.toLowerCase().split(' ')[1] || ''))),
     applyTemplate,
     setShape: (key) => { changeShape(() => G.applyShape(R(), key)); return G.SHAPES[key]?.label; },
@@ -2344,6 +2346,137 @@ function shapeApi() {
 }
 function openBuilder(opts = {}) { openShapeBuilder(shapeApi(), opts); closeDrawers(); }
 
+// ===================================================================== room modes glue
+function modeRoom() {
+  const room = R(), rect = G.isRect(room) && (room.ceiling?.type || 'flat') === 'flat';
+  const A = G.floorArea(room);
+  return { L: room.d, W: room.w, H: rect ? room.h : G.volume(room) / A, rect, fill: A / (room.w * room.d) };
+}
+function boxSurfaces(st) {
+  const sm = (id) => surf(id).acoustic;
+  const fe = edgeFor('front')?.id || 'front', be = edgeFor('back')?.id || 'back', le = edgeFor('left')?.id || 'left', re = edgeFor('right')?.id || 'right';
+  return [
+    { area: st.W * st.H, mat: sm(fe) }, { area: st.W * st.H, mat: sm(be) }, { area: st.L * st.H, mat: sm(le) }, { area: st.L * st.H, mat: sm(re) },
+    { area: st.W * st.L, mat: sm('floor') }, { area: st.W * st.L, mat: sm('ceiling') },
+  ];
+}
+function itemsAbs() { return P().items.filter((i) => !i.hidden).map((i) => ({ acoustic: i.acoustic, area: areaOf(defOf(i.type), i.size), tunedHz: i.params?.tunedHz || 0 })); }
+function setUnits(u) { S.units = u; try { localStorage.setItem('rt.units', u); } catch { /* ignore */ } $('[data-action="units"]').textContent = u; buildRoom(); renderPanels(); renderSectionCtl(); }
+function moveListener(x, z) {
+  let L = getListener();
+  if (!L) { ensureListening('desk'); L = getListener(); }
+  const dx = x - L.pos[0], dz = z - L.pos[2];
+  const near = (it) => Math.hypot(it.pos[0] - L.pos[0], it.pos[2] - L.pos[2]) < 1.6;
+  for (const it of P().items) if (it === L || (['chair', 'desk', 'console', 'screen', 'stand', 'pc', 'rug', 'stool'].includes(it.type) && near(it)) || (defOf(it.type).speaker && it.type !== 'mains' && near(it))) { it.pos[0] += dx; it.pos[2] += dz; }
+  for (const c of P().items.filter((i) => i.type === 'cloud' && Math.hypot(i.pos[0] - L.pos[0] + dx, i.pos[2] - L.pos[2] + dz) < 1.8)) { c.pos[0] += dx; c.pos[2] += dz; }
+  rebuildAllItems(); commit(); updateHelpers();
+}
+function trapPlacement(it, mode, k) {
+  // put tuned traps where the mode's pressure is highest: at the ends of the wall(s) it bounces between
+  const n = mode?.n || [1, 0, 0];
+  const wall = n[0] && (!n[1] || k % 2 === 0) ? (k % 2 ? 'front' : 'back') : n[1] ? (k % 2 ? 'right' : 'left') : 'back';
+  const e = edgeFor(wall); if (!e) return placeItem(it, 'back');
+  const u = (k % 4 < 2 ? -1 : 1) * (e.len / 2 - it.size[0] / 2 - 0.05);
+  placeOnWall(it, e, u, n[2] && !n[0] && !n[1] ? undefined : 0);
+  if (n[2] && !n[0] && !n[1]) { it.pos[1] = Math.max(0, ceilingYFor(it) - it.size[1]); }
+}
+function addTunedTrap({ f, kind = 'membrane', depth, mode, slot, slat }, k = 0, silent = false) {
+  const type = kind === 'helmholtz' ? 'helmholtz' : kind === 'slot' ? 'slatResonator' : kind === 'porous' ? 'bassPanel' : 'membrane';
+  const it = makeItem(type);
+  // membrane: pick the lightest panel that keeps the cavity ≤ 30 cm (f ≈ 60/√(m·d))
+  let panel = null, autoDepth = 0.2;
+  if (kind === 'membrane' && !depth) { for (const [name, m] of [['6 mm plywood', 3.6], ['9 mm MDF', 6.8], ['12.5 mm drywall', 9.5], ['MLV 10 kg/m² + 9 mm ply', 15.4], ['2× drywall', 19]]) { panel = name; autoDepth = (60 / f) ** 2 / m; if (autoDepth <= 0.3) break; } }
+  if (kind === 'porous') autoDepth = Math.min(0.4, (343 / (4 * f)) * 0.5);
+  const dep = clamp(depth || autoDepth, 0.05, 0.8);
+  it.size = [1.2, 0.6, +dep.toFixed(3)];
+  if (kind === 'porous') it.size = [0.6, 1.8, +dep.toFixed(3)];
+  it.params = { ...it.params, tunedHz: kind === 'porous' ? 0 : +f.toFixed(1) };
+  if (kind === 'slot') it.params = { ...it.params, gap: slot || 0.006, slatWidth: slat || 0.045 };
+  it.name = `${defOf(type).name} · ${f.toFixed(0)} Hz${panel ? ` (${panel})` : ''}`;
+  trapPlacement(it, mode, k);
+  P().items.push(it); rebuildItem(it);
+  if (!silent) { select([it.id]); commit(); }
+  return it;
+}
+function addRecommended(rep) {
+  let n = 0;
+  if (!P().items.some((i) => i.type === 'cornerTrap')) n += addMany('cornerTrap', { qty: 4, loc: 'corners' }).length;
+  const done = [];
+  for (const p of rep.problems) {
+    if (done.length >= 3) break;
+    if (p.m.f > 150 || done.some((f) => Math.abs(f - p.m.f) / f < 0.08)) continue;
+    done.push(p.m.f);
+    for (let k = 0; k < 2; k++) { addTunedTrap({ f: p.m.f, kind: p.m.f < 120 ? 'membrane' : 'porous', mode: p.m }, done.length * 2 + k, true); n++; }
+  }
+  limitLights(); commit(); renderPanels();
+  return n;
+}
+
+// 3D overlay: pressure map of one mode (or the best-seat map) on a horizontal slice
+const modeOverlay = new THREE.Group(); modeOverlay.name = 'ModeOverlay'; scene.add(modeOverlay);
+function showOverlay(spec) {
+  S.overlay = spec;
+  modeOverlay.clear();
+  const chip = $('#mode-chip');
+  if (!spec) { chip.hidden = true; return; }
+  const R0 = spec.R, cols = 128, rows = Math.max(16, Math.round((128 * R0.L) / R0.W));
+  const c = document.createElement('canvas'); c.width = cols; c.height = rows;
+  const g = c.getContext('2d'), img = g.createImageData(cols, rows);
+  const y = spec.height ?? 1.2;
+  for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) {
+    const x = -R0.W / 2 + (R0.W * (i + 0.5)) / cols, z = -R0.L / 2 + (R0.L * (j + 0.5)) / rows, k = (j * cols + i) * 4;
+    if (!insideRoom(x, z)) continue;
+    let v;
+    if (spec.kind === 'mode') v = psi(spec.mode, x, y, z, R0);
+    else { const sw = spec.sweep, gi = Math.min(sw.nx - 1, Math.floor(((x + R0.W / 2) / R0.W) * sw.nx)), gj = Math.min(sw.nz - 1, Math.floor(((z + R0.L / 2) / R0.L) * sw.nz)); const val = sw.grid[gj * sw.nx + gi]; const vals = sw.grid.filter((q) => q != null); v = val == null ? null : -1 + (2 * (Math.max(...vals) - val)) / Math.max(1e-6, Math.max(...vals) - Math.min(...vals)); }
+    if (v == null) continue;
+    const [r, gg, b] = divergeColor(v); img.data[k] = r; img.data[k + 1] = gg; img.data[k + 2] = b; img.data[k + 3] = 205;
+  }
+  g.putImageData(img, 0, 0);
+  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.magFilter = THREE.LinearFilter;
+  const plane = new THREE.Mesh(new THREE.PlaneGeometry(R0.W, R0.L), new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, side: THREE.DoubleSide }));
+  plane.rotation.x = -Math.PI / 2; plane.position.y = spec.kind === 'mode' ? y : 0.02; plane.renderOrder = 5;
+  modeOverlay.add(plane);
+  if (spec.kind === 'grid') { const b = spec.sweep.best; const ring = new THREE.Mesh(new THREE.TorusGeometry(0.18, 0.025, 8, 32), new THREE.MeshBasicMaterial({ color: '#ffffff', depthTest: false })); ring.rotation.x = Math.PI / 2; ring.position.set(b.x, 0.05, b.z); ring.renderOrder = 6; modeOverlay.add(ring); }
+  chip.hidden = false; chip.innerHTML = '';
+  if (spec.kind === 'mode') {
+    const list = computeModes(R0.L, R0.W, R0.H, speedOfSound(+(localStorage.getItem('rt.tempC') ?? 20)), 300);
+    const idx = list.findIndex((m) => Math.abs(m.f - spec.mode.f) < 0.01 && m.n.join() === spec.mode.n.join());
+    const go = (d) => { const m = list[clamp(idx + d, 0, list.length - 1)]; if (m) showOverlay({ ...spec, mode: m }); };
+    chip.append(h('button', { class: 'icon-btn', title: 'Previous mode', onclick: () => go(-1) }, '◀'),
+      h('div', {}, h('b', {}, `${spec.mode.f.toFixed(1)} Hz`), h('small', {}, `${spec.mode.type} ${spec.mode.n.join('·')} · ${describeMode(spec.mode)} · ${noteOf(spec.mode.f).name}`)),
+      h('button', { class: 'icon-btn', title: 'Next mode', onclick: () => go(1) }, '▶'),
+      h('label', { class: 'field inline' }, h('span', {}, `Slice ${fmt(y)}`), h('input', { type: 'range', min: 0.05, max: R0.H - 0.05, step: 0.05, value: y, oninput: (e) => showOverlay({ ...spec, height: +e.target.value }) })),
+      h('span', { class: 'legend-bar mini' }, h('i', {})),
+      h('button', { class: 'btn small', onclick: () => openModes('map') }, 'Calculator'),
+      h('button', { class: 'icon-btn', title: 'Close', html: '&times;', onclick: () => showOverlay(null) }));
+  } else {
+    chip.append(h('div', {}, h('b', {}, 'Best-seat map'), h('small', {}, 'red = smoothest bass · ring = recommended seat')),
+      h('button', { class: 'btn small', onclick: () => { moveListener(spec.sweep.best.x, spec.sweep.best.z); showOverlay(null); toast('Listening position moved', 'ok'); } }, 'Move listener there'),
+      h('button', { class: 'icon-btn', title: 'Close', html: '&times;', onclick: () => showOverlay(null) }));
+  }
+}
+function modesApi() {
+  return {
+    h, modal, toast, fmt, download,
+    units: () => S.units, setUnits,
+    roomDims: modeRoom, surfacesFor: boxSurfaces, itemsAbs,
+    ear: () => ear(getListener()), speakers: () => getSpeakers().slice(0, 2).map(speakerAcoustic),
+    insideFn: () => insideRoom,
+    applyDims: (st) => setRoom({ w: st.W, d: st.L, h: st.H }),
+    moveListener, showOverlay, addTunedTrap: (o) => addTunedTrap(o), addRecommended,
+  };
+}
+function openModes(tab = 'modes') { closeDrawers(); return openModeCalculator(modesApi(), tab); }
+function modeData() {
+  const r = modeRoom();
+  const rep = modeReport({ calc: { L: r.L, W: r.W, H: r.H, tC: +(localStorage.getItem('rt.tempC') ?? 20), fmax: 300 }, V: G.volume(R()), surfaces: boxSurfaces(r), items: itemsAbs(), ear: ear(getListener()), speakers: getSpeakers().slice(0, 2).map(speakerAcoustic) });
+  const fs = logFreqs(20, 300, 24), modes = rep.all.filter((m) => m.f < 450);
+  const norm = (db) => { const v = db.filter((_, i) => fs[i] >= 40 && fs[i] <= 200).sort((a, b) => a - b), med = v[Math.floor(v.length / 2)]; return db.map((x) => x - med); };
+  const resp = norm(modalResponse(rep.R, modes, rep.srcs, rep.ear, fs, true)), bare = norm(modalResponse(rep.R, modes, rep.srcs, rep.ear, fs, false));
+  return { rep, fs, resp, bare, treat: rep.problems.slice(0, 8).map((p) => ({ ...p, t: treatmentFor(p, rep.R, rep.c, fmt), desc: describeMode(p.m), note: noteOf(p.m.f).name })) };
+}
+
 // ===================================================================== scanner & export glue
 function scannerApi() {
   return {
@@ -2365,7 +2498,7 @@ function exportApi() {
   return {
     h, toast, modal, project: P, room: R, analysis, scheduleRows, renderToDataURL, viewNames: VIEW_NAMES,
     fmt, acousticName: (k) => AC.ACOUSTIC_MATERIALS[k]?.name || k, finishName: (k) => FINISHES[k]?.label || k, surfaceList: () => surfaceIds().map((id) => ({ id, label: surfLabel(id), s: surf(id) })), floorArea: () => G.floorArea(R()), wallCount: () => wallEdges().length, ceilingName: () => G.CEILINGS[R().ceiling?.type || 'flat'], hmax: () => S.hmax,
-    safeName, download, closeModals, bands: AC.BANDS, noteName, colorNames: COLOR_NAMES, defOf,
+    safeName, download, closeModals, modeData, bands: AC.BANDS, noteName, colorNames: COLOR_NAMES, defOf,
   };
 }
 
@@ -2379,6 +2512,8 @@ const ACTIONS = {
   importModel, importUnderlay,
   importPhotoWall: () => openScanner(scannerApi(), { mode: 'upload' }),
   pdf: () => openPdfDialog(exportApi()),
+  modes: () => openModes(),
+  units: () => setUnits(S.units === 'm' ? 'ft' : 'm'),
   png: hqRender, pngAll: exportAllViewsPNG, glb: exportGLB, obj: exportOBJ, csv: exportCSV,
   help: () => showHelp(),
   treat: () => { autoTreat('mixing'); S.rightTab = 'acoustics'; renderRightTabs(); },
@@ -2390,7 +2525,7 @@ const ACTIONS = {
   toggleRight: () => { document.body.classList.toggle('show-right'); document.body.classList.remove('show-left'); },
 };
 function showHelp() {
-  const keys = [['V', 'Select'], ['M', 'Move'], ['R', 'Rotate'], ['S', 'Scale'], ['T', 'Tape measure'], ['O', 'Edit room outline (drag corners)'], ['1–6', '3D / Top / Front / Back / Left / Right'], ['7 · 8', 'Quad view · Walkthrough'], ['F / double-click', 'Focus selection'], ['Arrows', 'Nudge 1 cm (Shift = 10 cm)'], ['[ ]', 'Rotate 15°'], ['Ctrl+D', 'Duplicate'], ['Ctrl+Z / Ctrl+Y', 'Undo / Redo'], ['Del', 'Delete'], ['/', 'Focus prompt'], ['W A S D Q E', 'Walk (in walkthrough)']];
+  const keys = [['V', 'Select'], ['M', 'Move'], ['R', 'Rotate'], ['S', 'Scale'], ['T', 'Tape measure'], ['O', 'Edit room outline (drag corners)'], ['K', 'Room mode calculator'], ['1–6', '3D / Top / Front / Back / Left / Right'], ['7 · 8', 'Quad view · Walkthrough'], ['F / double-click', 'Focus selection'], ['Arrows', 'Nudge 1 cm (Shift = 10 cm)'], ['[ ]', 'Rotate 15°'], ['Ctrl+D', 'Duplicate'], ['Ctrl+Z / Ctrl+Y', 'Undo / Redo'], ['Del', 'Delete'], ['/', 'Focus prompt'], ['W A S D Q E', 'Walk (in walkthrough)']];
   modal('How to use RoomTone', h('div', { class: 'help' },
     h('p', {}, 'Design your studio in five steps: 1) set the room size (Room tab or prompt "room 4 x 5 x 2.7"), 2) add a listening position and monitors, 3) add treatment from the Library or press ✨ Auto-treat, 4) check the Acoustics tab, 5) export a PDF.'),
     h('h4', {}, 'Prompt examples (works offline)'), h('div', { class: 'chips' }, PROMPT_EXAMPLES.map((p) => h('code', {}, p))),
@@ -2423,6 +2558,7 @@ document.addEventListener('keydown', (e) => {
     if (k === 'escape') { setTool('select'); return; }
   }
   if (k === 'o') { setTool(S.tool === 'shape' ? 'select' : 'shape'); return; }
+  if (k === 'k') { openModes(); return; }
   if (k === 'delete' || k === 'backspace') { removeItems(selectedItems()); return; }
   if (k === 'escape') { if (S.measureA) { S.measureA = null; measureGroup.children.filter((c) => c.userData.pending).forEach((c) => measureGroup.remove(c)); } else select([]); return; }
   if (k === '/') { e.preventDefault(); $('#prompt').focus(); return; }
@@ -2504,7 +2640,8 @@ if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
 window.addEventListener('online', () => $('#net').textContent = 'Online');
 window.addEventListener('offline', () => $('#net').textContent = 'Offline ✓');
 $('#net').textContent = navigator.onLine ? 'Online' : 'Offline ✓';
+$('[data-action="units"]').textContent = S.units;
 
 // expose for debugging / automation
-window.roomtone = { S, P, addMany, autoTreat, setView, runPromptText, analysis, renderToDataURL, applyTemplate, select };
+window.roomtone = { S, P, openModes, showOverlay, addMany, autoTreat, setView, runPromptText, analysis, renderToDataURL, applyTemplate, select };
 boot();
