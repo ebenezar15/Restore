@@ -1,0 +1,40 @@
+{
+  "name": "roomtone-desktop",
+  "productName": "RoomTone",
+  "version": "1.0.0",
+  "description": "RoomTone Studio Designer — offline 3D studio and acoustic room designer",
+  "author": "RoomTone",
+  "private": true,
+  "main": "main.cjs",
+  "scripts": {
+    "prepare-app": "node prepare.cjs",
+    "start": "npm run prepare-app && electron .",
+    "dist": "npm run prepare-app && electron-builder --mac --universal",
+    "dist:dir": "npm run prepare-app && electron-builder --mac --dir"
+  },
+  "devDependencies": {
+    "electron": "33.2.1",
+    "electron-builder": "25.1.8"
+  },
+  "build": {
+    "appId": "app.roomtone.studiodesigner",
+    "productName": "RoomTone",
+    "files": ["main.cjs", "app/**/*"],
+    "directories": { "output": "release", "buildResources": "build" },
+    "mac": {
+      "category": "public.app-category.graphics-design",
+      "target": ["dmg", "zip"],
+      "icon": "build/icon.png",
+      "identity": "-",
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false,
+      "extendInfo": {
+        "NSCameraUsageDescription": "RoomTone uses the camera to photograph walls and sample colours for your room design.",
+        "NSMicrophoneUsageDescription": "RoomTone can use the microphone for spoken design commands."
+      },
+      "fileAssociations": [{ "ext": "roomtone", "name": "RoomTone Project", "role": "Editor" }]
+    },
+    "dmg": { "title": "RoomTone ${version}", "artifactName": "RoomTone-${version}-mac-universal.dmg" },
+    "artifactName": "RoomTone-${version}-mac-universal.${ext}"
+  }
+}

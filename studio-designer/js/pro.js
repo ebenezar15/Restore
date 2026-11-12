@@ -185,7 +185,7 @@ export function openOptions(app) {
     body.innerHTML = '';
     body.append(
       h('div', { class: 'row gap wrap' },
-        h('button', { class: 'btn primary', onclick: () => { const name = prompt('Name this option:', `Option ${String.fromCharCode(65 + list.length)}`); if (name) { app.saveOption(name); draw(); } } }, '＋ Save current design as an option'),
+        h('button', { class: 'btn primary', onclick: async () => { const name = await app.ask('Save design option', 'Name this option', `Option ${String.fromCharCode(65 + list.length)}`); if (name) { app.saveOption(name); draw(); } } }, '＋ Save current design as an option'),
         h('span', { class: 'hint' }, 'Options are full snapshots of the design. Try alternatives, then compare score, acoustics, isolation and cost side by side.')),
       list.length ? h('div', { class: 'opt-grid' }, list.map((o) => h('div', { class: 'opt-card' + (o.id === app.currentOption() ? ' sel' : '') },
         h('img', { src: o.thumb || '' }), h('b', {}, o.name),
@@ -275,14 +275,14 @@ export function parseDXF(text) {
   const area = (p) => Math.abs(p.reduce((a, q, i) => { const n = p[(i + 1) % p.length]; return a + q[0] * n[1] - n[0] * q[1]; }, 0)) / 2;
   return polys.map((p) => ({ pts: p, area: area(p), layer: p.layer || '' })).sort((a, b) => b.area - a.area);
 }
-export function importDXF(app, text) {
+export async function importDXF(app, text) {
   const polys = parseDXF(text);
   if (!polys.length) return app.toast('No closed outline found in that DXF (need a closed polyline or lines forming a loop)', 'error');
   // prefer a layer that names the interior wall line; otherwise the largest closed outline
   const pick = polys.find((q) => /^(walls?|a-wall|room|outline|interior)$/i.test(q.layer)) || polys[0];
   const p = pick.pts, xs = p.map((q) => q[0]), ys = p.map((q) => q[1]), span = Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys));
   const guess = span > 250 ? 'mm' : span > 60 ? 'in' : span > 25 ? 'ft' : 'm';
-  const u = (prompt(`Outline found (${p.length} corners, ${span.toFixed(1)} drawing units across).\nWhat are the drawing units? (mm, cm, m, in, ft)`, guess) || '').trim().toLowerCase();
+  const u = ((await app.ask('Import DXF outline', `Outline found: ${p.length} corners, ${span.toFixed(1)} drawing units across. Drawing units? (mm, cm, m, in, ft)`, guess)) || '').trim().toLowerCase();
   const k = { mm: 0.001, cm: 0.01, m: 1, in: 0.0254, ft: 0.3048 }[u];
   if (!k) return;
   app.setOutline(p.map(([x, y]) => [x * k, -y * k]));

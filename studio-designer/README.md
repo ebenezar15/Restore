@@ -15,7 +15,36 @@ connection once it's loaded.
 | **Single file (easiest)** | Open `dist/RoomTone-standalone.html` by double-clicking it. Everything is inlined, so it works from disk with no connection. |
 | **Installable app (PWA)** | Serve the folder over http(s), e.g. `npx http-server studio-designer` or GitHub Pages. Then use "Install app" / "Add to Home Screen". A service worker caches everything, so the app keeps working offline afterwards. |
 
-The camera needs `https://` or `localhost`. On phones, "Upload photo" also opens the native camera.
+| **Mac app** | Download `RoomTone-…-mac-universal.dmg` from the repository's **Actions** tab (workflow *RoomTone macOS app* → latest run → *Artifacts*), open it and drag **RoomTone** to Applications. See [Mac app](#mac-app) below. |
+
+The camera needs `https://` or `localhost` (in the Mac app it works after you allow camera access). On phones, "Upload photo" also opens the native camera.
+
+## Mac app
+
+`desktop/` wraps the offline single-file app in a native Mac window (Electron) with a menu bar, Save dialogs for exports, camera permission and its own Dock icon. It runs on Apple Silicon and Intel Macs and needs no internet.
+
+**Install**
+1. Get the `.dmg`: GitHub → **Actions** → *RoomTone macOS app* → the latest successful run → **Artifacts** → `RoomTone-mac`. (Pushing a tag such as `roomtone-v1.0.0` also publishes it as a Release.)
+2. Open the `.dmg` and drag **RoomTone** into **Applications**.
+3. First launch only: the app is not notarised by Apple, so right-click (or Control-click) RoomTone → **Open** → **Open**. If macOS says the app is damaged, run this once in Terminal:
+
+```bash
+xattr -cr /Applications/RoomTone.app
+```
+
+**Build it yourself on a Mac** (Node 20+):
+
+```bash
+cd studio-designer && npm install && npm run build
+```
+
+```bash
+cd desktop && npm install && npm run dist
+```
+
+The `.dmg` appears in `desktop/release/`. `npm start` in `desktop/` runs the app without packaging.
+
+To distribute without the first-launch warning you need an Apple Developer ID: set `mac.identity` in `desktop/package.json` to your certificate name, enable `hardenedRuntime`, and add notarisation credentials (see the electron-builder documentation).
 
 ## Features
 
@@ -162,6 +191,7 @@ js/materials.js       procedural textures, finishes, colour names
 sw.js, manifest.webmanifest   offline PWA
 vendor/               three.js r169 + addons, jsPDF 2.5.2 (MIT)
 tools/build-standalone.mjs    builds dist/RoomTone-standalone.html (npm i && npm run build)
+desktop/              Mac app wrapper (Electron main process, packaging config, icon)
 ```
 
 Acoustic figures are design estimates based on standard formulas and published

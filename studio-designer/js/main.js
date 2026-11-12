@@ -1595,6 +1595,18 @@ function modal(title, body, actions = [], { wide = false, xwide = false } = {}) 
 }
 function closeModals() { [...document.querySelectorAll('.modal-layer')].forEach((l) => l._close?.()); }
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { const top = [...document.querySelectorAll('.modal-layer')].pop(); if (top) { e.stopImmediatePropagation(); top._close(); } } }, true);
+/** In-app replacement for window.prompt (which desktop wrappers do not provide). Resolves to the text, or null if cancelled. */
+function askText(title, label, def = '') {
+  return new Promise((res) => {
+    let done = false;
+    const inp = h('input', { value: def });
+    const finish = (v) => { if (done) return; done = true; res(v); m.close(); };
+    inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') finish(inp.value); });
+    const m = modal(title, h('label', { class: 'field' }, h('span', {}, label), inp), [{ label: 'Cancel', onClick: () => { finish(null); return false; } }, { label: 'OK', primary: true, onClick: () => { finish(inp.value); return false; } }]);
+    m.el.addEventListener('closed', () => { if (!done) { done = true; res(null); } }, { once: true });
+    setTimeout(() => { inp.focus(); inp.select(); }, 30);
+  });
+}
 function confirmDialog(title, text) {
   return new Promise((res) => {
     let answered = false;
@@ -1943,7 +1955,7 @@ function wallsEditor() {
     h('button', { class: 'link', title: 'Edit this wall’s colour & material', onclick: () => selectSurface(e.id) }, surfLabel(e.id)),
     h('input', { type: 'number', step: 0.01, min: 0.05, value: +toUnit(e.len).toFixed(3), title: `Length (${S.units})`, onchange: (ev) => setEdgeLength(i, fromUnit(+ev.target.value)) }),
     h('small', { title: 'Direction' }, `${((Math.atan2(e.dir[1], e.dir[0]) / DEG + 360) % 360).toFixed(0)}°`),
-    h('button', { class: 'icon-btn tiny', title: 'Curve this wall', html: '⌒', onclick: () => { const v = prompt('Bulge in metres (+ outward, − into the room):', '0.4'); if (v != null && !Number.isNaN(+v)) changeShape(() => { const src = surf(e.id); const ids = G.curveEdge(R(), i, fromUnit(+v)) || []; for (const id of ids) R().surfaces[id] = { ...JSON.parse(JSON.stringify(src)) }; }); } }),
+    h('button', { class: 'icon-btn tiny', title: 'Curve this wall', html: '⌒', onclick: async () => { const v = await askText('Curve this wall', 'Bulge in metres (+ outward, − into the room)', '0.4'); if (v != null && !Number.isNaN(+v)) changeShape(() => { const src = surf(e.id); const ids = G.curveEdge(R(), i, fromUnit(+v)) || []; for (const id of ids) R().surfaces[id] = { ...JSON.parse(JSON.stringify(src)) }; }); } }),
     h('button', { class: 'icon-btn tiny', title: 'Split into two walls', html: '⫶', onclick: () => changeShape(() => { const id = G.splitEdge(R(), i); if (id) R().surfaces[id] = { ...JSON.parse(JSON.stringify(surf(e.id))) }; }) }),
     E.length > 3 ? h('button', { class: 'icon-btn tiny', title: 'Remove this wall (merge corners)', html: '&times;', onclick: () => changeShape(() => R().poly.splice((i + 1) % R().poly.length, 1)) }) : null));
   const body = h('div', { class: 'walls-list' }, rows);
@@ -2173,7 +2185,7 @@ function actionRow(items) {
     h('button', { class: 'icon-btn', title: 'Mirror across room centre line (symmetry)', html: svg('mirror'), onclick: () => mirror(items) }),
     h('button', { class: 'icon-btn', title: one.locked ? 'Unlock' : 'Lock', html: svg(one.locked ? 'lock' : 'unlock'), onclick: () => { items.forEach((i) => (i.locked = !one.locked)); attachGizmo(); commit(); } }),
     h('button', { class: 'icon-btn', title: one.hidden ? 'Show' : 'Hide', html: svg(one.hidden ? 'eyeOff' : 'eye'), onclick: () => { items.forEach((i) => updateItem(i, { hidden: !one.hidden })); commit(); } }),
-    h('button', { class: 'btn small', title: 'Make N copies in a row', onclick: () => { const n = parseInt(prompt('How many copies in a row?', '3'), 10); if (n > 0) duplicate(items, Math.min(n, 50)); } }, 'Array…'),
+    h('button', { class: 'btn small', title: 'Make N copies in a row', onclick: async () => { const n = parseInt(await askText('Array', 'How many copies in a row?', '3'), 10); if (n > 0) duplicate(items, Math.min(n, 50)); } }, 'Array…'),
     h('button', { class: 'icon-btn danger', title: 'Delete (Del)', html: svg('trash'), onclick: () => removeItems(items) }));
 }
 function sizePresets(def) {
@@ -3048,7 +3060,7 @@ function showScore(sc) {
 }
 function proApi() {
   return {
-    h, modal, toast, fmt, download, safeName, selectField, units: () => S.units,
+    h, modal, toast, fmt, download, safeName, selectField, ask: askText, units: () => S.units,
     project: P, room: R, analysis, modeData, isolationData, scheduleRows, cornerStats, wallEdges, surfaceArea, defOf,
     edgeOf: (id) => wallEdges().find((e) => e.id === id), outerRing: () => G.offsetRing(R(), R().wallT ?? 0.15), layerOfItem: (it) => catLayer(defOf(it.type)),
     defByName: (n) => CATALOG.find((d) => d.name === n), finishName: (k) => FINISHES[k]?.label || k, ceilingName: () => G.CEILINGS[R().ceiling?.type || 'flat'], colorNamer: () => colorNamer,
