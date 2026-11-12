@@ -10,6 +10,7 @@ import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
 import { CATALOG, CATEGORIES, BY_TYPE, buildItem, areaOf, defaultParams } from './catalog.js';
 import { mat, FINISHES, imageTexture, COLOR_NAMES } from './materials.js';
 import * as AC from './acoustics.js';
+import * as G from './geometry.js';
 import { runPrompt, PROMPT_EXAMPLES } from './prompt.js';
 import { openScanner } from './scan.js';
 import { openPdfDialog } from './export.js';
@@ -51,7 +52,7 @@ const SURF_LABEL = { front: 'Front wall', back: 'Back wall', left: 'Left wall', 
 function newProject(dims = { w: 4.2, d: 5.4, h: 2.7 }) {
   return {
     version: 1, name: 'Untitled Studio', designer: '', client: '', notes: '',
-    room: { ...dims, surfaces: JSON.parse(JSON.stringify(SURF_DEFAULTS)), ambient: 0.8, daylight: true },
+    room: G.ensureRoom({ ...dims, surfaces: JSON.parse(JSON.stringify(SURF_DEFAULTS)), ambient: 0.8, daylight: true }),
     items: [], scenes: [], assets: {}, underlay: null,
   };
 }
@@ -65,6 +66,12 @@ const TEMPLATES = {
   'Live room': { dims: { w: 7.0, d: 9.0, h: 3.6 }, setup: 'live' },
   'Podcast studio': { dims: { w: 3.6, d: 4.0, h: 2.6 }, setup: 'podcast' },
   'Home theater': { dims: { w: 5.0, d: 7.0, h: 2.8 }, setup: 'theater' },
+  'Splayed control room': { dims: { w: 5.4, d: 6.6, h: 2.8 }, setup: 'desk', shape: 'splayed', ceiling: { type: 'shed', h2: 3.4, dir: 'f2b' } },
+  'L-shaped live room': { dims: { w: 7.0, d: 8.0, h: 3.2 }, setup: 'live', shape: 'lshape' },
+  'Attic studio': { dims: { w: 4.5, d: 6.0, h: 1.6 }, setup: 'desk', ceiling: { type: 'gable', h2: 3.2, axis: 'z' } },
+  'Octagonal booth': { dims: { w: 2.0, d: 2.0, h: 2.4 }, setup: 'booth', shape: 'octagon' },
+  'Vaulted hall': { dims: { w: 8.0, d: 12.0, h: 3.2 }, setup: 'live', ceiling: { type: 'vault', h2: 5.5, axis: 'z' } },
+  'Round dome room': { dims: { w: 6.0, d: 6.0, h: 2.8 }, setup: 'desk', shape: 'round', ceiling: { type: 'dome', h2: 4.0 } },
   'Empty room': { dims: { w: 4.0, d: 5.0, h: 2.7 }, setup: null },
 };
 
@@ -80,6 +87,64 @@ const R = () => S.project.room;
 const defOf = (type) => BY_TYPE[type] || BY_TYPE.shapeBox;
 const itemById = (id) => P().items.find((i) => i.id === id);
 const selectedItems = () => S.sel.map(itemById).filter(Boolean);
+
+// ---- walls & surfaces of an arbitrarily shaped room
+const wallEdges = () => G.edges(R());
+function surfLabel(id) {
+  if (SURF_LABEL[id]) return SURF_LABEL[id];
+  const i = wallEdges().findIndex((e) => e.id === id);
+  return i >= 0 ? `Wall ${i + 1}` : id;
+}
+const surfaceIds = () => [...wallEdges().map((e) => e.id), 'floor', 'ceiling'];
+const surfaceLabels = () => Object.fromEntries(surfaceIds().map((id) => [id, surfLabel(id)]));
+function surf(id) {
+  const all = R().surfaces;
+  if (!all[id]) all[id] = { ...JSON.parse(JSON.stringify(all.front || SURF_DEFAULTS.front)), photo: null };
+  return all[id];
+}
+const IDEAL_N = { front: [0, 1], back: [0, -1], left: [1, 0], right: [-1, 0] };
+/** Resolve "front"/"left"… (or a wall id) to the best matching wall of any room shape. */
+function edgeFor(name) {
+  const E = wallEdges();
+  const exact = E.find((e) => e.id === name);
+  if (exact) return exact;
+  const n = IDEAL_N[name];
+  if (!n) return E[0];
+  const ext = Math.max(R().w, R().d) / 2 || 1;
+  let best = null, bs = -Infinity;
+  for (const e of E) {
+    const al = e.n[0] * n[0] + e.n[1] * n[1];
+    if (al < 0.35) continue;
+    const pos = -(e.mid[0] * n[0] + e.mid[1] * n[1]) / ext; // how far toward that side
+    const sc = al * 2 + pos * 1.5 + Math.min(e.len, 4) * 0.25;
+    if (sc > bs) { bs = sc; best = e; }
+  }
+  return best || E.slice().sort((a, b) => (b.n[0] * n[0] + b.n[1] * n[1]) - (a.n[0] * n[0] + a.n[1] * n[1]))[0];
+}
+function openingsOn(e) {
+  const out = [];
+  for (const it of P().items) {
+    const def = defOf(it.type);
+    if (!def.opening || it.hidden || it.params?.cutWall === false) continue;
+    const r = G.distToSegment(it.pos[0], it.pos[2], e.a, e.b);
+    if (r.d > it.size[2] / 2 + 0.25) continue;
+    const a = it.rot[1] * DEG, fx = Math.sin(a), fz = Math.cos(a);
+    if (fx * e.n[0] + fz * e.n[1] < 0.9) continue;
+    const u = r.t * e.len, hw = it.size[0] / 2;
+    const u0 = clamp(u - hw, 0.02, e.len - 0.02), u1 = clamp(u + hw, 0.02, e.len - 0.02);
+    const top = Math.min(G.heightAt(R(), e.a[0] + e.dir[0] * u0, e.a[1] + e.dir[1] * u0), G.heightAt(R(), e.a[0] + e.dir[0] * u1, e.a[1] + e.dir[1] * u1));
+    const y0 = clamp(it.pos[1], 0, top - 0.05), y1 = clamp(it.pos[1] + it.size[1], y0 + 0.02, top - 0.02);
+    if (u1 - u0 > 0.05 && y1 - y0 > 0.05) out.push({ u0, u1, y0, y1, id: it.id });
+  }
+  return out;
+}
+function surfaceArea(id) {
+  if (id === 'floor') return G.floorArea(R());
+  if (id === 'ceiling') return G.ceilingArea(R());
+  const e = wallEdges().find((x) => x.id === id);
+  if (!e) return 0;
+  return Math.max(0, G.wallArea(R(), e) - openingsOn(e).reduce((a, o) => a + (o.u1 - o.u0) * (o.y1 - o.y0), 0));
+}
 
 // ===================================================================== units
 const fmt = (m, digits = 2) => (S.units === 'ft' ? `${(m / 0.3048).toFixed(digits)} ft` : `${m.toFixed(digits)} m`);
@@ -167,73 +232,130 @@ function dimLine(a, b, text, offsetDir, color = '#9fd3ff') {
   return g;
 }
 
-function surfaceMaterial(name, repeat) {
-  const sf = R().surfaces[name];
+function surfaceMaterial(name, opts = {}) {
+  const sf = surf(name);
   if (sf.photo && sf.showPhoto !== false && P().assets[sf.photo]) {
-    return new THREE.MeshStandardMaterial({ map: imageTexture(P().assets[sf.photo], () => {}), roughness: 0.9, side: THREE.FrontSide });
+    return new THREE.MeshStandardMaterial({ map: imageTexture(P().assets[sf.photo], () => {}), roughness: 0.9, side: opts.side ?? THREE.FrontSide });
   }
-  return mat(sf.color, sf.finish, { repeat });
+  let m = mat(sf.color, sf.finish, opts);
+  if (S.xray && opts.xray) { m = m.clone(); m.transparent = true; m.opacity = 0.28; m.depthWrite = false; }
+  return m;
+}
+/** Wall face as a flat shape in (u along wall, y up) with holes for doors / windows, mapped into 3D. */
+function wallFaceGeometry(e, top, holes, map, photo) {
+  const sh = new THREE.Shape();
+  sh.moveTo(0, 0); sh.lineTo(e.len, 0);
+  for (let k = top.length - 1; k >= 0; k--) sh.lineTo(top[k][0], top[k][1]);
+  sh.closePath();
+  for (const o of holes) { const hp = new THREE.Path(); hp.moveTo(o.u0, o.y0); hp.lineTo(o.u0, o.y1); hp.lineTo(o.u1, o.y1); hp.lineTo(o.u1, o.y0); hp.closePath(); sh.holes.push(hp); }
+  const g = new THREE.ShapeGeometry(sh);
+  const pos = g.attributes.position, uv = g.attributes.uv, hmax = Math.max(...top.map((t) => t[1]));
+  for (let i = 0; i < pos.count; i++) {
+    const u = pos.getX(i), y = pos.getY(i), [x, z] = map(u);
+    pos.setXYZ(i, x, y, z);
+    if (photo) uv.setXY(i, u / e.len, y / hmax); else uv.setXY(i, u / 2.4, y / 2.4);
+  }
+  g.computeVertexNormals();
+  return g;
+}
+function quadsGeometry(quads) {
+  const v = [];
+  for (const [a, b, c, d] of quads) v.push(...a, ...b, ...c, ...a, ...c, ...d);
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(v, 3)); g.computeVertexNormals();
+  return g;
 }
 
 function buildRoom() {
   roomGroup.clear();
-  const { w, d, h } = R(), t = 0.15, shellMat = mat('#c9c5bd', 'paint');
+  for (const k of Object.keys(wallObjs)) delete wallObjs[k];
+  const room = G.ensureRoom(R());
+  const { w, d, h } = room, t = clamp(room.wallT ?? 0.15, 0.02, 1);
+  S.hmax = G.maxHeight(room);
+  const shellMat = S.xray ? new THREE.MeshStandardMaterial({ color: '#c9c5bd', transparent: true, opacity: 0.12, depthWrite: false, side: THREE.DoubleSide }) : mat('#c9c5bd', 'paint', { side: THREE.DoubleSide });
   const mk = (geo, m, name) => { const me = new THREE.Mesh(geo, m); me.userData.surface = name; me.receiveShadow = true; return me; };
-  // floor
+  const E = wallEdges(), ring = G.offsetRing(room, t);
+  // floor + slab
   const fg = new THREE.Group(); fg.userData.surface = 'floor';
-  const floor = mk(new THREE.PlaneGeometry(w, d), surfaceMaterial('floor', [w / 1.2, d / 1.2]), 'floor');
+  const floorShape = new THREE.Shape(room.poly.map((p) => new THREE.Vector2(p.x, -p.z)));
+  const floor = mk(new THREE.ShapeGeometry(floorShape), surfaceMaterial('floor', { repeat: [1 / 1.2, 1 / 1.2] }), 'floor');
   floor.rotation.x = -Math.PI / 2; fg.add(floor);
-  const slab = mk(new THREE.BoxGeometry(w + 2 * t, t, d + 2 * t), shellMat, 'floor'); slab.position.y = -t / 2 - 0.002; fg.add(slab);
+  const slabShape = new THREE.Shape(ring.map(([x, z]) => new THREE.Vector2(x, -z)));
+  const slabGeo = new THREE.ExtrudeGeometry(slabShape, { depth: 0.15, bevelEnabled: false });
+  slabGeo.rotateX(-Math.PI / 2); slabGeo.translate(0, -0.152, 0);
+  fg.add(mk(slabGeo, shellMat, 'floor'));
   roomGroup.add(fg); wallObjs.floor = fg;
-  // walls
-  const walls = {
-    front: { len: w, pos: [0, h / 2, -d / 2], rot: 0, shell: [0, h / 2, -d / 2 - t / 2 - 0.004] },
-    back: { len: w, pos: [0, h / 2, d / 2], rot: Math.PI, shell: [0, h / 2, d / 2 + t / 2 + 0.004] },
-    left: { len: d, pos: [-w / 2, h / 2, 0], rot: Math.PI / 2, shell: [-w / 2 - t / 2 - 0.004, h / 2, 0] },
-    right: { len: d, pos: [w / 2, h / 2, 0], rot: -Math.PI / 2, shell: [w / 2 + t / 2 + 0.004, h / 2, 0] },
-  };
-  for (const [name, W] of Object.entries(walls)) {
-    const g = new THREE.Group(); g.userData.surface = name;
-    let wm = surfaceMaterial(name, [W.len / 2.4, h / 2.4]);
-    if (S.xray) { wm = wm.clone(); wm.transparent = true; wm.opacity = 0.28; wm.depthWrite = false; }
-    const p = mk(new THREE.PlaneGeometry(W.len, h), wm, name);
-    p.position.set(...W.pos); p.rotation.y = W.rot; g.add(p);
-    const sh = mk(new THREE.BoxGeometry(W.len + 2 * t + 0.01, h + 0.002, t), S.xray ? new THREE.MeshStandardMaterial({ color: '#c9c5bd', transparent: true, opacity: 0.12, depthWrite: false }) : shellMat, name);
-    sh.position.set(...W.shell); sh.rotation.y = W.rot; sh.castShadow = true; g.add(sh);
-    roomGroup.add(g); wallObjs[name] = g;
-  }
+  // walls (each edge: inner face with openings, outer shell, top cap, reveals)
+  E.forEach((e, i) => {
+    const g = new THREE.Group(); g.userData.surface = e.id; g.userData.edge = e;
+    const top = G.wallTop(room, e), holes = openingsOn(e), sf = surf(e.id);
+    const photo = sf.photo && sf.showPhoto !== false && P().assets[sf.photo];
+    const inner = (u) => [e.a[0] + e.dir[0] * u, e.a[1] + e.dir[1] * u];
+    const oA = ring[i], oB = ring[(i + 1) % ring.length];
+    const outer = (u) => [oA[0] + (oB[0] - oA[0]) * (u / e.len), oA[1] + (oB[1] - oA[1]) * (u / e.len)];
+    g.add(mk(wallFaceGeometry(e, top, holes, inner, !!photo), surfaceMaterial(e.id, { xray: true }), e.id));
+    const og = wallFaceGeometry(e, top, holes, outer, false);
+    const idx = og.index.array; for (let k = 0; k < idx.length; k += 3) { const tmp = idx[k + 1]; idx[k + 1] = idx[k + 2]; idx[k + 2] = tmp; }
+    og.computeVertexNormals();
+    const shell = mk(og, shellMat, e.id); shell.castShadow = true; g.add(shell);
+    const quads = [];
+    for (let k = 0; k < top.length - 1; k++) {
+      const [u0, y0] = top[k], [u1, y1] = top[k + 1], i0 = inner(u0), i1 = inner(u1), o0 = outer(u0), o1 = outer(u1);
+      quads.push([[i0[0], y0, i0[1]], [i1[0], y1, i1[1]], [o1[0], y1, o1[1]], [o0[0], y0, o0[1]]]);
+    }
+    for (const o of holes) {
+      const P3 = (u, y, f) => { const q = f(u); return [q[0], y, q[1]]; };
+      quads.push([P3(o.u0, o.y0, inner), P3(o.u1, o.y0, inner), P3(o.u1, o.y0, outer), P3(o.u0, o.y0, outer)]);
+      quads.push([P3(o.u0, o.y1, inner), P3(o.u1, o.y1, inner), P3(o.u1, o.y1, outer), P3(o.u0, o.y1, outer)]);
+      quads.push([P3(o.u0, o.y0, inner), P3(o.u0, o.y1, inner), P3(o.u0, o.y1, outer), P3(o.u0, o.y0, outer)]);
+      quads.push([P3(o.u1, o.y0, inner), P3(o.u1, o.y1, inner), P3(o.u1, o.y1, outer), P3(o.u1, o.y0, outer)]);
+    }
+    if (quads.length) g.add(mk(quadsGeometry(quads), shellMat, e.id));
+    roomGroup.add(g); wallObjs[e.id] = g;
+  });
+  // ceiling (flat, sloped, pitched, vaulted or domed)
   const cg = new THREE.Group(); cg.userData.surface = 'ceiling';
-  const ceil = mk(new THREE.PlaneGeometry(w, d), surfaceMaterial('ceiling', [w / 1.2, d / 1.2]), 'ceiling');
-  ceil.rotation.x = Math.PI / 2; ceil.position.y = h; cg.add(ceil);
-  const cs = mk(new THREE.BoxGeometry(w + 2 * t, t, d + 2 * t), shellMat, 'ceiling'); cs.position.y = h + t / 2 + 0.002; cs.castShadow = true; cg.add(cs);
+  const tris = G.ceilingTriangles(room), cv = [], cuv = [];
+  for (const tri of tris) for (const [x, y, z] of tri) { cv.push(x, y, z); cuv.push(x / 1.2, z / 1.2); }
+  const cgeo = new THREE.BufferGeometry();
+  cgeo.setAttribute('position', new THREE.Float32BufferAttribute(cv, 3)); cgeo.setAttribute('uv', new THREE.Float32BufferAttribute(cuv, 2)); cgeo.computeVertexNormals();
+  cg.add(mk(cgeo, surfaceMaterial('ceiling', { side: THREE.DoubleSide }), 'ceiling'));
   roomGroup.add(cg); wallObjs.ceiling = cg;
-  // grid
+  // grid clipped to the floor outline
   if (S.showGrid) {
-    const pts = [], step = S.units === 'ft' ? 0.3048 : 0.5;
-    for (let x = -w / 2; x <= w / 2 + 1e-6; x += step) pts.push(new THREE.Vector3(x, 0.003, -d / 2), new THREE.Vector3(x, 0.003, d / 2));
-    for (let z = -d / 2; z <= d / 2 + 1e-6; z += step) pts.push(new THREE.Vector3(-w / 2, 0.003, z), new THREE.Vector3(w / 2, 0.003, z));
+    const pts = [], step = S.units === 'ft' ? 0.3048 : 0.5, seg = step / 4;
+    const add = (x0, z0, x1, z1) => { if (insideRoom((x0 + x1) / 2, (z0 + z1) / 2)) pts.push(new THREE.Vector3(x0, 0.003, z0), new THREE.Vector3(x1, 0.003, z1)); };
+    for (let x = -w / 2; x <= w / 2 + 1e-6; x += step) for (let z = -d / 2; z < d / 2 - 1e-6; z += seg) add(x, z, x, Math.min(z + seg, d / 2));
+    for (let z = -d / 2; z <= d / 2 + 1e-6; z += step) for (let x = -w / 2; x < w / 2 - 1e-6; x += seg) add(x, z, Math.min(x + seg, w / 2), z);
     const grid = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: '#000000', transparent: true, opacity: 0.12 }));
     grid.userData.helper = true; roomGroup.add(grid);
   }
   if (S.showDims) {
     const dims = new THREE.Group(); dims.userData.helper = true; dims.name = 'dims';
-    dims.add(dimLine([-w / 2, 0.01, -d / 2], [w / 2, 0.01, -d / 2], fmt(w), [0, 0, -0.45]));
-    dims.add(dimLine([-w / 2, 0.01, -d / 2], [-w / 2, 0.01, d / 2], fmt(d), [-0.45, 0, 0]));
-    dims.add(dimLine([w / 2, 0, -d / 2], [w / 2, h, -d / 2], fmt(h), [0.45, 0, 0]));
+    const rect = G.isRect(room);
+    for (const e of E) {
+      if (e.len < 0.6 && !rect) continue;
+      dims.add(dimLine([e.a[0], 0.01, e.a[1]], [e.b[0], 0.01, e.b[1]], fmt(e.len), [-e.n[0] * (t + 0.35), 0, -e.n[1] * (t + 0.35)]));
+    }
+    const e0 = E.find((e) => e.id === 'front') || E[0];
+    dims.add(dimLine([e0.b[0], 0, e0.b[1]], [e0.b[0], G.heightAt(room, e0.b[0], e0.b[1]), e0.b[1]], fmt(G.heightAt(room, e0.b[0], e0.b[1])), [-e0.n[0] * (t + 0.3) + e0.dir[0] * 0.2, 0, -e0.n[1] * (t + 0.3) + e0.dir[1] * 0.2]));
+    if (S.hmax > h + 0.05) { const lab = labelSprite(`peak ${fmt(S.hmax)}`, { size: 0.15, color: '#dff1ff' }); lab.position.set(0, S.hmax + 0.2, 0); dims.add(lab); }
     roomGroup.add(dims);
   }
   // wall name tags (visible in plan)
-  for (const [name, p] of Object.entries({ front: [0, 0.02, -d / 2 + 0.25], back: [0, 0.02, d / 2 - 0.25], left: [-w / 2 + 0.3, 0.02, 0], right: [w / 2 - 0.3, 0.02, 0] })) {
-    const s = labelSprite(name.toUpperCase(), { size: 0.12, color: '#ffffff', bg: 'rgba(0,0,0,0.35)' }); s.position.set(...p); s.userData.helper = true; s.userData.tag = name; s.visible = false; roomGroup.add(s);
-  }
+  E.forEach((e, i) => {
+    if (e.len < 0.5 && !G.isRect(room)) return;
+    const s2 = labelSprite(SURF_LABEL[e.id] ? e.id.toUpperCase() : `W${i + 1}`, { size: 0.12, color: '#ffffff', bg: 'rgba(0,0,0,0.35)' });
+    s2.position.set(e.mid[0] + e.n[0] * 0.28, 0.02, e.mid[1] + e.n[1] * 0.28); s2.userData.helper = true; s2.userData.tag = e.id; s2.visible = false; roomGroup.add(s2);
+  });
   // lighting rig follows room size
-  sun.position.set(w * 0.6, h * 3, d * 0.9);
+  sun.position.set(w * 0.6, S.hmax * 3, d * 0.9);
   sun.target.position.set(0, 0, 0);
   const span = Math.max(w, d) * 0.9;
-  Object.assign(sun.shadow.camera, { left: -span, right: span, top: span, bottom: -span, near: 0.5, far: h * 6 + span * 2 });
+  Object.assign(sun.shadow.camera, { left: -span, right: span, top: span, bottom: -span, near: 0.5, far: S.hmax * 6 + span * 2 });
   sun.shadow.camera.updateProjectionMatrix();
   applyAmbient();
   buildUnderlay();
+  drawShapeHandles();
 }
 function applyAmbient() {
   const a = R().ambient ?? 0.8;
@@ -258,7 +380,7 @@ function buildUnderlay() {
 }
 
 // ===================================================================== items
-const buildCtx = () => ({ room: R(), assets: P().assets, imported: S.imported, onTexture: () => {} });
+const buildCtx = () => ({ room: R(), heightAt: (x, z) => G.heightAt(R(), x, z), assets: P().assets, imported: S.imported, onTexture: () => {} });
 
 function syncTransform(it, obj = objMap.get(it.id)) {
   if (!obj) return;
@@ -308,51 +430,121 @@ function makeItem(type, over = {}) {
 }
 
 // ---------------------------------------------------------------- placement
-const WALL_ROT = { front: 0, back: 180, left: 90, right: -90 };
 function wallY(def, size) {
-  if (def.wallTop) return R().h - size[1];
-  if (def.wallY != null) return clamp(def.wallY - size[1] / 2, 0, R().h - size[1]);
+  if (def.wallY != null) return Math.max(0, def.wallY - size[1] / 2);
   if (size[1] >= 1.8) return 0;
-  return clamp(1.2 - size[1] / 2, 0, R().h - size[1]);
+  return Math.max(0, 1.2 - size[1] / 2);
 }
-function placeOnWall(it, wall, u, y) {
-  const { w, d } = R(), dep = it.size[2], def = defOf(it.type);
-  it.rot = [0, WALL_ROT[wall], 0];
-  const yy = y ?? wallY(def, it.size);
-  if (wall === 'front') it.pos = [u, yy, -d / 2 + dep / 2];
-  if (wall === 'back') it.pos = [u, yy, d / 2 - dep / 2];
-  if (wall === 'left') it.pos = [-w / 2 + dep / 2, yy, u];
-  if (wall === 'right') it.pos = [w / 2 - dep / 2, yy, u];
+const inwardRot = (e) => Math.atan2(e.n[0], e.n[1]) / DEG;
+/** Put an item flat against a wall. `u` = offset from the wall's centre along the wall. */
+function placeOnWall(it, wall, u = 0, y) {
+  const e = typeof wall === 'object' ? wall : edgeFor(wall);
+  if (!e) return;
+  const dep = it.size[2], def = defOf(it.type), half = Math.min(it.size[0] / 2, e.len / 2);
+  const uu = clamp(u, -e.len / 2 + half, e.len / 2 - half);
+  const x = e.mid[0] + e.dir[0] * uu + e.n[0] * dep / 2, z = e.mid[1] + e.dir[1] * uu + e.n[1] * dep / 2;
+  it.rot = [0, inwardRot(e), 0];
+  const top = Math.min(G.heightAt(R(), x - e.dir[0] * half, z - e.dir[1] * half), G.heightAt(R(), x + e.dir[0] * half, z + e.dir[1] * half));
+  let yy = y ?? wallY(def, it.size);
+  if (def.wallTop) yy = top - it.size[1];
+  if (it.size[1] > top) it.size[1] = +top.toFixed(3);
+  it.pos = [x, clamp(yy, 0, Math.max(0, top - it.size[1])), z];
+  it.wall = e.id;
 }
-const CORNERS = { FL: [-1, -1, 0], FR: [1, -1, -90], BR: [1, 1, 180], BL: [-1, 1, 90] };
+/** Put an item on a wall at the point nearest to world (px, pz). */
+function placeOnWallAt(it, wall, px, pz, y) {
+  const e = typeof wall === 'object' ? wall : edgeFor(wall);
+  if (!e) return;
+  const t = (px - e.a[0]) * e.dir[0] + (pz - e.a[1]) * e.dir[1];
+  placeOnWall(it, e, t - e.len / 2, y);
+}
+function nearestEdge(x, z) {
+  let best = null;
+  for (const e of wallEdges()) { const r = G.distToSegment(x, z, e.a, e.b); if (!best || r.d < best.d) best = { e, d: r.d }; }
+  return best?.e;
+}
+function convexCorners() {
+  const v = G.vertexInfo(R()).filter((c) => c.convex);
+  return v.sort((a, b) => a.z - b.z || a.x - b.x);
+}
+function cornerFor(key) {
+  const { w, d } = R(), vs = convexCorners();
+  if (typeof key === 'number') return vs[key % vs.length];
+  const t = { FL: [-w / 2, -d / 2], FR: [w / 2, -d / 2], BR: [w / 2, d / 2], BL: [-w / 2, d / 2] }[key] || [0, 0];
+  return vs.slice().sort((a, b) => Math.hypot(a.x - t[0], a.z - t[1]) - Math.hypot(b.x - t[0], b.z - t[1]))[0];
+}
 function placeInCorner(it, key) {
-  const { w, d } = R(), [sx, sz, rot] = CORNERS[key], def = defOf(it.type);
-  if (def.origin === 'corner') { it.pos = [sx * w / 2, 0, sz * d / 2]; it.rot = [0, rot, 0]; }
-  else { it.pos = [sx * (w / 2 - it.size[0] / 2 - 0.03), def.mount === 'wall' ? wallY(def, it.size) : 0, sz * (d / 2 - it.size[2] / 2 - 0.03)]; it.rot = [0, sz < 0 ? 0 : 180, 0]; }
-  if (it.size[1] > R().h) it.size[1] = R().h;
+  const v = typeof key === 'object' ? key : cornerFor(key), def = defOf(it.type);
+  if (!v) return placeItem(it, 'floor');
+  const top = G.heightAt(R(), v.x, v.z);
+  if (def.origin === 'corner') {
+    let u = v.toNext, o = v.toPrev;
+    const zdir = [-u[1], u[0]];
+    if (zdir[0] * o[0] + zdir[1] * o[1] < 0) [u, o] = [o, u];
+    it.pos = [v.x, 0, v.z];
+    it.rot = [0, Math.atan2(-u[1], u[0]) / DEG, 0];
+    it.params = { ...it.params, angle: Math.round(v.angle * 10) / 10 };
+    if (it.size[1] > top || it.size[1] >= R().h - 0.05) it.size[1] = +top.toFixed(3);
+  } else {
+    const bx = v.toPrev[0] + v.toNext[0], bz = v.toPrev[1] + v.toNext[1], bl = Math.hypot(bx, bz) || 1;
+    const off = (Math.max(it.size[0], it.size[2]) / 2 + 0.03) / Math.max(0.3, Math.sin((v.angle * DEG) / 2));
+    it.pos = [v.x + (bx / bl) * off, def.mount === 'wall' ? wallY(def, it.size) : 0, v.z + (bz / bl) * off];
+    it.rot = [0, Math.atan2(bx, bz) / DEG, 0];
+  }
 }
 function spread(n, i, len, itemLen, gap = 0.15) {
   const total = n * itemLen + (n - 1) * gap;
   if (total > len - 0.1) { const step = (len - itemLen - 0.1) / Math.max(1, n - 1); return n === 1 ? 0 : -len / 2 + 0.05 + itemLen / 2 + step * i; }
   return -total / 2 + itemLen / 2 + i * (itemLen + gap);
 }
-function wallLen(wall) { return wall === 'front' || wall === 'back' ? R().w : R().d; }
+function wallLen(wall) { return edgeFor(wall)?.len || R().w; }
+const insideRoom = (x, z) => G.pointInPoly(x, z, R().poly);
+function roomCentroid() { const p = R().poly; return [p.reduce((a, v) => a + v.x, 0) / p.length, p.reduce((a, v) => a + v.z, 0) / p.length]; }
+function defaultListenerSpot() {
+  const { d } = R(); const z = -d / 2 + d * 0.38;
+  if (insideRoom(0, z)) return [0, z];
+  const c = roomCentroid(); return insideRoom(c[0], c[1]) ? c : [R().poly[0].x * 0.5, R().poly[0].z * 0.5];
+}
+/** Lowest ceiling point over an item's footprint (for hanging clouds, lights…). */
+function ceilingYFor(it, x = it.pos[0], z = it.pos[2]) {
+  const a = (it.rot?.[1] || 0) * DEG, c = Math.cos(a), s = Math.sin(a), hw = it.size[0] / 2, hd = it.size[2] / 2;
+  let m = Infinity;
+  for (const [u, v] of [[0, 0], [-hw, -hd], [hw, -hd], [hw, hd], [-hw, hd]]) m = Math.min(m, G.heightAt(R(), x + u * c + v * s, z - u * s + v * c));
+  return m;
+}
 
 function getListener() { return P().items.find((i) => defOf(i.type).listener); }
 function getSpeakers() { return P().items.filter((i) => defOf(i.type).speaker && !i.hidden); }
-function ear(L) { return L ? [L.pos[0], L.pos[1] + L.size[1] * 0.92, L.pos[2]] : [0, 1.2, -R().d / 2 + R().d * 0.38]; }
+function ear(L) { if (L) return [L.pos[0], L.pos[1] + L.size[1] * 0.92, L.pos[2]]; const [x, z] = defaultListenerSpot(); return [x, 1.2, z]; }
 function speakerAcoustic(s) {
   // acoustic centre ≈ between woofer and tweeter on the front face
   const o = new THREE.Vector3(0, s.size[1] * 0.6, s.size[2] / 2).applyEuler(new THREE.Euler(s.rot[0] * DEG, s.rot[1] * DEG, s.rot[2] * DEG, 'YXZ'));
   return [s.pos[0] + o.x, s.pos[1] + o.y, s.pos[2] + o.z];
 }
+/** Which way a wall faces, for wording and placement ("left", "front"…). */
+function sideOf(e) {
+  const n = e.n;
+  if (Math.abs(n[1]) >= Math.abs(n[0])) return n[1] > 0 ? 'front' : 'back';
+  return n[0] > 0 ? 'left' : 'right';
+}
 function reflectionPoints() {
   const L = getListener(), sp = getSpeakers();
   if (!sp.length) return [];
-  const E = ear(L), out = [];
-  for (const s of sp) for (const surf of ['left', 'right', 'ceiling', 'floor', 'front', 'back']) {
-    const r = AC.reflectionPoint(R(), speakerAcoustic(s), E, surf);
-    if (r) out.push({ ...r, speaker: s.id });
+  const E = ear(L), out = [], room = R();
+  for (const s of sp) {
+    const S0 = speakerAcoustic(s);
+    for (const e of wallEdges()) {
+      const r = AC.reflectOffPlane(S0, E, [e.a[0], 0, e.a[1]], [e.n[0], 0, e.n[1]], (pt) => G.distToSegment(pt[0], pt[2], e.a, e.b).d < 0.02 && pt[1] >= 0 && pt[1] <= G.heightAt(room, pt[0], pt[2]) + 0.01);
+      if (r) out.push({ ...r, surface: e.id, side: sideOf(e), speaker: s.id });
+    }
+    const f = AC.reflectOffPlane(S0, E, [0, 0, 0], [0, 1, 0], (pt) => insideRoom(pt[0], pt[2]));
+    if (f) out.push({ ...f, surface: 'floor', side: 'floor', speaker: s.id });
+    // ceiling: tangent plane under the midpoint (handles sloped / curved ceilings)
+    const mx = (S0[0] + E[0]) / 2, mz = (S0[2] + E[2]) / 2, dd = 0.05;
+    const Hm = G.heightAt(room, mx, mz), hx = (G.heightAt(room, mx + dd, mz) - G.heightAt(room, mx - dd, mz)) / (2 * dd), hz = (G.heightAt(room, mx, mz + dd) - G.heightAt(room, mx, mz - dd)) / (2 * dd);
+    const nl = Math.hypot(hx, 1, hz);
+    const c = AC.reflectOffPlane(S0, E, [mx, Hm, mz], [hx / nl, -1 / nl, hz / nl], (pt) => insideRoom(pt[0], pt[2]) && Math.abs(pt[1] - G.heightAt(room, pt[0], pt[2])) < 0.2);
+    if (c) out.push({ ...c, surface: 'ceiling', side: 'ceiling', speaker: s.id });
   }
   return out;
 }
@@ -361,34 +553,39 @@ function defaultFloorSpot(i, n, size) {
   const L = getListener(), { w, d } = R();
   const z = L ? L.pos[2] + 0.9 : d * 0.15;
   const x = n > 1 ? spread(n, i, w * 0.8, size[0], 0.3) : 0;
-  return [clamp(x, -w / 2 + size[0] / 2, w / 2 - size[0] / 2), 0, clamp(z, -d / 2 + size[2] / 2, d / 2 - size[2] / 2)];
+  let p = [clamp(x, -w / 2 + size[0] / 2, w / 2 - size[0] / 2), 0, clamp(z, -d / 2 + size[2] / 2, d / 2 - size[2] / 2)];
+  if (!insideRoom(p[0], p[2])) { const c = roomCentroid(); p = [c[0] + x * 0.3, 0, c[1]]; }
+  return p;
 }
 
 function placeItem(it, loc, i = 0, n = 1, extra = {}) {
-  const def = defOf(it.type), { w, d, h } = R();
+  const def = defOf(it.type), { w, d } = R();
   if (!loc) loc = def.mount === 'wall' ? 'front' : def.mount === 'ceiling' ? 'ceiling' : def.mount === 'corner' ? 'corners' : 'floor';
   if (def.speaker && ['floor', 'center'].includes(loc)) return placeSpeaker(it, i);
-  if (def.listener) { it.pos = [0, 0, -d / 2 + d * 0.38]; it.rot = [0, 180, 0]; return; }
+  if (def.listener) { const [x, z] = defaultListenerSpot(); it.pos = [x, 0, z]; it.rot = [0, 180, 0]; return; }
+  const ceilY = (x, z) => Math.max(0, ceilingYFor(it, x, z) - it.size[1] - (def.drop || 0));
   switch (loc) {
     case 'front': case 'back': case 'left': case 'right':
-      if (def.mount === 'ceiling') { it.pos = [0, h - it.size[1] - (def.drop || 0), 0]; return; }
+      if (def.mount === 'ceiling') { const e = edgeFor(loc); const x = e.mid[0] + e.n[0] * 0.8, z = e.mid[1] + e.n[1] * 0.8; it.pos = [x, ceilY(x, z), z]; return; }
       placeOnWall(it, loc, spread(n, i, wallLen(loc), it.size[0]));
-      if (def.mount === 'floor') { it.pos[1] = 0; if (def.mount === 'floor' && def.cat !== 'Absorption') it.pos[1] = 0; }
+      if (def.mount === 'floor') it.pos[1] = 0;
       return;
     case 'sides': {
       const wall = i % 2 ? 'right' : 'left', k = Math.floor(i / 2), m = Math.ceil(n / 2);
-      return placeOnWall(it, wall, spread(m, k, d * 0.7, it.size[0]));
+      return placeOnWall(it, wall, spread(m, k, Math.min(wallLen(wall), d) * 0.7, it.size[0]));
     }
     case 'allWalls': {
-      const walls = ['front', 'left', 'back', 'right'], wall = walls[i % 4], k = Math.floor(i / 4), m = Math.ceil((n - (i % 4)) / 4);
-      return placeOnWall(it, wall, spread(Math.max(m, 1), k, wallLen(wall), it.size[0]));
+      const walls = wallEdges().filter((e) => e.len > it.size[0] + 0.1);
+      const list = walls.length ? walls : wallEdges();
+      const e = list[i % list.length], k = Math.floor(i / list.length), m = Math.ceil((n - (i % list.length)) / list.length);
+      return placeOnWall(it, e, spread(Math.max(m, 1), k, e.len, it.size[0]));
     }
-    case 'corners': return placeInCorner(it, ['FL', 'FR', 'BR', 'BL'][i % 4]);
+    case 'corners': return placeInCorner(it, i);
     case 'frontCorners': return placeInCorner(it, ['FL', 'FR'][i % 2]);
     case 'backCorners': return placeInCorner(it, ['BL', 'BR'][i % 2]);
     case 'ceiling': case 'aboveListener': {
       const L = getListener(), sp = getSpeakers();
-      let cx = 0, cz = 0;
+      let [cx, cz] = roomCentroid();
       if (loc === 'aboveListener' || n === 1) {
         const E = ear(L);
         const sz = sp.length ? sp.reduce((a, s) => a + s.pos[2], 0) / sp.length : E[2] - 1.2;
@@ -396,28 +593,24 @@ function placeItem(it, loc, i = 0, n = 1, extra = {}) {
       }
       const cols = Math.ceil(Math.sqrt(n)), rows = Math.ceil(n / cols), c = i % cols, r = Math.floor(i / cols);
       const gx = (c - (cols - 1) / 2) * (it.size[0] + 0.3), gz = (r - (rows - 1) / 2) * (it.size[2] + 0.3);
-      const ny = def.mount === 'ceiling' ? h - it.size[1] - (def.drop || 0) : 0;
-      it.pos = [clamp(cx + gx, -w / 2 + it.size[0] / 2, w / 2 - it.size[0] / 2), Math.max(0, ny), clamp(cz + gz, -d / 2 + it.size[2] / 2, d / 2 - it.size[2] / 2)];
+      const x = clamp(cx + gx, -w / 2 + it.size[0] / 2, w / 2 - it.size[0] / 2), z = clamp(cz + gz, -d / 2 + it.size[2] / 2, d / 2 - it.size[2] / 2);
+      it.pos = [x, def.mount === 'ceiling' ? ceilY(x, z) : 0, z];
       return;
     }
     case 'reflections': {
-      const pts = extra.points || [];
-      const p = pts[i];
+      const p = (extra.points || [])[i];
       if (!p) return placeItem(it, null, i, n);
-      if (['left', 'right', 'front', 'back'].includes(p.surface)) {
-        const u = p.surface === 'front' || p.surface === 'back' ? p.point[0] : p.point[2];
-        placeOnWall(it, p.surface, u, clamp(p.point[1] - it.size[1] / 2, 0, h - it.size[1]));
-      } else if (p.surface === 'ceiling') {
-        it.pos = [p.point[0], h - it.size[1] - (def.drop || 0), p.point[2]];
-      } else it.pos = [p.point[0], 0, p.point[2]];
+      if (p.side === 'ceiling') it.pos = [p.point[0], ceilY(p.point[0], p.point[2]), p.point[2]];
+      else if (p.side === 'floor') it.pos = [p.point[0], 0, p.point[2]];
+      else placeOnWallAt(it, p.surface, p.point[0], p.point[2], Math.max(0, p.point[1] - it.size[1] / 2));
       return;
     }
     default: {
-      if (def.mount === 'wall') return placeOnWall(it, 'front', spread(n, i, w, it.size[0]));
+      if (def.mount === 'wall') return placeOnWall(it, 'front', spread(n, i, wallLen('front'), it.size[0]));
       if (def.mount === 'ceiling') return placeItem(it, 'ceiling', i, n);
-      if (def.mount === 'corner') return placeInCorner(it, ['FL', 'FR', 'BR', 'BL'][i % 4]);
-      if (BACK_WALL_TYPES.has(it.type)) { placeOnWall(it, 'back', spread(n, i, R().w, it.size[0], 0.3)); it.pos[1] = 0; return; }
-      if (SIDE_WALL_TYPES.has(it.type)) { placeOnWall(it, i % 2 ? 'right' : 'left', spread(Math.ceil(n / 2), Math.floor(i / 2), R().d * 0.6, it.size[0], 0.3) + R().d * 0.15); it.pos[1] = 0; return; }
+      if (def.mount === 'corner') return placeInCorner(it, i);
+      if (BACK_WALL_TYPES.has(it.type)) { placeOnWall(it, 'back', spread(n, i, wallLen('back'), it.size[0], 0.3)); it.pos[1] = 0; return; }
+      if (SIDE_WALL_TYPES.has(it.type)) { placeOnWall(it, i % 2 ? 'right' : 'left', spread(Math.ceil(n / 2), Math.floor(i / 2), wallLen('left') * 0.6, it.size[0], 0.3) + wallLen('left') * 0.15 * (i % 2 ? -1 : 1)); it.pos[1] = 0; return; }
       it.pos = defaultFloorSpot(i, n, it.size);
       it.rot = [0, 180, 0];
     }
@@ -454,7 +647,7 @@ function addMany(type, { qty = 1, loc = null, color = null, size = null, auto = 
     let pts = reflectionPoints();
     if (!pts.length) { ensureListening('desk'); pts = reflectionPoints(); }
     const want = def.mount === 'ceiling' ? ['ceiling'] : def.mount === 'floor' && def.cat === 'Absorption' ? ['floor'] : ['left', 'right'];
-    points = mergePoints(pts.filter((p) => want.includes(p.surface)), 0.5);
+    points = mergePoints(pts.filter((p) => want.includes(p.side)), 0.5);
     if (!qty) qty = points.length;
   }
   if (!qty) qty = 1;
@@ -531,13 +724,13 @@ function autoTreat(mode = 'mixing') {
   }
   if (mode === 'mixing' || mode === 'mastering') {
     // Behind the speakers: thick panels to tame SBIR
-    for (const s of sp) { const it = makeItem('bassPanel', { auto: true }); placeOnWall(it, 'front', s.pos[0], 0.55); it.size = [0.6, 1.2, 0.2]; P().items.push(it); rebuildItem(it); }
+    for (const s of sp) { const it = makeItem('bassPanel', { auto: true }); placeOnWallAt(it, 'front', s.pos[0], s.pos[2], 0.55); it.size = [0.6, 1.2, 0.2]; P().items.push(it); rebuildItem(it); }
     // Rear wall: diffusion at ear height + bass panels low
     const nd = mode === 'mastering' ? 4 : 3;
     const type = mode === 'mastering' ? 'skyline' : 'qrd';
-    for (let i = 0; i < nd; i++) { const it = makeItem(type, { auto: true }); placeOnWall(it, 'back', spread(nd, i, w * 0.8, it.size[0], 0.02), 1.2 - it.size[1] / 2 + (type === 'skyline' ? 0.3 : 0)); P().items.push(it); rebuildItem(it); }
-    if (mode === 'mastering') for (let i = 0; i < 4; i++) { const it = makeItem('skyline', { auto: true }); placeOnWall(it, 'back', spread(4, i, w * 0.8, 0.6, 0.02), 0.6); P().items.push(it); rebuildItem(it); }
-    for (const side of ['left', 'right']) { const it = makeItem('bad', { auto: true }); placeOnWall(it, side, d / 2 - 1.0); P().items.push(it); rebuildItem(it); }
+    for (let i = 0; i < nd; i++) { const it = makeItem(type, { auto: true }); placeOnWall(it, 'back', spread(nd, i, Math.min(w, wallLen('back')) * 0.8, it.size[0], 0.02), 1.2 - it.size[1] / 2 + (type === 'skyline' ? 0.3 : 0)); P().items.push(it); rebuildItem(it); }
+    if (mode === 'mastering') for (let i = 0; i < 4; i++) { const it = makeItem('skyline', { auto: true }); placeOnWall(it, 'back', spread(4, i, Math.min(w, wallLen('back')) * 0.8, 0.6, 0.02), 0.6); P().items.push(it); rebuildItem(it); }
+    for (const side of ['left', 'right']) { const it = makeItem('bad', { auto: true }); placeOnWallAt(it, side, 0, d / 2 - 1.0); P().items.push(it); rebuildItem(it); }
     if (!P().items.some((i) => i.type === 'rug')) A('rug', { qty: 1, loc: 'floor' }).forEach((r) => { r.pos = [E[0], 0, E[2] - 0.6]; syncTransform(r); });
   }
   if (mode === 'tracking') {
@@ -565,6 +758,8 @@ function applyTemplate(name) {
   const keep = { name: P().name, designer: P().designer, client: P().client };
   S.project = newProject(t.dims);
   Object.assign(S.project, keep);
+  if (t.shape) G.applyShape(R(), t.shape);
+  if (t.ceiling) Object.assign(R().ceiling, t.ceiling);
   if (P().name === 'Untitled Studio') P().name = name;
   S.sel = [];
   buildRoom(); rebuildAllItems();
@@ -573,6 +768,10 @@ function applyTemplate(name) {
   if (t.setup === 'live') { const dk = makeItem('drums'); dk.pos = [0, 0, -1.5]; dk.rot = [0, 180, 0]; const pi = makeItem('piano'); placeOnWall(pi, 'left', 2, 0); const a = makeItem('amp'); a.pos = [2.2, 0, 1.5]; a.rot = [0, -120, 0]; P().items.push(dk, pi, a); [dk, pi, a].forEach(rebuildItem); }
   if (t.setup === 'theater') { const tv = makeItem('tv', { size: [2.0, 1.15, 0.06] }); placeOnWall(tv, 'front', 0); const so = makeItem('sofa'); so.pos = [0, 0, 1.0]; so.rot = [0, 180, 0]; const L = makeItem('listener'); L.pos = [0, 0, 1.0]; L.rot = [0, 180, 0]; for (const sx of [-1, 1]) { const s = makeItem('midfield'); s.pos = [sx * 1.6, 0, -R().d / 2 + 0.45]; s.rot = [0, Math.atan2(-s.pos[0], 1.0 - s.pos[2]) / DEG, 0]; s.pos[1] = 0.62; P().items.push(s); rebuildItem(s); const st = makeItem('stand'); st.pos = [s.pos[0], 0, s.pos[2]]; st.size = [0.35, 0.62, 0.35]; P().items.push(st); rebuildItem(st); } P().items.push(tv, so, L); [tv, so, L].forEach(rebuildItem); }
   if (t.setup === 'podcast') autoTreat('podcast');
+  // keep template furniture inside non-rectangular outlines
+  for (const it of P().items) if (defOf(it.type).mount === 'floor' && !insideRoom(it.pos[0], it.pos[2])) {
+    const [cx, cz] = roomCentroid(); it.pos[0] = cx + (it.pos[0] - cx) * 0.3; it.pos[2] = cz + (it.pos[2] - cz) * 0.3; syncTransform(it);
+  }
   setView('persp', true);
   commit(true);
   renderPanels();
@@ -695,13 +894,8 @@ function mirror(list = selectedItems()) {
   return made.length;
 }
 function snapToWall(it, wall) {
-  if (!wall) {
-    const { w, d } = R(), [x, , z] = it.pos;
-    const dists = { left: x + w / 2, right: w / 2 - x, front: z + d / 2, back: d / 2 - z };
-    wall = Object.entries(dists).sort((a, b) => a[1] - b[1])[0][0];
-  }
-  const u = wall === 'front' || wall === 'back' ? it.pos[0] : it.pos[2];
-  placeOnWall(it, wall, u, defOf(it.type).mount === 'floor' ? 0 : it.pos[1]);
+  const e = wall ? edgeFor(wall) : nearestEdge(it.pos[0], it.pos[2]);
+  placeOnWallAt(it, e, it.pos[0], it.pos[2], defOf(it.type).mount === 'floor' ? 0 : it.pos[1]);
   rebuildItem(it); commit(); renderProps(); updateHelpers();
 }
 function alignItems(axis, how) {
@@ -742,7 +936,7 @@ function updateHelpers(light = false) {
     const pts = reflectionPoints(), sp = getSpeakers(), E = ear(getListener());
     const treated = treatedCheck(pts);
     pts.forEach((p, i) => {
-      if (p.surface === 'front') return;
+      if (p.side === 'front') return;
       const col = treated[i] ? '#3ddc97' : '#ff5d73';
       const m = new THREE.Mesh(new THREE.SphereGeometry(0.045, 12, 8), new THREE.MeshBasicMaterial({ color: col, depthTest: false }));
       m.position.set(...p.point); m.renderOrder = 999; helpers.add(m);
@@ -763,7 +957,7 @@ function treatedCheck(pts) {
 
 // ===================================================================== views & cameras
 function frameOrtho(cam, view, aspect, spanOverride) {
-  const { w, d, h } = R(), m = 1.7;
+  const { w, d } = R(), h = S.hmax || R().h, m = 1.7;
   let sw, sh, cy = h / 2;
   if (view === 'top') { sw = w + m; sh = d + m; cy = 0; }
   else if (view === 'front' || view === 'back') { sw = w + m; sh = h + m * 0.8; }
@@ -783,7 +977,7 @@ function frameOrtho(cam, view, aspect, spanOverride) {
   return new THREE.Vector3(0, view === 'top' ? 0 : cy, 0);
 }
 function framePersp(cam) {
-  const { w, d, h } = R(), r = Math.max(w, d, h);
+  const { w, d } = R(), h = S.hmax || R().h, r = Math.max(w, d, h);
   cam.position.set(w * 0.55 + r * 0.55, h + r * 0.75, d * 0.5 + r * 1.0);
   cam.up.set(0, 1, 0);
   orbit.target.set(0, h * 0.35, 0);
@@ -816,43 +1010,37 @@ function setView(v, reframe = false) {
     orbit.object = activeCam; orbit.target.copy(target); orbit.enableRotate = false; orbit.enabled = true;
   } else if (v === 'walk') {
     activeCam = persp; orbit.enabled = false;
-    if (!S._walkPlaced) { const E = ear(getListener()); persp.position.set(E[0], 1.25, Math.min(R().d / 2 - 0.4, E[2] + 1.2)); walk.yaw = 0; walk.pitch = -0.1; }
+    if (!S._walkPlaced) { const E = ear(getListener()); let z = Math.min(R().d / 2 - 0.4, E[2] + 1.2); if (!insideRoom(E[0], z)) z = E[2]; persp.position.set(E[0], 1.25, z); walk.yaw = 0; walk.pitch = -0.1; }
     S._walkPlaced = false;
   } else if (v === 'quad') { activeCam = persp; orbit.object = persp; orbit.enableRotate = true; orbit.enabled = false; }
   tc.camera = activeCam;
   orbit.update();
   attachGizmo();
   renderSectionCtl();
+  drawShapeHandles();
 }
 
 function cutaway(cam, view) {
-  const { w, d, h } = R(), p = cam.position;
-  const hidden = {
-    front: p.z < -d / 2 - 0.01, back: p.z > d / 2 + 0.01, left: p.x < -w / 2 - 0.01, right: p.x > w / 2 + 0.01,
-    ceiling: p.y > h - 0.01 || view === 'top', floor: p.y < 0,
-  };
-  if (view === 'walk') for (const k in hidden) hidden[k] = false;
-  for (const [k, o] of Object.entries(wallObjs)) {
-    o.visible = !hidden[k];
-  }
-  for (const s of roomGroup.children) if (s.userData.tag) s.visible = view === 'top';
-  // hide wall/corner-mounted items sitting on a cut-away wall (perspective only)
+  const room = R(), p = cam.position, hidden = {};
+  for (const e of wallEdges()) hidden[e.id] = view !== 'walk' && ((p.x - e.a[0]) * e.n[0] + (p.z - e.a[1]) * e.n[1]) < -0.01;
+  hidden.ceiling = view === 'top' || (view !== 'walk' && (p.y > S.hmax - 0.01 || (!insideRoom(p.x, p.z) && p.y > room.h)));
+  hidden.floor = view !== 'walk' && p.y < 0;
+  for (const [k, o] of Object.entries(wallObjs)) o.visible = !hidden[k];
+  for (const s2 of roomGroup.children) if (s2.userData.tag) s2.visible = view === 'top';
+  const hiddenEdges = view === 'persp' ? wallEdges().filter((e) => hidden[e.id]) : [];
   for (const it of P().items) {
     const o = objMap.get(it.id); if (!o) continue;
     let vis = !it.hidden;
-    if (vis && view === 'persp') {
+    if (vis && hiddenEdges.length) {
       const m = defOf(it.type).mount;
-      if (m === 'wall' || m === 'corner') {
-        const x = it.pos[0], z = it.pos[2], reach = 0.45;
-        if ((hidden.front && z < -d / 2 + reach) || (hidden.back && z > d / 2 - reach) || (hidden.left && x < -w / 2 + reach) || (hidden.right && x > w / 2 - reach)) vis = false;
-      }
+      if ((m === 'wall' || m === 'corner') && hiddenEdges.some((e) => G.distToSegment(it.pos[0], it.pos[2], e.a, e.b).d < 0.45)) vis = false;
     }
     o.visible = vis;
   }
 }
 function clipFor(view) {
-  const { w, d, h } = R(), f = S.section[view] ?? 0.5;
-  if (view === 'top') return [new THREE.Plane(new THREE.Vector3(0, -1, 0), h * f + 0.001)];
+  const { w, d } = R(), f = S.section[view] ?? 0.5;
+  if (view === 'top') return [new THREE.Plane(new THREE.Vector3(0, -1, 0), (S.hmax || R().h) * f + 0.001)];
   if (view === 'front') return [new THREE.Plane(new THREE.Vector3(0, 0, -1), -d / 2 + d * f)];
   if (view === 'back') return [new THREE.Plane(new THREE.Vector3(0, 0, 1), d / 2 - d * f)];
   if (view === 'left') return [new THREE.Plane(new THREE.Vector3(-1, 0, 0), -w / 2 + w * f)];
@@ -865,7 +1053,7 @@ function renderSectionCtl() {
   el.hidden = false;
   const lab = S.view === 'top' ? 'Cut height' : 'Section depth';
   const { w, d, h: rh } = R();
-  const len = S.view === 'top' ? rh : S.view === 'front' || S.view === 'back' ? d : w;
+  const len = S.view === 'top' ? (S.hmax || rh) : S.view === 'front' || S.view === 'back' ? d : w;
   el.innerHTML = '';
   const out = h('span', {}, fmt(len * S.section[S.view]));
   el.append(h('label', {}, lab), h('input', { type: 'range', min: 0.05, max: 1, step: 0.01, value: S.section[S.view], oninput: (e) => { S.section[S.view] = +e.target.value; out.textContent = fmt(len * S.section[S.view]); } }), out);
@@ -915,11 +1103,11 @@ function stepWalk(dt) {
   if (k.has('a') || k.has('arrowleft') || k.has('left')) v.sub(r);
   if (k.has('e') || k.has('up')) v.y += 1;
   if (k.has('q') || k.has('down')) v.y -= 1;
+  const prev = persp.position.clone();
   if (v.lengthSq()) persp.position.addScaledVector(v.normalize(), walk.speed * dt * (k.has('shift') ? 2.5 : 1));
-  const { w, d, h } = R();
-  persp.position.x = clamp(persp.position.x, -w / 2 + 0.15, w / 2 - 0.15);
-  persp.position.z = clamp(persp.position.z, -d / 2 + 0.15, d / 2 - 0.15);
-  persp.position.y = clamp(persp.position.y, 0.3, h - 0.1);
+  const pp = persp.position;
+  if (!insideRoom(pp.x, pp.z) || wallEdges().some((e) => G.distToSegment(pp.x, pp.z, e.a, e.b).d < 0.12)) { pp.x = prev.x; pp.z = prev.z; }
+  pp.y = clamp(pp.y, 0.3, G.heightAt(R(), pp.x, pp.z) - 0.1);
   persp.rotation.set(walk.pitch, walk.yaw, 0, 'YXZ');
 }
 
@@ -949,9 +1137,12 @@ function pickAt(e, includeRoom = true) {
 let down = null;
 renderer.domElement.addEventListener('pointerdown', (e) => {
   down = { x: e.clientX, y: e.clientY, t: performance.now(), yaw: walk.yaw, pitch: walk.pitch };
+  if (S.tool === 'shape' && e.button === 0 && shapePointerDown(e)) { down.shape = true; return; }
   if (S.view === 'walk') renderer.domElement.setPointerCapture(e.pointerId);
 });
 renderer.domElement.addEventListener('pointermove', (e) => {
+  if (S.dragV != null) { shapePointerMove(e); return; }
+  if (S.tool === 'draw' && S.drawPts) { const last = S.drawPts[S.drawPts.length - 1]; S.drawHover = floorPoint(e, last ? [last] : []); drawShapeHandles(); }
   if (S.view === 'walk' && down && e.buttons) {
     walk.yaw = down.yaw - (e.clientX - down.x) * 0.005;
     walk.pitch = clamp(down.pitch - (e.clientY - down.y) * 0.005, -1.4, 1.4);
@@ -959,6 +1150,7 @@ renderer.domElement.addEventListener('pointermove', (e) => {
 });
 renderer.domElement.addEventListener('pointerup', (e) => {
   if (!down) return;
+  if (down.shape) { down = null; if (S.dragV != null) shapePointerUp(); return; }
   const moved = Math.hypot(e.clientX - down.x, e.clientY - down.y);
   down = null;
   if (moved > 5 || tc.dragging || tc.axis) return;
@@ -967,6 +1159,8 @@ renderer.domElement.addEventListener('pointerup', (e) => {
     setView(topH ? (left ? 'persp' : 'top') : (left ? 'front' : 'left'));
     return;
   }
+  if (S.tool === 'draw') { drawClick(e); return; }
+  if (S.tool === 'shape') return;
   const hit = pickAt(e);
   if (S.tool === 'measure') { if (hit) measureClick(hit.point); return; }
   if (!hit) { select([]); return; }
@@ -974,7 +1168,16 @@ renderer.domElement.addEventListener('pointerup', (e) => {
   if (id) select([id], e.shiftKey || e.metaKey || e.ctrlKey);
   else if (hit.object.userData.surface) selectSurface(hit.object.userData.surface);
 });
-renderer.domElement.addEventListener('dblclick', () => focusSelection());
+renderer.domElement.addEventListener('dblclick', (e) => {
+  if (S.tool === 'draw') return finishDraw();
+  if (S.tool === 'shape') {
+    ray.setFromCamera(ndc(e), activeCam);
+    const hit = ray.intersectObjects(shapeGroup.children, false).find((x) => x.object.userData.vertex != null);
+    if (hit && R().poly.length > 3) changeShape(() => R().poly.splice(hit.object.userData.vertex, 1));
+    return;
+  }
+  focusSelection();
+});
 
 function focusSelection() {
   const it = selectedItems()[0]; if (!it || S.view === 'walk') return;
@@ -1016,13 +1219,12 @@ function dropItem(type, e) {
   const def = defOf(type), it = makeItem(type);
   const hit = pickAt(e);
   const surf = hit?.object.userData.surface;
-  if (hit && ['front', 'back', 'left', 'right'].includes(surf) && def.mount !== 'floor') {
-    const u = surf === 'front' || surf === 'back' ? hit.point.x : hit.point.z;
-    placeOnWall(it, surf, u, clamp(hit.point.y - it.size[1] / 2, 0, R().h - it.size[1]));
+  if (hit && surf && surf !== 'floor' && surf !== 'ceiling' && def.mount !== 'floor') {
+    placeOnWallAt(it, surf, hit.point.x, hit.point.z, Math.max(0, hit.point.y - it.size[1] / 2));
   } else if (hit && def.mount === 'ceiling') {
-    it.pos = [hit.point.x, R().h - it.size[1] - (def.drop || 0), hit.point.z];
+    it.pos = [hit.point.x, 0, hit.point.z]; it.pos[1] = Math.max(0, ceilingYFor(it) - it.size[1] - (def.drop || 0));
   } else if (hit && def.origin === 'corner') {
-    const { w, d } = R(); const key = (hit.point.z < 0 ? 'F' : 'B') + (hit.point.x < 0 ? 'L' : 'R'); placeInCorner(it, key); void w; void d;
+    const vs = convexCorners().sort((a, b) => Math.hypot(a.x - hit.point.x, a.z - hit.point.z) - Math.hypot(b.x - hit.point.x, b.z - hit.point.z)); placeInCorner(it, vs[0]);
   } else if (hit) {
     const p = hit.object.userData.itemId ? hit.point : hit.point;
     it.pos = [p.x, hit.object.userData.itemId ? Math.max(0, p.y) : 0, p.z];
@@ -1037,7 +1239,10 @@ function dropItem(type, e) {
 
 // ===================================================================== history & persistence
 function serialize() { const { assets, ...rest } = P(); return JSON.stringify(rest); }
+function openingSig() { return JSON.stringify(P().items.filter((i) => defOf(i.type).opening).map((i) => [i.pos, i.rot, i.size, i.hidden, i.params?.cutWall])); }
 function commit(reset = false) {
+  const sig = openingSig();
+  if (sig !== S._openSig) { S._openSig = sig; buildRoom(); }
   const snap = serialize();
   if (reset) { S.hist = []; S.future = []; S.cur = snap; scheduleSave(); return; }
   if (snap === S.cur) { renderPanels(true); return; }
@@ -1050,6 +1255,7 @@ function commit(reset = false) {
 function restore(snap) {
   const assets = P().assets;
   S.project = { ...JSON.parse(snap), assets };
+  G.ensureRoom(R());
   S.sel = S.sel.filter((id) => itemById(id));
   buildRoom(); rebuildAllItems(); updateHelpers(); renderPanels();
 }
@@ -1074,7 +1280,8 @@ function scheduleSave() {
 function loadProjectData(data) {
   const p = typeof data === 'string' ? JSON.parse(data) : data;
   const base = newProject();
-  S.project = { ...base, ...p, room: { ...base.room, ...p.room, surfaces: { ...base.room.surfaces, ...(p.room?.surfaces || {}) } }, assets: p.assets || {} };
+  S.project = { ...base, ...p, room: { ...base.room, ...p.room, poly: p.room?.poly, surfaces: { ...base.room.surfaces, ...(p.room?.surfaces || {}) } }, assets: p.assets || {} };
+  G.ensureRoom(R()); G.normalizeRoom(R());
   S.sel = []; S.surfaceSel = null;
   hydrateImported().then(() => { rebuildAllItems(); });
   buildRoom(); rebuildAllItems(); setView('persp', true); commit(true); renderPanels();
@@ -1213,7 +1420,7 @@ function renderToDataURL({ view = 'persp', scene: sc = null, width = 1600, heigh
   return url;
 }
 function framePerspClone(cam) {
-  const { w, d, h } = R(), r = Math.max(w, d, h);
+  const { w, d } = R(), h = S.hmax || R().h, r = Math.max(w, d, h);
   cam.position.set(w * 0.55 + r * 0.55, h + r * 0.7, d * 0.5 + r * 1.0);
   cam.lookAt(0, h * 0.3, 0); cam.updateProjectionMatrix();
 }
@@ -1248,16 +1455,22 @@ function gotoScene(sc) {
 // ===================================================================== acoustic analysis
 function analysis() {
   const items = P().items.filter((i) => !i.hidden).map((i) => ({ acoustic: i.acoustic, area: areaOf(defOf(i.type), i.size) }));
-  const rt = AC.reverbTime(R(), items);
-  const modes = AC.roomModes(R(), 300);
+  const room = R(), V = G.volume(room), floorA = G.floorArea(room), rect = G.isRect(room);
+  const rt = AC.reverbTime({ V, surfaces: surfaceIds().map((id) => ({ area: surfaceArea(id), mat: surf(id).acoustic })) }, items);
+  const eq = { w: room.w, d: room.d, h: V / floorA }; // equivalent box for non-rectangular rooms
+  const modes = AC.roomModes(rect && room.ceiling?.type === 'flat' ? room : eq, 300);
   const issues = AC.modeIssues(modes);
-  const ratio = AC.ratioCheck(R());
+  const ratio = AC.ratioCheck(eq);
+  const shaped = !rect || room.ceiling?.type !== 'flat';
   const L = getListener(), sp = getSpeakers(), E = ear(L);
   const refl = reflectionPoints();
   const treated = treatedCheck(refl);
   let tri = null;
   if (sp.length >= 2) tri = AC.listeningTriangle(E, speakerAcoustic(sp[0]), speakerAcoustic(sp[1]));
-  const sbir = sp.map((s) => ({ name: s.name, ...AC.sbir(R(), speakerAcoustic(s)) }));
+  const sbir = sp.map((s) => {
+    const p = speakerAcoustic(s), dTo = (e) => (e ? G.distToSegment(p[0], p[2], e.a, e.b).d : 9);
+    return { name: s.name, ...AC.sbir({ front: dTo(edgeFor('front')), side: Math.min(dTo(edgeFor('left')), dTo(edgeFor('right'))), floor: p[1] }) };
+  });
   const coverage = P().items.filter((i) => (AC.ACOUSTIC_MATERIALS[i.acoustic]?.a[3] || 0) >= 0.5).reduce((a, i) => a + areaOf(defOf(i.type), i.size), 0) / rt.S;
   const advice = [];
   const tol = 0.05;
@@ -1277,13 +1490,14 @@ function analysis() {
   if (L) {
     const frac = (E[2] + R().d / 2) / R().d;
     if (Math.abs(frac - 0.38) > 0.06) advice.push({ lvl: 'info', text: `Listening position is at ${(frac * 100).toFixed(0)} % of the room length. ~38 % from the front wall usually avoids the worst length-mode nulls.` });
-    if (Math.abs(E[0]) > 0.05) advice.push({ lvl: 'warn', text: 'Listening position is off the room\'s centre line — symmetry left/right is critical for stereo imaging.' });
+    if (Math.abs(E[0]) > 0.05 && rect) advice.push({ lvl: 'warn', text: 'Listening position is off the room\'s centre line — symmetry left/right is critical for stereo imaging.' });
   }
-  const untreated = refl.filter((p, i) => !treated[i] && ['left', 'right', 'ceiling'].includes(p.surface));
+  const untreated = refl.filter((p, i) => !treated[i] && ['left', 'right', 'ceiling'].includes(p.side));
+  if (shaped) advice.push({ lvl: 'info', text: `Non-rectangular room / ceiling: volume ${V.toFixed(1)} m³ is computed from the real shape; room modes are approximated with an equivalent ${room.w.toFixed(1)} × ${room.d.toFixed(1)} × ${eq.h.toFixed(2)} m box. Splayed / non-parallel walls reduce flutter echo and spread modes.` });
   if (untreated.length) advice.push({ lvl: 'bad', text: `${untreated.length} first-reflection point(s) untreated (red dots). Use "Treat reflection points".` });
   for (const s of sbir) if (s.front.d > 0.25 && s.front.d < 1.6) advice.push({ lvl: 'info', text: `${s.name}: front-wall SBIR null near ${s.front.f.toFixed(0)} Hz (${fmt(s.front.d)} from wall). Move closer (<0.3 m), further, or treat behind with thick absorption.` });
   if (!advice.length) advice.push({ lvl: 'good', text: 'Looking good — decay times are near target and reflections are treated.' });
-  return { rt, modes, issues, ratio, refl, treated, tri, sbir, coverage, advice, E, L, sp };
+  return { rt, modes, issues, ratio, refl, treated, tri, sbir, coverage, advice, E, L, sp, shaped, floorA, V };
 }
 
 // ===================================================================== UI: toasts, modals
@@ -1420,22 +1634,51 @@ function renderRoomDims() {
     h('p', { class: 'hint' }, `Floor ${(w * d).toFixed(1)} m² · Volume ${V.toFixed(1)} m³ (${(V * 35.315).toFixed(0)} ft³)`));
 }
 function setRoom(dims) {
-  const old = { ...R() };
-  Object.assign(R(), Object.fromEntries(Object.entries(dims).filter(([, v]) => v != null && !Number.isNaN(v)).map(([k, v]) => [k, Math.round(clamp(v, 1, 40) * 1000) / 1000])));
-  // keep wall-mounted items on their walls when the room resizes
-  for (const it of P().items) {
-    const sx = (old.w / 2), sz = (old.d / 2);
-    if (Math.abs(Math.abs(it.pos[0]) - sx) < it.size[2] / 2 + 0.06 && Math.abs(it.pos[0]) > 0.01) it.pos[0] = Math.sign(it.pos[0]) * (R().w / 2 - (sx - Math.abs(it.pos[0])));
-    if (Math.abs(Math.abs(it.pos[2]) - sz) < it.size[2] / 2 + 0.06 && Math.abs(it.pos[2]) > 0.01) it.pos[2] = Math.sign(it.pos[2]) * (R().d / 2 - (sz - Math.abs(it.pos[2])));
-    if (defOf(it.type).origin === 'corner') { it.pos[0] = Math.sign(it.pos[0] || -1) * R().w / 2; it.pos[2] = Math.sign(it.pos[2] || -1) * R().d / 2; it.size[1] = Math.min(it.size[1], R().h); }
-    if (defOf(it.type).mount === 'ceiling') it.pos[1] = R().h - it.size[1] - (defOf(it.type).drop || 0);
+  const room = R(), old = { w: room.w, d: room.d, h: room.h };
+  const v = Object.fromEntries(Object.entries(dims).filter(([, x]) => x != null && !Number.isNaN(x)).map(([k, x]) => [k, Math.round(clamp(x, 1, 60) * 1000) / 1000]));
+  const rect = G.isRect(room);
+  Object.assign(room, v);
+  if (v.h && room.ceiling && room.ceiling.type !== 'flat' && room.ceiling.h2 != null && ['gable', 'vault', 'dome'].includes(room.ceiling.type)) room.ceiling.h2 = Math.max(room.h + 0.1, room.ceiling.h2 + (room.h - old.h));
+  const kx = room.w / old.w, kz = room.d / old.d;
+  if (rect) {
+    const ids = room.poly.map((p) => p.id);
+    room.poly = G.rectPoly(room.w, room.d).map((p, i) => ({ ...p, id: ids[i] || p.id }));
+    // keep wall-mounted items on their walls when the room resizes
+    for (const it of P().items) {
+      const sx = old.w / 2, sz = old.d / 2;
+      if (Math.abs(Math.abs(it.pos[0]) - sx) < it.size[2] / 2 + 0.06 && Math.abs(it.pos[0]) > 0.01) it.pos[0] = Math.sign(it.pos[0]) * (room.w / 2 - (sx - Math.abs(it.pos[0])));
+      if (Math.abs(Math.abs(it.pos[2]) - sz) < it.size[2] / 2 + 0.06 && Math.abs(it.pos[2]) > 0.01) it.pos[2] = Math.sign(it.pos[2]) * (room.d / 2 - (sz - Math.abs(it.pos[2])));
+    }
+  } else {
+    room.poly = room.poly.map((p) => ({ ...p, x: p.x * kx, z: p.z * kz }));
+    for (const it of P().items) { it.pos[0] *= kx; it.pos[2] *= kz; }
   }
+  G.normalizeRoom(room);
+  refitItemsToRoom();
   buildRoom(); rebuildAllItems(); if (orthoCams[S.view] || S.view === 'persp') setView(S.view, true);
   commit(); renderRoomDims();
 }
-function setSurface(name, patch) { Object.assign(R().surfaces[name], patch); buildRoom(); }
+/** After the room shape changes, re-seat corner traps, wall items and ceiling items. */
+function refitItemsToRoom() {
+  for (const it of P().items) {
+    const def = defOf(it.type);
+    if (def.origin === 'corner') {
+      const vs = convexCorners();
+      const v = vs.sort((a, b) => Math.hypot(a.x - it.pos[0], a.z - it.pos[2]) - Math.hypot(b.x - it.pos[0], b.z - it.pos[2]))[0];
+      if (v) { const tall = it.size[1] >= (S._prevH || R().h) - 0.05; placeInCorner(it, v); if (tall) it.size[1] = +G.heightAt(R(), v.x, v.z).toFixed(3); }
+    } else if (def.mount === 'wall' && it.wall) {
+      const e = wallEdges().find((x) => x.id === it.wall) || nearestEdge(it.pos[0], it.pos[2]);
+      if (e) placeOnWallAt(it, e, it.pos[0], it.pos[2], it.pos[1]);
+    } else if (def.mount === 'ceiling') it.pos[1] = Math.max(0, ceilingYFor(it) - it.size[1] - (def.drop || 0));
+  }
+}
+function setSurface(name, patch) {
+  const ids = name === '*walls' ? wallEdges().map((e) => e.id) : [name in IDEAL_N && !wallEdges().some((e) => e.id === name) ? edgeFor(name).id : name];
+  for (const id of ids) Object.assign(surf(id), patch);
+  buildRoom();
+}
 function surfaceEditor(name, compact = false) {
-  const sf = R().surfaces[name];
+  const sf = surf(name);
   const kids = [
     colorField('Colour', sf.color, (c, done) => { sf.color = c; buildRoom(); if (done) commit(); }),
     selectField('Finish', sf.finish, finishOptions(), (v) => { sf.finish = v; buildRoom(); commit(); }),
@@ -1445,9 +1688,9 @@ function surfaceEditor(name, compact = false) {
       h('button', { class: 'btn small', onclick: () => pickFile('image/*', async (u) => { sf.photo = addAsset(await compressImage(u)); sf.showPhoto = true; buildRoom(); commit(); renderPanels(); }) }, 'Upload photo')),
   ];
   if (sf.photo) kids.push(h('label', { class: 'check' }, h('input', { type: 'checkbox', checked: sf.showPhoto !== false, onchange: (e) => { sf.showPhoto = e.target.checked; buildRoom(); commit(); } }), ' Show photo on surface'), h('button', { class: 'btn small ghost', onclick: () => { sf.photo = null; buildRoom(); commit(); renderPanels(); } }, 'Remove photo'));
-  const area = AC.surfaceArea(R(), name);
+  const area = surfaceArea(name);
   kids.push(h('p', { class: 'hint' }, `Area ${area.toFixed(2)} m² · α@500Hz ${(AC.ACOUSTIC_MATERIALS[sf.acoustic]?.a[2] ?? 0).toFixed(2)}`));
-  return compact ? h('div', {}, kids) : section(SURF_LABEL[name], ...kids);
+  return compact ? h('div', {}, kids) : section(surfLabel(name), ...kids);
 }
 function renderRoom() {
   const pane = $('#pane-room'); pane.innerHTML = '';
@@ -1461,12 +1704,15 @@ function renderRoom() {
       h('label', { class: 'field' }, h('span', {}, 'Notes (included in PDF)'), h('textarea', { rows: 3, value: p.notes, onchange: (e) => { p.notes = e.target.value; commit(); } }))),
     section('Room size', h('div', { id: 'room-dims' }),
       selectField('Units', S.units, [['m', 'Metres'], ['ft', 'Feet']], (v) => { S.units = v; localStorage.setItem('rt.units', v); buildRoom(); renderPanels(); })),
+    section('Room shape', shapeEditor()),
+    section('Ceiling', ceilingEditor()),
+    section('Walls', wallsEditor()),
     section('Start from template', h('div', { class: 'tpl-grid' }, Object.entries(TEMPLATES).map(([name, t]) => h('button', { class: 'btn small', onclick: async () => { if (!P().items.length || await confirmDialog('Replace current design?', `Start a new "${name}" (${t.dims.w}×${t.dims.d}×${t.dims.h} m)? Your current design stays in undo history only if you saved it.`)) applyTemplate(name); } }, name)))),
     section('Colours & materials',
       h('div', { class: 'row gap wrap' },
         h('button', { class: 'btn small', onclick: () => paletteDialog() }, '🎨 Colour schemes'),
         h('button', { class: 'btn small', onclick: () => openScanner(scannerApi(), { target: 'palette' }) }, '📷 Match colours from camera')),
-      h('div', { class: 'surf-tabs' }, Object.keys(SURF_LABEL).map((k) => h('details', { class: 'sub' }, h('summary', {}, h('i', { class: 'dot', style: { background: R().surfaces[k].color } }), SURF_LABEL[k]), surfaceEditor(k, true))))),
+      h('div', { class: 'surf-tabs' }, surfaceIds().map((k) => h('details', { class: 'sub' }, h('summary', {}, h('i', { class: 'dot', style: { background: surf(k).color } }), surfLabel(k)), surfaceEditor(k, true))))),
     section('Lighting & display',
       h('label', { class: 'field' }, h('span', {}, 'Ambient / daylight level'), h('input', { type: 'range', min: 0, max: 1.5, step: 0.05, value: R().ambient, oninput: (e) => { R().ambient = +e.target.value; applyAmbient(); }, onchange: () => commit() })),
       h('label', { class: 'check' }, h('input', { type: 'checkbox', checked: R().daylight !== false, onchange: (e) => { R().daylight = e.target.checked; applyAmbient(); commit(); } }), ' Sunlight (shadows)'),
@@ -1477,6 +1723,170 @@ function renderRoom() {
     section('Floor-plan underlay', underlayEditor()),
   );
   renderRoomDims();
+}
+// ---------------------------------------------------------------- room shape editors
+/** Apply an edit to the room outline, keep it centred and keep items in place. */
+function changeShape(fn, { refit = true } = {}) {
+  fn();
+  const sh = G.normalizeRoom(R());
+  for (const it of P().items) { it.pos[0] += sh.dx; it.pos[2] += sh.dz; }
+  if (P().underlay) { P().underlay.x = (P().underlay.x || 0) + sh.dx; P().underlay.z = (P().underlay.z || 0) + sh.dz; }
+  if (refit) refitItemsToRoom();
+  buildRoom(); rebuildAllItems(); updateHelpers();
+  commit();
+  if (S.leftTab === 'room') renderRoom();
+}
+function shapeThumb(key) {
+  const pts = G.SHAPES[key].pts(1, 1.2);
+  const d = pts.map(([x, z], i) => `${i ? 'L' : 'M'}${(x * 30 + 22).toFixed(1)} ${(z * 30 + 22).toFixed(1)}`).join(' ') + 'Z';
+  return `<svg viewBox="0 0 44 44" width="38" height="38"><path d="${d}" fill="rgba(53,196,181,.18)" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><line x1="10" y1="3" x2="34" y2="3" stroke="#ffb547" stroke-width="2"/></svg>`;
+}
+function shapeEditor() {
+  const room = R(), E = wallEdges(), per = E.reduce((a, e) => a + e.len, 0);
+  return h('div', {},
+    h('div', { class: 'shape-grid' }, Object.entries(G.SHAPES).map(([k, sp]) => h('button', { class: 'shape-btn', title: sp.label, onclick: () => changeShape(() => G.applyShape(R(), k)) }, h('span', { html: shapeThumb(k) }), h('small', {}, sp.label)))),
+    h('p', { class: 'hint' }, 'Orange line = front wall (where the speakers face from).'),
+    h('div', { class: 'row gap wrap' },
+      h('button', { class: 'btn small' + (S.tool === 'shape' ? ' primary' : ''), onclick: () => setTool(S.tool === 'shape' ? 'select' : 'shape') }, '✏️ Edit corners on plan'),
+      h('button', { class: 'btn small' + (S.tool === 'draw' ? ' primary' : ''), onclick: () => setTool('draw') }, '✍️ Draw new outline'),
+      h('button', { class: 'btn small', title: 'Mirror the outline left ↔ right', onclick: () => changeShape(() => { R().poly = R().poly.map((p) => ({ ...p, x: -p.x })).reverse(); const n = R().poly.length, ids = R().poly.map((p) => p.id); R().poly.forEach((p, i) => (p.id = ids[(i + 1) % n])); }) }, '⇋ Mirror'),
+      h('button', { class: 'btn small', title: 'Mirror the outline front ↔ back', onclick: () => changeShape(() => { R().poly = R().poly.map((p) => ({ ...p, z: -p.z })).reverse(); const n = R().poly.length, ids = R().poly.map((p) => p.id); R().poly.forEach((p, i) => (p.id = ids[(i + 1) % n])); }) }, '⇵ Flip'),
+      h('button', { class: 'btn small', title: 'Rotate the outline 90°', onclick: () => changeShape(() => { R().poly = R().poly.map((p) => ({ ...p, x: -p.z, z: p.x })); }) }, '⟳ 90°')),
+    numField('Wall thickness', room.wallT ?? 0.15, (v) => { R().wallT = clamp(v, 0.02, 1); buildRoom(); commit(); }, { min: 0.02, max: 1 }),
+    h('p', { class: 'hint' }, `${E.length} walls · perimeter ${fmt(per)} · floor ${G.floorArea(room).toFixed(2)} m² · volume ${G.volume(room).toFixed(1)} m³`),
+    h('details', { class: 'sub' }, h('summary', {}, 'Corner coordinates'),
+      h('table', { class: 'tbl coords' }, h('tr', {}, h('th', {}, '#'), h('th', {}, `X (${S.units})`), h('th', {}, `Z (${S.units})`), h('th', {}, '∠'), h('th', {})),
+        G.vertexInfo(room).map((v, i) => h('tr', {},
+          h('td', {}, i + 1),
+          h('td', {}, h('input', { type: 'number', step: 0.01, value: +toUnit(v.x).toFixed(3), onchange: (ev) => changeShape(() => { R().poly[i].x = fromUnit(+ev.target.value); }) })),
+          h('td', {}, h('input', { type: 'number', step: 0.01, value: +toUnit(v.z).toFixed(3), onchange: (ev) => changeShape(() => { R().poly[i].z = fromUnit(+ev.target.value); }) })),
+          h('td', {}, `${(v.convex ? v.angle : 360 - v.angle).toFixed(0)}°`),
+          h('td', {}, R().poly.length > 3 ? h('button', { class: 'icon-btn tiny', title: 'Remove corner', html: '&times;', onclick: () => changeShape(() => R().poly.splice(i, 1)) }) : null)))),
+      h('p', { class: 'hint' }, 'Origin is the room centre; Z grows toward the back wall.')));
+}
+function ceilingEditor() {
+  const c = R().ceiling, t = c.type || 'flat';
+  const upd = (patch) => { Object.assign(R().ceiling, patch); refitItemsToRoom(); buildRoom(); rebuildAllItems(); commit(); renderRoom(); if (orthoCams[S.view]) setView(S.view); };
+  const lowLabel = { flat: 'Height', shed: 'Low side', gable: 'Eaves height', vault: 'Springing height', dome: 'Edge height' }[t];
+  const highLabel = { shed: 'High side', gable: 'Ridge height', vault: 'Crown height', dome: 'Crown height' }[t];
+  return h('div', {},
+    h('div', { class: 'ceil-grid' }, Object.entries(G.CEILINGS).map(([k, l]) => h('button', { class: 'btn small' + (k === t ? ' primary' : ''), onclick: () => upd({ type: k, h2: c.h2 && c.h2 > R().h ? c.h2 : +(R().h + 0.8).toFixed(2) }) }, l))),
+    h('div', { class: 'grid2' },
+      numField(lowLabel, R().h, (v) => setRoom({ h: v }), { min: 1, max: 30 }),
+      t !== 'flat' ? numField(highLabel, c.h2 ?? R().h, (v) => upd({ h2: clamp(v, 0.5, 40) }), { min: 0.5, max: 40 }) : null),
+    t === 'shed' ? selectField('Rises toward', c.dir || 'f2b', [['f2b', 'Back wall'], ['b2f', 'Front wall'], ['l2r', 'Right wall'], ['r2l', 'Left wall']], (v) => upd({ dir: v })) : null,
+    t === 'gable' || t === 'vault' ? selectField('Ridge runs', c.axis || 'z', [['z', 'Front to back'], ['x', 'Left to right']], (v) => upd({ axis: v })) : null,
+    h('p', { class: 'hint' }, `Peak ${fmt(S.hmax || R().h)} · ceiling area ${G.ceilingArea(R()).toFixed(2)} m². Sloped/curved ceilings change volume, reflection points and RT60 automatically.`));
+}
+function wallsEditor() {
+  const E = wallEdges();
+  const rows = E.map((e, i) => h('div', { class: 'wall-row' + (S.surfaceSel === e.id ? ' sel' : '') },
+    h('i', { class: 'dot', style: { background: surf(e.id).color } }),
+    h('button', { class: 'link', title: 'Edit this wall’s colour & material', onclick: () => selectSurface(e.id) }, surfLabel(e.id)),
+    h('input', { type: 'number', step: 0.01, min: 0.05, value: +toUnit(e.len).toFixed(3), title: `Length (${S.units})`, onchange: (ev) => setEdgeLength(i, fromUnit(+ev.target.value)) }),
+    h('small', { title: 'Direction' }, `${((Math.atan2(e.dir[1], e.dir[0]) / DEG + 360) % 360).toFixed(0)}°`),
+    h('button', { class: 'icon-btn tiny', title: 'Curve this wall', html: '⌒', onclick: () => { const v = prompt('Bulge in metres (+ outward, − into the room):', '0.4'); if (v != null && !Number.isNaN(+v)) changeShape(() => { const src = surf(e.id); const ids = G.curveEdge(R(), i, fromUnit(+v)) || []; for (const id of ids) R().surfaces[id] = { ...JSON.parse(JSON.stringify(src)) }; }); } }),
+    h('button', { class: 'icon-btn tiny', title: 'Split into two walls', html: '⫶', onclick: () => changeShape(() => { const id = G.splitEdge(R(), i); if (id) R().surfaces[id] = { ...JSON.parse(JSON.stringify(surf(e.id))) }; }) }),
+    E.length > 3 ? h('button', { class: 'icon-btn tiny', title: 'Remove this wall (merge corners)', html: '&times;', onclick: () => changeShape(() => R().poly.splice((i + 1) % R().poly.length, 1)) }) : null));
+  const body = h('div', { class: 'walls-list' }, rows);
+  return E.length > 14 ? h('details', { class: 'sub' }, h('summary', {}, `${E.length} wall segments`), body) : body;
+}
+function setEdgeLength(i, L) {
+  changeShape(() => {
+    const E = wallEdges(), e = E[i], n = R().poly.length;
+    const b = R().poly[(i + 1) % n];
+    b.x = e.a[0] + e.dir[0] * Math.max(0.05, L); b.z = e.a[1] + e.dir[1] * Math.max(0.05, L);
+  });
+}
+
+// ---------------------------------------------------------------- outline editing on the plan
+const shapeGroup = new THREE.Group(); shapeGroup.name = 'ShapeHandles';
+scene.add(shapeGroup);
+function handleScale() { return activeCam?.isOrthographicCamera ? clamp(((activeCam.right - activeCam.left) / activeCam.zoom) / 9, 0.5, 4) : clamp(Math.max(R().w, R().d) / 6, 0.6, 3); }
+function drawShapeHandles() {
+  shapeGroup.clear();
+  const k = handleScale();
+  const ball = (r, color, x, z) => { const m = new THREE.Mesh(new THREE.SphereGeometry(r * k, 16, 12), new THREE.MeshBasicMaterial({ color, depthTest: false })); m.position.set(x, 0.04, z); m.renderOrder = 1000; return m; };
+  if (S.tool === 'shape') {
+    wallEdges().forEach((e, i) => {
+      const v = ball(0.09, S.dragV === i ? '#ffffff' : '#ffb547', e.a[0], e.a[1]); v.userData.vertex = i; shapeGroup.add(v);
+      const m = ball(0.055, '#35c4b5', e.mid[0], e.mid[1]); m.userData.insert = i; shapeGroup.add(m);
+    });
+  }
+  if (S.tool === 'draw' && S.drawPts) {
+    const pts = S.drawPts.slice(); if (S.drawHover) pts.push(S.drawHover);
+    pts.forEach((p, i) => shapeGroup.add(ball(i === 0 ? 0.11 : 0.07, i === 0 ? '#ffb547' : '#35c4b5', p[0], p[1])));
+    if (pts.length > 1) shapeGroup.add(line(pts.map((p) => [p[0], 0.04, p[1]]), '#35c4b5', 1));
+    if (S.drawHover && S.drawPts.length) {
+      const a = S.drawPts[S.drawPts.length - 1], b = S.drawHover, L = Math.hypot(b[0] - a[0], b[1] - a[1]);
+      const lab = labelSprite(fmt(L), { size: 0.16 * k, color: '#1b1d21', bg: '#35c4b5' }); lab.position.set((a[0] + b[0]) / 2, 0.1, (a[1] + b[1]) / 2); shapeGroup.add(lab);
+    }
+  }
+}
+const floorPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+function floorPoint(e, neighbours = []) {
+  ray.setFromCamera(ndc(e), activeCam);
+  const v = new THREE.Vector3();
+  if (!ray.ray.intersectPlane(floorPlane, v)) return null;
+  let x = v.x, z = v.z;
+  if (S.snap) { const g = S.units === 'ft' ? 0.3048 / 4 : 0.05; x = Math.round(x / g) * g; z = Math.round(z / g) * g; }
+  // square-up: snap to the X / Z of neighbouring corners
+  const tol = 0.12 * handleScale();
+  for (const n of neighbours) { if (Math.abs(x - n[0]) < tol) x = n[0]; if (Math.abs(z - n[1]) < tol) z = n[1]; }
+  return [x, z];
+}
+function shapePointerDown(e) {
+  ray.setFromCamera(ndc(e), activeCam);
+  const hit = ray.intersectObjects(shapeGroup.children, false)[0];
+  if (!hit) return false;
+  const ud = hit.object.userData;
+  if (ud.insert != null) {
+    const src = surf(wallEdges()[ud.insert].id);
+    const id = G.splitEdge(R(), ud.insert, 0.5);
+    if (id) R().surfaces[id] = { ...JSON.parse(JSON.stringify(src)) };
+    S.dragV = ud.insert + 1;
+  } else if (ud.vertex != null) S.dragV = ud.vertex;
+  else return false;
+  orbit.enabled = false;
+  renderer.domElement.setPointerCapture(e.pointerId);
+  buildRoom();
+  return true;
+}
+let shapeRaf = 0;
+function shapePointerMove(e) {
+  const poly = R().poly, n = poly.length, i = S.dragV;
+  const nb = [poly[(i - 1 + n) % n], poly[(i + 1) % n]].map((p) => [p.x, p.z]);
+  const p = floorPoint(e, nb); if (!p) return;
+  poly[i].x = p[0]; poly[i].z = p[1];
+  if (!shapeRaf) shapeRaf = requestAnimationFrame(() => { shapeRaf = 0; buildRoom(); });
+}
+function shapePointerUp() {
+  S.dragV = null;
+  orbit.enabled = S.view !== 'walk';
+  if (G.floorArea(R()) < 0.5) { toast('That outline is too small', 'error'); undo(); return; }
+  changeShape(() => {});
+}
+function drawClick(e) {
+  const last = S.drawPts[S.drawPts.length - 1];
+  const p = floorPoint(e, last ? [last] : []); if (!p) return;
+  const first = S.drawPts[0];
+  if (S.drawPts.length >= 3 && Math.hypot(p[0] - first[0], p[1] - first[1]) < 0.25 * handleScale()) return finishDraw();
+  S.drawPts.push(p); S.drawHover = null; drawShapeHandles();
+}
+function finishDraw() {
+  const pts = S.drawPts || [];
+  if (pts.length < 3) { toast('Click at least 3 corners, then click the first corner (or press Enter) to close', 'error'); return; }
+  let poly = pts.map(([x, z]) => ({ x, z, id: G.newWallId() }));
+  if (G.signedArea(poly) < 0) poly = poly.reverse();
+  if (Math.abs(G.signedArea(poly)) < 0.5) { toast('That outline is too small', 'error'); return; }
+  // name the wall nearest the front 'front' so speaker/treatment logic keeps working
+  const tmp = { ...R(), poly };
+  const fe = G.edges(tmp).filter((e) => e.n[1] > 0.5).sort((a, b) => a.mid[1] - b.mid[1])[0];
+  if (fe) { poly[fe.i].id = 'front'; }
+  S.drawPts = null; S.drawHover = null;
+  changeShape(() => { R().poly = poly; });
+  setTool('shape');
+  toast('New outline created — drag corners to refine, click teal dots to add corners');
 }
 function underlayEditor() {
   const u = P().underlay;
@@ -1502,9 +1912,9 @@ const SCHEMES = {
   'Neon producer': { walls: '#16181c', floor: ['#2f3236', 'carpet'], ceiling: '#101114', panels: '#2a2a2e', diff: '#3a3d43' },
 };
 function applyScheme(sc) {
-  for (const k of ['front', 'back', 'left', 'right']) Object.assign(R().surfaces[k], { color: sc.walls, finish: 'paint' });
-  Object.assign(R().surfaces.floor, { color: sc.floor[0], finish: sc.floor[1], acoustic: sc.floor[1] === 'carpet' ? 'carpet_pad' : sc.floor[1] === 'concrete' ? 'concrete' : 'wood_floor' });
-  Object.assign(R().surfaces.ceiling, { color: sc.ceiling });
+  for (const k of wallEdges().map((e) => e.id)) Object.assign(surf(k), { color: sc.walls, finish: 'paint' });
+  Object.assign(surf('floor'), { color: sc.floor[0], finish: sc.floor[1], acoustic: sc.floor[1] === 'carpet' ? 'carpet_pad' : sc.floor[1] === 'concrete' ? 'concrete' : 'wood_floor' });
+  Object.assign(surf('ceiling'), { color: sc.ceiling });
   for (const it of P().items) {
     const cat = defOf(it.type).cat;
     if (['Absorption', 'Bass Control', 'Ceiling'].includes(cat) && it.finish === 'fabric') it.color = sc.panels;
@@ -1542,7 +1952,7 @@ function renderScenes() {
 function renderProps() {
   const pane = $('#pane-props'); if (!pane) return;
   pane.innerHTML = '';
-  if (S.surfaceSel) { pane.append(h('div', { class: 'pane-title' }, h('h3', {}, SURF_LABEL[S.surfaceSel]), h('small', {}, 'Room surface')), surfaceEditor(S.surfaceSel, true)); return; }
+  if (S.surfaceSel) { pane.append(h('div', { class: 'pane-title' }, h('h3', {}, surfLabel(S.surfaceSel)), h('small', {}, 'Room surface')), surfaceEditor(S.surfaceSel, true)); return; }
   const items = selectedItems();
   if (!items.length) {
     pane.append(h('div', { class: 'empty' },
@@ -1723,14 +2133,14 @@ function reflTable(A) {
   if (!A.refl.length) return h('p', { class: 'hint' }, 'No speakers yet.');
   const spName = (id) => itemById(id)?.name || 'Speaker';
   return h('table', { class: 'tbl' }, h('tr', {}, h('th', {}, 'Speaker'), h('th', {}, 'Surface'), h('th', {}, 'Delay'), h('th', {}, 'Level'), h('th', {}, '')),
-    A.refl.map((p, i) => h('tr', { class: A.treated[i] ? 'ok' : 'no' }, h('td', {}, spName(p.speaker)), h('td', {}, p.surface), h('td', {}, p.delayMs.toFixed(1) + ' ms'), h('td', {}, p.levelDb.toFixed(1) + ' dB'), h('td', {}, A.treated[i] ? '✓' : '✗'))));
+    A.refl.map((p, i) => h('tr', { class: A.treated[i] ? 'ok' : 'no' }, h('td', {}, spName(p.speaker)), h('td', {}, surfLabel(p.surface)), h('td', {}, p.delayMs.toFixed(1) + ' ms'), h('td', {}, p.levelDb.toFixed(1) + ' dB'), h('td', {}, A.treated[i] ? '✓' : '✗'))));
 }
 
 // ---------------------------------------------------------------- status bar
 function renderStatus() {
   const el = $('#status-sel'); if (!el) return;
   const it = selectedItems()[0];
-  if (!it) { el.textContent = S.surfaceSel ? SURF_LABEL[S.surfaceSel] : `${P().items.length} items · Room ${fmt(R().w)} × ${fmt(R().d)} × ${fmt(R().h)}`; return; }
+  if (!it) { el.textContent = S.surfaceSel ? surfLabel(S.surfaceSel) : `${P().items.length} items · Room ${fmt(R().w)} × ${fmt(R().d)} × ${fmt(R().h)}${S.hmax > R().h + 0.05 ? '–' + fmt(S.hmax) : ''} · ${wallEdges().length} walls · ${G.floorArea(R()).toFixed(1)} m²`; return; }
   const { w, d } = R();
   el.textContent = `${it.name} · ${it.size.map((v) => fmt(v)).join(' × ')} · X ${fmt(it.pos[0])} Z ${fmt(it.pos[2])} elev ${fmt(it.pos[1])} · to L ${fmt(it.pos[0] + w / 2)} · to front ${fmt(it.pos[2] + d / 2)}${S.sel.length > 1 ? ` · +${S.sel.length - 1} more` : ''}`;
 }
@@ -1747,10 +2157,16 @@ function renderRightTabs() {
   if (S.rightTab === 'layers') renderLayers();
 }
 function setTool(t) {
+  const prevTool = S.tool;
   S.tool = t; S.measureA = null;
+  if (t === 'draw') { S.drawPts = []; S.drawHover = null; if (S.view !== 'top') setView('top'); toast('Draw: click each corner on the plan · click the first corner or press Enter to close · Backspace undoes a point · Esc cancels'); }
+  else S.drawPts = null;
+  if (t === 'shape' && prevTool !== 'shape') { if (S.view === 'persp' || S.view === 'quad' || S.view === 'walk') setView('top'); toast('Edit shape: drag orange corners · click teal dots to add a corner · double-click a corner to delete it'); }
+  drawShapeHandles();
+  if (S.leftTab === 'room' && (t === 'shape' || t === 'draw' || prevTool === 'shape' || prevTool === 'draw')) renderRoom();
   $$('[data-tool]').forEach((b) => b.classList.toggle('active', b.dataset.tool === t));
   attachGizmo();
-  renderer.domElement.style.cursor = t === 'measure' ? 'crosshair' : '';
+  renderer.domElement.style.cursor = t === 'measure' || t === 'draw' ? 'crosshair' : '';
   if (t === 'measure') toast('Measure: click two points. Esc to cancel.');
 }
 function closeDrawers() { document.body.classList.remove('show-left', 'show-right'); }
@@ -1765,6 +2181,9 @@ function promptApi() {
     openPdf: () => openPdfDialog(exportApi()), exportGLB, showAcoustics: () => { S.rightTab = 'acoustics'; renderRightTabs(); document.body.classList.add('show-right'); },
     findTemplate: (s) => Object.keys(TEMPLATES).find((k) => s.includes(k.toLowerCase()) || s.includes(k.toLowerCase().split(' ')[0] + ' ' + (k.toLowerCase().split(' ')[1] || ''))),
     applyTemplate,
+    setShape: (key) => { changeShape(() => G.applyShape(R(), key)); return G.SHAPES[key]?.label; },
+    setCeiling: (patch) => { Object.assign(R().ceiling, patch); if (patch.h != null) R().h = patch.h; delete R().ceiling.h; refitItemsToRoom(); buildRoom(); rebuildAllItems(); commit(); renderRoom(); return G.CEILINGS[R().ceiling.type]; },
+    curveWall: (name, sag) => { const e = edgeFor(name); if (!e) return false; changeShape(() => { const src = surf(e.id); const ids = G.curveEdge(R(), e.i, sag) || []; for (const id of ids) R().surfaces[id] = { ...JSON.parse(JSON.stringify(src)) }; }); return true; },
     setLights: (patch) => {
       const lights = P().items.filter((i) => defOf(i.type).light);
       for (const it of lights) {
@@ -1793,11 +2212,11 @@ function runPromptText(text) {
 function scannerApi() {
   return {
     h, toast, modal, compressImage,
-    surfaces: SURF_LABEL,
+    get surfaces() { return surfaceLabels(); },
     selected: () => selectedItems()[0],
     room: R,
-    applyPhotoToSurface: (name, dataUrl) => { R().surfaces[name].photo = addAsset(dataUrl); R().surfaces[name].showPhoto = true; buildRoom(); commit(); renderPanels(); },
-    applyColorToSurface: (name, c) => { R().surfaces[name].color = c; buildRoom(); commit(); renderPanels(); },
+    applyPhotoToSurface: (name, dataUrl) => { surf(name).photo = addAsset(dataUrl); surf(name).showPhoto = true; buildRoom(); commit(); renderPanels(); },
+    applyColorToSurface: (name, c) => { surf(name).color = c; buildRoom(); commit(); renderPanels(); },
     applyColorToSelection: (c) => { selectedItems().forEach((i) => updateItem(i, { color: c })); commit(); renderProps(); },
     applyImageToItem: (it, dataUrl) => { updateItem(it, { params: { image: addAsset(dataUrl) } }); commit(); },
     addArtPanel: (dataUrl) => { const [it] = addMany('artPanel', { loc: 'back' }); updateItem(it, { params: { image: addAsset(dataUrl) } }); commit(); },
@@ -1809,7 +2228,7 @@ function scannerApi() {
 function exportApi() {
   return {
     h, toast, modal, project: P, room: R, analysis, scheduleRows, renderToDataURL, viewNames: VIEW_NAMES,
-    fmt, acousticName: (k) => AC.ACOUSTIC_MATERIALS[k]?.name || k, finishName: (k) => FINISHES[k]?.label || k, surfaceLabels: SURF_LABEL,
+    fmt, acousticName: (k) => AC.ACOUSTIC_MATERIALS[k]?.name || k, finishName: (k) => FINISHES[k]?.label || k, surfaceList: () => surfaceIds().map((id) => ({ id, label: surfLabel(id), s: surf(id) })), floorArea: () => G.floorArea(R()), wallCount: () => wallEdges().length, ceilingName: () => G.CEILINGS[R().ceiling?.type || 'flat'], hmax: () => S.hmax,
     safeName, download, bands: AC.BANDS, noteName, colorNames: COLOR_NAMES, defOf,
   };
 }
@@ -1835,7 +2254,7 @@ const ACTIONS = {
   toggleRight: () => { document.body.classList.toggle('show-right'); document.body.classList.remove('show-left'); },
 };
 function showHelp() {
-  const keys = [['V', 'Select'], ['M', 'Move'], ['R', 'Rotate'], ['S', 'Scale'], ['T', 'Tape measure'], ['1–6', '3D / Top / Front / Back / Left / Right'], ['7 · 8', 'Quad view · Walkthrough'], ['F / double-click', 'Focus selection'], ['Arrows', 'Nudge 1 cm (Shift = 10 cm)'], ['[ ]', 'Rotate 15°'], ['Ctrl+D', 'Duplicate'], ['Ctrl+Z / Ctrl+Y', 'Undo / Redo'], ['Del', 'Delete'], ['/', 'Focus prompt'], ['W A S D Q E', 'Walk (in walkthrough)']];
+  const keys = [['V', 'Select'], ['M', 'Move'], ['R', 'Rotate'], ['S', 'Scale'], ['T', 'Tape measure'], ['O', 'Edit room outline (drag corners)'], ['1–6', '3D / Top / Front / Back / Left / Right'], ['7 · 8', 'Quad view · Walkthrough'], ['F / double-click', 'Focus selection'], ['Arrows', 'Nudge 1 cm (Shift = 10 cm)'], ['[ ]', 'Rotate 15°'], ['Ctrl+D', 'Duplicate'], ['Ctrl+Z / Ctrl+Y', 'Undo / Redo'], ['Del', 'Delete'], ['/', 'Focus prompt'], ['W A S D Q E', 'Walk (in walkthrough)']];
   modal('How to use RoomTone', h('div', { class: 'help' },
     h('p', {}, 'Design your studio in five steps: 1) set the room size (Room tab or prompt "room 4 x 5 x 2.7"), 2) add a listening position and monitors, 3) add treatment from the Library or press ✨ Auto-treat, 4) check the Acoustics tab, 5) export a PDF.'),
     h('h4', {}, 'Prompt examples (works offline)'), h('div', { class: 'chips' }, PROMPT_EXAMPLES.map((p) => h('code', {}, p))),
@@ -1862,6 +2281,12 @@ document.addEventListener('keydown', (e) => {
   if (ctrl && k === 's') { e.preventDefault(); ACTIONS.save(); return; }
   if (ctrl && k === 'a') { e.preventDefault(); select(P().items.map((i) => i.id)); return; }
   if (ctrl) return;
+  if (S.tool === 'draw' && S.drawPts) {
+    if (k === 'enter') { finishDraw(); return; }
+    if (k === 'backspace') { S.drawPts.pop(); drawShapeHandles(); return; }
+    if (k === 'escape') { setTool('select'); return; }
+  }
+  if (k === 'o') { setTool(S.tool === 'shape' ? 'select' : 'shape'); return; }
   if (k === 'delete' || k === 'backspace') { removeItems(selectedItems()); return; }
   if (k === 'escape') { if (S.measureA) { S.measureA = null; measureGroup.children.filter((c) => c.userData.pending).forEach((c) => measureGroup.remove(c)); } else select([]); return; }
   if (k === '/') { e.preventDefault(); $('#prompt').focus(); return; }
@@ -1909,7 +2334,7 @@ async function boot() {
   let restored = false;
   try {
     const saved = await DB.get('autosave');
-    if (saved) { const p = JSON.parse(saved); if (p?.room) { S.project = { ...newProject(), ...p }; restored = true; } }
+    if (saved) { const p = JSON.parse(saved); if (p?.room) { S.project = { ...newProject(), ...p }; G.ensureRoom(R()); G.normalizeRoom(R()); restored = true; } }
   } catch { /* first run */ }
   buildRoom();
   await hydrateImported();

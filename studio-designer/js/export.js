@@ -101,7 +101,7 @@ async function buildPdf(app, o) {
     y += 18; doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(90);
     const lines = [
       `Client: ${p.client || '-'}`, `Designer: ${p.designer || '-'}`, `Date: ${date}`, '',
-      `Room: ${room.w.toFixed(2)} W x ${room.d.toFixed(2)} L x ${room.h.toFixed(2)} H m`, `Floor area: ${(room.w * room.d).toFixed(1)} m2   Volume: ${A.rt.V.toFixed(1)} m3`,
+      `Room: ${room.w.toFixed(2)} W x ${room.d.toFixed(2)} L x ${room.h.toFixed(2)}${app.hmax() > room.h + 0.05 ? '-' + app.hmax().toFixed(2) : ''} H m (overall)`, `Shape: ${app.wallCount()} walls, ${app.ceilingName()} ceiling`, `Floor area: ${app.floorArea().toFixed(1)} m2   Volume: ${A.rt.V.toFixed(1)} m3`,
       `RT60 (500 Hz-1 kHz): ${A.rt.mid.toFixed(2)} s  (target ~${A.rt.target.toFixed(2)} s)`, `Schroeder frequency: ${A.rt.schroeder.toFixed(0)} Hz`,
       `Items: ${p.items.length}   Treated surface: ${(A.coverage * 100).toFixed(0)} %`,
     ];
@@ -192,15 +192,15 @@ async function buildPdf(app, o) {
     const a = frame('Colour & material board');
     let x = a.x, y = a.y + 4;
     doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(20); doc.text('Room surfaces', x, y + 2); y += 8;
-    const sw = (a.w - 5 * 6) / 6;
-    Object.entries(room.surfaces).forEach(([k, s], i) => {
-      const xx = x + i * (sw + 6);
+    const sw = (a.w - 5 * 6) / 6, y0 = y;
+    app.surfaceList().slice(0, 18).forEach(({ label, s }, i) => {
+      const xx = x + (i % 6) * (sw + 6), y = y0 + Math.floor(i / 6) * 46;
       doc.setFillColor(...hexRgb(s.color)); doc.setDrawColor(160); doc.roundedRect(xx, y, sw, 26, 2, 2, 'FD');
-      doc.setFontSize(9); doc.setTextColor(20); doc.setFont('helvetica', 'bold'); doc.text(app.surfaceLabels[k], xx, y + 31);
+      doc.setFontSize(9); doc.setTextColor(20); doc.setFont('helvetica', 'bold'); doc.text(txt(label), xx, y + 31);
       doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(80);
       doc.text([s.color.toUpperCase(), txt(app.finishName(s.finish)), txt(app.acousticName(s.acoustic))], xx, y + 35);
     });
-    y += 52;
+    y = y0 + Math.ceil(Math.min(18, app.surfaceList().length) / 6) * 46 + 6;
     doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(20); doc.text('Item colours', x, y); y += 6;
     const used = new Map();
     for (const it of p.items) for (const c of [it.color]) { const key = c + '|' + it.finish; const e = used.get(key) || { c, finish: it.finish, names: new Set() }; e.names.add(app.defOf(it.type).name); used.set(key, e); }

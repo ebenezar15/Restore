@@ -20,6 +20,15 @@ The camera needs `https://` or `localhost`. On phones, "Upload photo" also opens
 ## Features
 
 - **Modelling like SketchUp, but simpler:** you get Select, Move, Rotate and Scale gizmos with grid and 15° snapping. There are also a tape measure, align and distribute, duplicate, *Array*, and *Mirror across the room centre* for symmetric layouts. You can lock and hide items, undo and redo, nudge with the keyboard, and drag items from the library onto a wall, the floor or the ceiling.
+- **Room shapes:** design any room shape, not just a rectangle.
+  - **Preset outlines:** rectangle, trapezoid, splayed control room, L, T and U shapes, alcove, angled corner, pentagon, hexagon, octagon, round/oval, curved back wall and fan.
+  - **Edit corners on the plan:** drag corners with grid and square-up snapping, click a wall's midpoint to add a corner, and double-click a corner to delete it.
+  - **Draw an outline freehand** on the plan.
+  - **Edit walls numerically:** type each wall's length or the X/Z of each corner, curve any wall outward or inward, split or remove walls, and mirror, flip or rotate the outline.
+  - **Ceilings:** flat, sloped (shed), pitched (gable/cathedral), barrel vault or dome, with low and high heights and a direction.
+  - **Real wall openings:** doors, windows and pass-throughs cut holes through the wall. Wall thickness is adjustable.
+  - **Acoustics follow the real shape:** volume, surface areas, RT60 and image-source reflections all use the actual geometry, and angled corner traps fit any corner angle.
+  - **Prompts work too**, for example `make the room L shaped`, `sloped ceiling 2.4 to 3.4`, `vaulted ceiling 4`, `curve the back wall 0.6`.
 - **Views:** 3D orbit, a true-to-scale Plan with an adjustable cut height, Front, Back, Left and Right elevations with section depth, a Quad view, a first-person Walkthrough and the Listener's-eye view. Walls nearest the camera are cut away automatically, and there's an X-ray mode.
 - **80+ items:**
   - **Absorption:** broadband 50/100 mm panels, framed panels, printed art panels, foam, PET felt, curtains, gobos and rugs.
@@ -56,7 +65,7 @@ The camera needs `https://` or `localhost`. On phones, "Upload photo" also opens
 
 ## Keyboard
 
-`V` select · `M` move · `R` rotate · `S` scale · `T` measure · `1–6` views · `7` quad · `8` walk · `F` focus · arrows nudge (Shift ×10) · `[` `]` rotate 15° · `Ctrl+D` duplicate · `Ctrl+Z/Y` undo/redo · `Del` delete · `/` prompt · `?` help
+`V` select · `O` edit room outline · `M` move · `R` rotate · `S` scale · `T` measure · `1–6` views · `7` quad · `8` walk · `F` focus · arrows nudge (Shift ×10) · `[` `]` rotate 15° · `Ctrl+D` duplicate · `Ctrl+Z/Y` undo/redo · `Del` delete · `/` prompt · `?` help
 
 ## Code layout
 
@@ -66,6 +75,7 @@ css/app.css           UI theme (responsive; drawers on phones/tablets)
 js/main.js            scene, views, tools, placement, panels, history, I/O
 js/catalog.js         item definitions + procedural 3D builders
 js/acoustics.js       RT60, modes, ratios, reflections, SBIR
+js/geometry.js        room outlines, ceiling profiles, areas & volume, shape presets
 js/prompt.js          offline natural-language command interpreter
 js/scan.js            camera capture, colour sampling, guided scan
 js/export.js          PDF generation (jsPDF)

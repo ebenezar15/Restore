@@ -61,8 +61,9 @@ function prism(points, h, m) {
   g.rotateX(-Math.PI / 2);
   return new THREE.Mesh(g, m);
 }
+const ceilAt = (ctx, it) => (ctx.heightAt ? ctx.heightAt(it.pos[0], it.pos[2]) : ctx.room.h);
 function hangWires(g, it, ctx, pts, top) {
-  const len = Math.max(0.02, ctx.room.h - (it.pos[1] + top));
+  const len = Math.max(0.02, ceilAt(ctx, it) - (it.pos[1] + top));
   const m = mat('#9a9a9a', 'metal');
   for (const [x, z] of pts) g.add(cyl(0.002, 0.002, len, m, x, top + len / 2, z, 6));
 }
@@ -121,8 +122,10 @@ const B = {
   cornerTrap(it) {
     const [L, h] = it.size, g = new THREE.Group();
     const style = it.params.style || 'triangle';
-    let pts = [[0, 0], [L, 0], [0, L]];
-    if (style === 'chamfer') pts = [[0, 0], [L, 0], [L, L * 0.3], [L * 0.3, L], [0, L]];
+    const a = ((it.params.angle ?? 90) * Math.PI) / 180, ca = Math.cos(a), sa = Math.sin(a);
+    // legs run along both walls of the corner, whatever its angle
+    let pts = [[0, 0], [L, 0], [L * ca, L * sa]];
+    if (style === 'chamfer') pts = [[0, 0], [L, 0], [L * 0.85 + L * 0.3 * ca, L * 0.3 * sa], [L * 0.3 + L * 0.85 * ca, L * 0.85 * sa], [L * ca, L * sa]];
     const m = prism(pts, h, mat(it.color, it.finish));
     g.add(m);
     return g;
@@ -638,7 +641,7 @@ const B = {
     const shade = new THREE.Mesh(new THREE.CylinderGeometry(w * 0.15, w / 2, h * 0.3, 32, 1, true), mat(it.color, it.finish, { side: THREE.DoubleSide }));
     shade.position.y = h * 0.15; g.add(shade);
     g.add(sphere(w * 0.12, glow(it, c, 3), 0, h * 0.05, 0, 14, 10));
-    const top = h * 0.3, len = Math.max(0.05, ctx.room.h - (it.pos[1] + top));
+    const top = h * 0.3, len = Math.max(0.05, ceilAt(ctx, it) - (it.pos[1] + top));
     g.add(cyl(0.004, 0.004, len, mat('#111', 'plastic'), 0, top + len / 2, 0, 6));
     addPointLight(g, it, 0, 0, 0, c, it.params.intensity * 8);
     return g;
@@ -768,7 +771,7 @@ export const CATALOG = [
   D({ type: 'gobo', name: 'Gobo / Mobile Screen', cat: 'Absorption', size: [1.0, 1.8, 0.1], color: '#2f3236', color2: '#555555', finish: 'fabric', acoustic: 'fabric_100', area: (s) => 2 * s[0] * s[1], build: B.gobo, params: { window: { label: 'Glass window', type: 'bool', default: false } }, desc: 'Movable absorbent screen for isolating sources in a live room.' }),
   D({ type: 'rug', name: 'Rug', cat: 'Absorption', size: [2.0, 0.015, 1.4], color: '#8b7d6b', color2: '#3b3e42', finish: 'carpet', acoustic: 'carpet_pad', area: AREA.top, build: B.rug, desc: 'Thick rug — kills floor flutter and the floor reflection between desk and speakers.' }),
   // Bass control
-  D({ type: 'cornerTrap', name: 'Corner Bass Trap', cat: 'Bass Control', mount: 'corner', origin: 'corner', size: [0.6, 2.4, 0.6], color: '#2f3236', finish: 'fabric', acoustic: 'bass_trap', area: AREA.corner, build: B.cornerTrap, params: { style: { label: 'Style', type: 'select', options: ['triangle', 'chamfer'], default: 'triangle' } }, desc: 'Floor-to-ceiling superchunk. Corners are where room modes have pressure maxima — the most effective place for bass absorption.' }),
+  D({ type: 'cornerTrap', name: 'Corner Bass Trap', cat: 'Bass Control', mount: 'corner', origin: 'corner', size: [0.6, 2.4, 0.6], color: '#2f3236', finish: 'fabric', acoustic: 'bass_trap', area: AREA.corner, build: B.cornerTrap, params: { style: { label: 'Style', type: 'select', options: ['triangle', 'chamfer'], default: 'triangle' }, angle: { label: 'Corner angle (°)', type: 'number', min: 30, max: 170, step: 0.5, default: 90 } }, desc: 'Floor-to-ceiling superchunk (adapts to angled corners). Corners are where room modes have pressure maxima — the most effective place for bass absorption.' }),
   D({ type: 'cornerTrapCeil', name: 'Wall–Ceiling Corner Trap', cat: 'Bass Control', mount: 'wall', wallTop: true, size: [2.4, 0.4, 0.4], color: '#2f3236', finish: 'fabric', acoustic: 'bass_trap', area: (s) => s[0] * s[1] * Math.SQRT2, build: (it) => { const [w, h, d] = it.size, g = new THREE.Group(); const shape = new THREE.Shape([new THREE.Vector2(-d / 2, h), new THREE.Vector2(d / 2, h), new THREE.Vector2(-d / 2, 0)]); const geo = new THREE.ExtrudeGeometry(shape, { depth: w, bevelEnabled: false }); geo.translate(0, 0, -w / 2); geo.rotateY(-Math.PI / 2); g.add(new THREE.Mesh(geo, mat(it.color, it.finish))); return g; }, desc: 'Triangular trap along the wall–ceiling junction (tri-corners and horizontal edges also hold modal pressure).' }),
   D({ type: 'bassPanel', name: 'Thick Bass Panel 200mm', cat: 'Bass Control', mount: 'wall', size: [0.6, 1.2, 0.2], color: '#3a3a3c', finish: 'fabric', acoustic: 'fabric_150', build: B.absorber, params: { frame: { label: 'Wood frame', type: 'bool', default: false } }, desc: 'Deep porous panel with air gap — extends absorption well below 125 Hz.' }),
   D({ type: 'membrane', name: 'Membrane Bass Trap', cat: 'Bass Control', mount: 'wall', size: [1.2, 0.6, 0.2], color: '#d0c8b8', color2: '#8a6a4a', finish: 'gloss', acoustic: 'membrane', build: B.membrane, desc: 'Limp-mass / panel resonator tuned to low frequencies (≈ 40–120 Hz). Pressure-based — mount on walls and corners.' }),
@@ -826,8 +829,9 @@ export const CATALOG = [
   D({ type: 'sconce', name: 'Wall Sconce', cat: 'Lighting', mount: 'wall', wallY: 1.7, size: [0.18, 0.25, 0.15], color: '#c8a14a', finish: 'metal', light: true, build: B.sconce, params: LIGHT_PARAMS }),
   D({ type: 'neon', name: '"ON AIR" Sign', cat: 'Lighting', mount: 'wall', wallY: 1.95, size: [0.6, 0.2, 0.05], color: '#111111', light: true, build: B.neon, params: { ...LIGHT_PARAMS, lightColor: { ...LIGHT_PARAMS.lightColor, default: '#ff2a2a' }, text: { label: 'Text', type: 'text', default: 'ON AIR' } } }),
   // Architecture
-  D({ type: 'door', name: 'Acoustic Door', cat: 'Architecture', mount: 'wall', size: [0.9, 2.1, 0.08], color: '#5d4030', color2: '#e9e6df', finish: 'wood', acoustic: 'wood_hard', build: B.door, params: { window: { label: 'Vision panel', type: 'bool', default: false }, seals: { label: 'Drop seal', type: 'bool', default: true } } }),
-  D({ type: 'window', name: 'Studio Window (double)', cat: 'Architecture', mount: 'wall', wallY: 0.9, size: [1.4, 1.0, 0.2], color: '#2a211c', finish: 'wood', acoustic: 'glass', build: B.window, params: { panes: { label: 'Panes', type: 'select', options: [1, 2, 3], default: 2 }, angled: { label: 'Angled pane', type: 'bool', default: true } } }),
+  D({ type: 'door', name: 'Acoustic Door', cat: 'Architecture', mount: 'wall', opening: true, size: [0.9, 2.1, 0.08], color: '#5d4030', color2: '#e9e6df', finish: 'wood', acoustic: 'wood_hard', build: B.door, params: { window: { label: 'Vision panel', type: 'bool', default: false }, seals: { label: 'Drop seal', type: 'bool', default: true }, cutWall: { label: 'Cut opening in wall', type: 'bool', default: true } } }),
+  D({ type: 'window', name: 'Studio Window (double)', cat: 'Architecture', mount: 'wall', wallY: 0.9, opening: true, size: [1.4, 1.0, 0.2], color: '#2a211c', finish: 'wood', acoustic: 'glass', build: B.window, params: { panes: { label: 'Panes', type: 'select', options: [1, 2, 3], default: 2 }, angled: { label: 'Angled pane', type: 'bool', default: true }, cutWall: { label: 'Cut opening in wall', type: 'bool', default: true } } }),
+  D({ type: 'opening', name: 'Wall Opening / Pass-through', cat: 'Architecture', mount: 'wall', opening: true, size: [1.2, 2.1, 0.2], color: '#c9c5bd', area: AREA.none, build: (it) => { const [w, h, d] = it.size, g = new THREE.Group(); const m = mat(it.color, 'paint', { opacity: 0.0001 }); g.add(box(w, h, d, m, 0, h / 2, 0)); return g; }, params: { cutWall: { label: 'Cut opening in wall', type: 'bool', default: true } }, desc: 'An open doorway / pass-through / niche cut into a wall.' }),
   D({ type: 'partition', name: 'Partition Wall', cat: 'Architecture', size: [2.0, 2.4, 0.12], color: '#ece8df', finish: 'paint', acoustic: 'drywall', area: (s) => 2 * s[0] * s[1], build: B.partition }),
   D({ type: 'soffit', name: 'Speaker Soffit Wall', cat: 'Architecture', mount: 'wall', size: [3.0, 2.4, 0.6], color: '#2f3236', finish: 'fabric', acoustic: 'none', build: B.soffit, params: { speakerHeight: { label: 'Speaker height (m)', type: 'number', min: 0.5, max: 2.2, step: 0.05, default: 1.25 } }, desc: 'Flush-mounted main monitors — removes front-wall SBIR.' }),
   D({ type: 'column', name: 'Column / Pillar', cat: 'Architecture', size: [0.3, 2.4, 0.3], color: '#ece8df', acoustic: 'concrete', area: (s) => 4 * s[0] * s[1], build: B.column, params: { round: { label: 'Round', type: 'bool', default: false } } }),

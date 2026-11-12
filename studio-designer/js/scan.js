@@ -35,7 +35,7 @@ export function openScanner(app, opts = {}) {
   const palette = h('div', { class: 'palette' });
   const actions = h('div', { class: 'scan-actions' });
   let facing = 'environment', captured = null;
-  const wizardSteps = ['front', 'right', 'back', 'left', 'floor', 'ceiling'];
+  const wizardSteps = Object.keys(app.surfaces);
   let wizard = opts.target === 'wizard' ? 0 : -1;
 
   async function start() {
@@ -44,7 +44,7 @@ export function openScanner(app, opts = {}) {
     try {
       stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facing, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false });
       video.srcObject = stream; video.hidden = false; canvas.hidden = true;
-      status.textContent = wizard >= 0 ? `Step ${wizard + 1}/6 — point the camera at the ${app.surfaces[wizardSteps[wizard]].toLowerCase()} and capture.` : 'Point the camera at a wall, material or artwork and press Capture.';
+      status.textContent = wizard >= 0 ? `Step ${wizard + 1}/${wizardSteps.length} — point the camera at the ${app.surfaces[wizardSteps[wizard]].toLowerCase()} and capture.` : 'Point the camera at a wall, material or artwork and press Capture.';
     } catch (e) {
       status.textContent = 'Camera unavailable (' + (e.name || 'blocked') + '). Use “Upload photo” instead.';
     }
@@ -110,7 +110,7 @@ export function openScanner(app, opts = {}) {
   }
   function askDims() {
     stop();
-    const r = app.room();
+    const r = app.room(); void r;
     const f = (label, key) => h('label', { class: 'field' }, h('span', {}, label + ' (m)'), h('input', { type: 'number', step: 0.01, value: r[key], 'data-k': key }));
     const body = h('div', {}, h('p', {}, 'Last step: enter the measured room size (tape or laser measure). Phone LiDAR apps can export a GLB/OBJ — import it to size the room automatically.'),
       h('div', { class: 'grid3' }, f('Width', 'w'), f('Length', 'd'), f('Height', 'h')));
@@ -129,7 +129,7 @@ export function openScanner(app, opts = {}) {
       h('button', { class: 'btn primary', onclick: capture }, '◉ Capture'),
       h('button', { class: 'btn', onclick: () => { facing = facing === 'environment' ? 'user' : 'environment'; start(); } }, '⟲ Flip camera'),
       h('button', { class: 'btn', onclick: upload }, 'Upload photo'),
-      h('button', { class: 'btn', onclick: () => { wizard = 0; start(); } }, '🧭 Guided room scan (6 surfaces)'),
+      h('button', { class: 'btn', onclick: () => { wizard = 0; start(); } }, '🧭 Guided room scan (every surface)'),
       h('button', { class: 'btn', onclick: () => { stop(); m.close(); app.importModel(); } }, 'Import 3D scan (GLB/OBJ)')));
   const m = app.modal('Scan & capture', body, [], { wide: true });
   document.getElementById('modal').addEventListener('closed', stop, { once: true });

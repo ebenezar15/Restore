@@ -54,7 +54,7 @@ const LOCATIONS = [
   ['front', 'front'], ['back', 'back'], ['rear', 'back'], ['left', 'left'], ['right', 'right'],
 ].sort((a, b) => b[0].length - a[0].length);
 
-const SURFACE_WORDS = [['front wall', ['front']], ['back wall', ['back']], ['rear wall', ['back']], ['left wall', ['left']], ['right wall', ['right']], ['side walls', ['left', 'right']], ['walls', ['front', 'back', 'left', 'right']], ['wall', ['front', 'back', 'left', 'right']], ['floor', ['floor']], ['ceiling', ['ceiling']]];
+const SURFACE_WORDS = [['front wall', ['front']], ['back wall', ['back']], ['rear wall', ['back']], ['left wall', ['left']], ['right wall', ['right']], ['side walls', ['left', 'right']], ['walls', ['*walls']], ['wall', ['*walls']], ['floor', ['floor']], ['ceiling', ['ceiling']]];
 
 const FINISH_WORDS = { oak: ['wood', '#c49a6c'], walnut: ['wood', '#5d4030'], wood: ['wood', null], wooden: ['wood', null], timber: ['wood', null], concrete: ['concrete', '#9a9a96'], brick: ['brick', '#b5654a'], carpet: ['carpet', null], carpeted: ['carpet', null], tile: ['tile', null], tiled: ['tile', null], marble: ['marble', '#efefef'], stone: ['marble', null], fabric: ['fabric', null], felt: ['felt', null], metal: ['metal', null], gloss: ['gloss', null], glossy: ['gloss', null], matte: ['paint', null], leather: ['leather', null] };
 const SURFACE_ACOUSTIC = { wood: 'wood_floor', concrete: 'concrete', brick: 'brick', carpet: 'carpet_pad', tile: 'tile_floor', marble: 'tile_floor' };
@@ -129,6 +129,9 @@ function splitCommands(text) {
 
 export const PROMPT_EXAMPLES = [
   'room 4.5 x 6 x 2.8',
+  'make the room L shaped',
+  'sloped ceiling 2.4 to 3.4',
+  'curve the back wall 0.6',
   'add bass traps in all corners',
   'add 2 absorbers at first reflections',
   'add a cloud above the listener',
@@ -151,7 +154,7 @@ export function runPrompt(text, api) {
   const stripLoc = (s) => s.replace(/\b(front|back|rear|left|right|side|all|every)?\s*(walls?|ceiling|floor|corners?)\b/g, ' ');
   for (let raw of splitCommands(text)) {
     let s = ' ' + raw.toLowerCase().replace(/[!?]/g, '').replace(/\s+/g, ' ') + ' ';
-    const verbMatch = s.match(/\b(add|place|put|insert|create|make|paint|colou?r|set|change|move|shift|nudge|rotate|turn|spin|delete|remove|clear|select|show|view|go to|switch|dim|brighten|treat|mirror|duplicate|copy|clone|export|save|undo|redo|analy[sz]e|check|reset|new|resize|scale|hide)\b/);
+    const verbMatch = s.match(/\b(add|place|put|insert|create|make|paint|colou?r|set|change|move|shift|nudge|rotate|turn|spin|delete|remove|clear|select|show|view|go to|switch|dim|brighten|treat|mirror|duplicate|copy|clone|export|save|undo|redo|analy[sz]e|check|reset|new|resize|scale|hide|curve|curved|bow)\b/);
     let verb = verbMatch ? verbMatch[1] : null;
     if (!verb && /\blights?\b|\blighting\b/.test(s) && /\b(on|off|warm|cool|cold|daylight|mood|rgb|dim|bright)\b|#|\b(red|blue|purple|green|pink|amber|orange)\b/.test(s)) verb = 'set';
     else if (!verb && !lastVerb && findColor(s) && !/\b(\d+|a|an)\s/.test(s)) verb = 'paint';
@@ -189,6 +192,34 @@ function handle(s, verb, api) {
     api.setView(map[v]); return { ok: true, msg: `Switched to ${v} view` };
   }
   if (/\b(analy[sz]e|check|rt60|reverb|room modes?|acoustics?)\b/.test(s) && !/\b(add|place)\b/.test(s)) { api.showAcoustics(); return { ok: true, msg: 'Showing acoustic analysis' }; }
+
+  // ---- room shape / ceiling / curved walls
+  const SHAPE_WORDS = [['l-shape', 'lshape'], ['l shape', 'lshape'], ['l-shaped', 'lshape'], ['l shaped', 'lshape'], ['t-shape', 'tshape'], ['t shape', 'tshape'], ['t-shaped', 'tshape'], ['u-shape', 'ushape'], ['u shape', 'ushape'], ['u-shaped', 'ushape'],
+    ['trapezoid', 'trapezoid'], ['trapezoidal', 'trapezoid'], ['splayed', 'splayed'], ['octagon', 'octagon'], ['octagonal', 'octagon'], ['hexagon', 'hexagon'], ['hexagonal', 'hexagon'], ['pentagon', 'pentagon'],
+    ['round', 'round'], ['circular', 'round'], ['circle', 'round'], ['oval', 'round'], ['angled corner', 'angled'], ['curved back', 'curvedBack'], ['fan', 'fan'], ['auditorium', 'fan'], ['alcove', 'alcove'], ['rectangular', 'rect'], ['rectangle', 'rect'], ['square', 'rect']];
+  if (/\b(room|shape|shaped|floor ?plan|outline|make it)\b/.test(s) && !/\b(add|place|put|insert)\b/.test(s) && !/\bceiling\b/.test(s)) {
+    const hit = SHAPE_WORDS.find(([w]) => new RegExp(`\\b${w}\\b`).test(s));
+    if (hit) { const label = api.setShape(hit[1]); return { ok: true, msg: `Room shape: ${label}` }; }
+  }
+  if (/\bceiling\b/.test(s) && /\b(slop|shed|mono|pitch|gable|cathedral|vault|barrel|arch|dome|domed|flat|raked|rais|angled|tilt)/.test(s) && !/\b(add|place|put|insert|paint|colou?r)\b/.test(s)) {
+    const type = /dome|domed/.test(s) ? 'dome' : /vault|barrel|arch/.test(s) ? 'vault' : /pitch|gable|cathedral|peak/.test(s) ? 'gable' : /flat/.test(s) ? 'flat' : 'shed';
+    const nums = [...s.matchAll(/(\d+(?:\.\d+)?)\s*(mm|cm|ft|feet|foot|'|m\b)?/g)].map((m) => toMetres(parseFloat(m[1]), m[2]));
+    const patch = { type };
+    if (nums.length >= 2) { patch.h = Math.min(nums[0], nums[1]); patch.h2 = Math.max(nums[0], nums[1]); }
+    else if (nums.length === 1) { if (type === 'flat') patch.h = nums[0]; else patch.h2 = nums[0]; }
+    if (type === 'shed') patch.dir = /\b(front)\b/.test(s) ? 'b2f' : /\bleft\b/.test(s) ? 'r2l' : /\bright\b/.test(s) ? 'l2r' : 'f2b';
+    if (type === 'gable' || type === 'vault') patch.axis = /\b(across|left to right|side to side|width)\b/.test(s) ? 'x' : 'z';
+    const label = api.setCeiling(patch);
+    return { ok: true, msg: `Ceiling: ${label}${patch.h2 ? ` (${(patch.h ?? 0) ? patch.h.toFixed(2) + ' → ' : 'up to '}${patch.h2.toFixed(2)} m)` : ''}` };
+  }
+  if (/\b(curve|curved|bow|round off)\b/.test(s) && /\bwall\b/.test(s) && !/\b(add|place)\b/.test(s)) {
+    const wall = (s.match(/\b(front|back|rear|left|right)\b/) || [])[1];
+    const num = s.match(/(-?\d+(?:\.\d+)?)\s*(mm|cm|ft|m\b)?/);
+    let sag = num ? toMetres(parseFloat(num[1]), num[2]) : 0.5;
+    if (/\b(inward|into the room|concave in)\b/.test(s)) sag = -Math.abs(sag);
+    const ok = api.curveWall(wall === 'rear' ? 'back' : wall || 'back', sag);
+    return { ok, msg: ok ? `Curved the ${wall || 'back'} wall by ${sag.toFixed(2)} m` : 'No such wall' };
+  }
 
   // ---- room dims
   if (/\b(room|dimensions?|size of room)\b/.test(s) && /\d/.test(s) && !/\b(add|place|put)\b/.test(s) || /^\s*(set |resize )?room\b/.test(s) && /\d/.test(s)) {
@@ -317,7 +348,7 @@ function handle(s, verb, api) {
         api.setSurface(name, patch);
       });
       api.commit();
-      return { ok: true, msg: `Updated ${surf.join(', ')}` };
+      return { ok: true, msg: `Updated ${surf.map((x) => (x === '*walls' ? 'all walls' : x)).join(', ')}` };
     }
     const targets = resolveTargets(s, api);
     if (targets.length && (color || finishWord)) {

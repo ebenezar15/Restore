@@ -44,23 +44,15 @@ export const ACOUSTIC_MATERIALS = {
 
 export const DIFFUSIVE = new Set(['qrd', 'skyline', 'poly', 'bad_panel', 'books']);
 
-export const SURFACES = ['front', 'back', 'left', 'right', 'floor', 'ceiling'];
-
-export function surfaceArea(room, s) {
-  if (s === 'front' || s === 'back') return room.w * room.h;
-  if (s === 'left' || s === 'right') return room.d * room.h;
-  return room.w * room.d;
-}
-
 // Air absorption (4mV) at 20°C / 50 % RH, per band.
 const AIR_M = [0.0001, 0.0002, 0.0005, 0.001, 0.0024, 0.0066];
 
 /**
- * RT60 estimate. `items` is [{acoustic, area}] from the catalogue.
+ * RT60 estimate. `geo` = { V, surfaces: [{ area, mat }] } (any room shape);
+ * `items` is [{ acoustic, area }] from the catalogue.
  */
-export function reverbTime(room, items) {
-  const V = room.w * room.h * room.d;
-  const surfaces = SURFACES.map((s) => ({ s, area: surfaceArea(room, s), mat: room.surfaces[s].acoustic }));
+export function reverbTime(geo, items) {
+  const V = geo.V, surfaces = geo.surfaces;
   const S = surfaces.reduce((t, x) => t + x.area, 0);
   const bands = BANDS.map((f, i) => {
     let A = 0;
@@ -131,33 +123,27 @@ export function ratioCheck(room) {
   return { r, inBolt, best };
 }
 
-/** Mirror-image first-reflection point of source S on a room surface, seen from listener L. */
-export function reflectionPoint(room, S, L, surface) {
-  const planes = {
-    left: { axis: 0, v: -room.w / 2 }, right: { axis: 0, v: room.w / 2 },
-    floor: { axis: 1, v: 0 }, ceiling: { axis: 1, v: room.h },
-    front: { axis: 2, v: -room.d / 2 }, back: { axis: 2, v: room.d / 2 },
-  };
-  const p = planes[surface];
-  const img = S.slice(); img[p.axis] = 2 * p.v - S[p.axis];
-  const denom = L[p.axis] - img[p.axis];
-  if (Math.abs(denom) < 1e-6) return null;
-  const t = (p.v - img[p.axis]) / denom;
+/**
+ * Mirror-image first reflection of source S off a plane (point P0, unit normal N),
+ * heard at listener L. `inside(pt)` decides whether the hit lies on the real surface.
+ */
+export function reflectOffPlane(S, L, P0, N, inside) {
+  const dist = (p) => (p[0] - P0[0]) * N[0] + (p[1] - P0[1]) * N[1] + (p[2] - P0[2]) * N[2];
+  const ds = dist(S), dl = dist(L);
+  if (ds * dl <= 0) return null; // both must be on the same (room) side
+  const img = [S[0] - 2 * ds * N[0], S[1] - 2 * ds * N[1], S[2] - 2 * ds * N[2]];
+  const di = dist(img), t = di / (di - dl);
   if (t <= 0 || t >= 1) return null;
   const pt = [0, 1, 2].map((k) => img[k] + (L[k] - img[k]) * t);
-  pt[p.axis] = p.v;
+  if (!inside(pt)) return null;
   const direct = Math.hypot(L[0] - S[0], L[1] - S[1], L[2] - S[2]);
   const reflected = Math.hypot(L[0] - img[0], L[1] - img[1], L[2] - img[2]);
-  const delayMs = ((reflected - direct) / C) * 1000;
-  // Inside bounds of the surface?
-  const inside = Math.abs(pt[0]) <= room.w / 2 + 1e-6 && pt[1] >= -1e-6 && pt[1] <= room.h + 1e-6 && Math.abs(pt[2]) <= room.d / 2 + 1e-6;
-  return inside ? { surface, point: pt, delayMs, levelDb: 20 * Math.log10(direct / reflected) } : null;
+  return { point: pt, delayMs: ((reflected - direct) / C) * 1000, levelDb: 20 * Math.log10(direct / reflected) };
 }
 
-export function sbir(room, speakerPos) {
-  const dFront = speakerPos[2] + room.d / 2;
-  const dSide = room.w / 2 - Math.abs(speakerPos[0]);
-  const dFloor = speakerPos[1];
+/** `dists` = { front, side, floor } boundary distances in metres. */
+export function sbir(dists) {
+  const { front: dFront, side: dSide, floor: dFloor } = dists;
   const f = (dist) => C / (4 * Math.max(dist, 0.01));
   return { front: { d: dFront, f: f(dFront) }, side: { d: dSide, f: f(dSide) }, floor: { d: dFloor, f: f(dFloor) } };
 }
