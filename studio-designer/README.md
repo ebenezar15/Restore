@@ -15,7 +15,7 @@ connection once it's loaded.
 | **Single file (easiest)** | Open `dist/RoomTone-standalone.html` by double-clicking it. Everything is inlined, so it works from disk with no connection. |
 | **Installable app (PWA)** | Serve the folder over http(s), e.g. `npx http-server studio-designer` or GitHub Pages. Then use "Install app" / "Add to Home Screen". A service worker caches everything, so the app keeps working offline afterwards. |
 
-| **Mac app** | Download `RoomTone-…-mac-universal.dmg` from the repository's **Actions** tab (workflow *RoomTone macOS app* → latest run → *Artifacts*), open it and drag **RoomTone** to Applications. See [Mac app](#mac-app) below. |
+| **Mac app** | Download `RoomTone-…-mac-universal.dmg` from the repository's **Releases** page, open it and drag **RoomTone** to Applications. See [Mac app](#mac-app) below. |
 
 The camera needs `https://` or `localhost` (in the Mac app it works after you allow camera access). On phones, "Upload photo" also opens the native camera.
 
@@ -24,7 +24,7 @@ The camera needs `https://` or `localhost` (in the Mac app it works after you al
 `desktop/` wraps the offline single-file app in a native Mac window (Electron) with a menu bar, Save dialogs for exports, camera permission and its own Dock icon. It runs on Apple Silicon and Intel Macs and needs no internet.
 
 **Install**
-1. Get the `.dmg`: GitHub → **Actions** → *RoomTone macOS app* → the latest successful run → **Artifacts** → `RoomTone-mac`. (Pushing a tag such as `roomtone-v1.0.0` also publishes it as a Release.)
+1. Get the `.dmg` from the repository's **Releases** page (`RoomTone-…-mac-universal.dmg`). A release is published automatically for each new `version` in `desktop/package.json`; every build is also available under **Actions** → *RoomTone macOS app* → **Artifacts**.
 2. Open the `.dmg` and drag **RoomTone** into **Applications**.
 3. First launch only: the app is not notarised by Apple, so right-click (or Control-click) RoomTone → **Open** → **Open**. If macOS says the app is damaged, run this once in Terminal:
 
