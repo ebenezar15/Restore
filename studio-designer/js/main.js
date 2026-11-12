@@ -187,10 +187,10 @@ function buildRoom() {
   roomGroup.add(fg); wallObjs.floor = fg;
   // walls
   const walls = {
-    front: { len: w, pos: [0, h / 2, -d / 2], rot: 0, shell: [0, h / 2, -d / 2 - t / 2] },
-    back: { len: w, pos: [0, h / 2, d / 2], rot: Math.PI, shell: [0, h / 2, d / 2 + t / 2] },
-    left: { len: d, pos: [-w / 2, h / 2, 0], rot: Math.PI / 2, shell: [-w / 2 - t / 2, h / 2, 0] },
-    right: { len: d, pos: [w / 2, h / 2, 0], rot: -Math.PI / 2, shell: [w / 2 + t / 2, h / 2, 0] },
+    front: { len: w, pos: [0, h / 2, -d / 2], rot: 0, shell: [0, h / 2, -d / 2 - t / 2 - 0.004] },
+    back: { len: w, pos: [0, h / 2, d / 2], rot: Math.PI, shell: [0, h / 2, d / 2 + t / 2 + 0.004] },
+    left: { len: d, pos: [-w / 2, h / 2, 0], rot: Math.PI / 2, shell: [-w / 2 - t / 2 - 0.004, h / 2, 0] },
+    right: { len: d, pos: [w / 2, h / 2, 0], rot: -Math.PI / 2, shell: [w / 2 + t / 2 + 0.004, h / 2, 0] },
   };
   for (const [name, W] of Object.entries(walls)) {
     const g = new THREE.Group(); g.userData.surface = name;
@@ -198,7 +198,7 @@ function buildRoom() {
     if (S.xray) { wm = wm.clone(); wm.transparent = true; wm.opacity = 0.28; wm.depthWrite = false; }
     const p = mk(new THREE.PlaneGeometry(W.len, h), wm, name);
     p.position.set(...W.pos); p.rotation.y = W.rot; g.add(p);
-    const sh = mk(new THREE.BoxGeometry(W.len + 2 * t + 0.002, h + 0.002, t), S.xray ? new THREE.MeshStandardMaterial({ color: '#c9c5bd', transparent: true, opacity: 0.12, depthWrite: false }) : shellMat, name);
+    const sh = mk(new THREE.BoxGeometry(W.len + 2 * t + 0.01, h + 0.002, t), S.xray ? new THREE.MeshStandardMaterial({ color: '#c9c5bd', transparent: true, opacity: 0.12, depthWrite: false }) : shellMat, name);
     sh.position.set(...W.shell); sh.rotation.y = W.rot; sh.castShadow = true; g.add(sh);
     roomGroup.add(g); wallObjs[name] = g;
   }
@@ -416,12 +416,16 @@ function placeItem(it, loc, i = 0, n = 1, extra = {}) {
       if (def.mount === 'wall') return placeOnWall(it, 'front', spread(n, i, w, it.size[0]));
       if (def.mount === 'ceiling') return placeItem(it, 'ceiling', i, n);
       if (def.mount === 'corner') return placeInCorner(it, ['FL', 'FR', 'BR', 'BL'][i % 4]);
+      if (BACK_WALL_TYPES.has(it.type)) { placeOnWall(it, 'back', spread(n, i, R().w, it.size[0], 0.3)); it.pos[1] = 0; return; }
+      if (SIDE_WALL_TYPES.has(it.type)) { placeOnWall(it, i % 2 ? 'right' : 'left', spread(Math.ceil(n / 2), Math.floor(i / 2), R().d * 0.6, it.size[0], 0.3) + R().d * 0.15); it.pos[1] = 0; return; }
       it.pos = defaultFloorSpot(i, n, it.size);
       it.rot = [0, 180, 0];
     }
   }
 }
 
+const BACK_WALL_TYPES = new Set(['sofa', 'bookshelf', 'piano', 'partition']);
+const SIDE_WALL_TYPES = new Set(['rack', 'keyboard', 'amp', 'plant', 'pc', 'floorLamp', 'tubeTrap', 'lightBar', 'guitar']);
 function speakerLayout() {
   const L = getListener(), E = ear(L), { w } = R();
   const spreadW = clamp(w * 0.38, 0.9, 1.8);
@@ -759,7 +763,7 @@ function treatedCheck(pts) {
 
 // ===================================================================== views & cameras
 function frameOrtho(cam, view, aspect, spanOverride) {
-  const { w, d, h } = R(), m = 1.2;
+  const { w, d, h } = R(), m = 1.7;
   let sw, sh, cy = h / 2;
   if (view === 'top') { sw = w + m; sh = d + m; cy = 0; }
   else if (view === 'front' || view === 'back') { sw = w + m; sh = h + m * 0.8; }
@@ -860,8 +864,8 @@ function renderSectionCtl() {
   if (!orthoCams[S.view]) { el.hidden = true; return; }
   el.hidden = false;
   const lab = S.view === 'top' ? 'Cut height' : 'Section depth';
-  const { w, d, h } = R();
-  const len = S.view === 'top' ? h : S.view === 'front' || S.view === 'back' ? d : w;
+  const { w, d, h: rh } = R();
+  const len = S.view === 'top' ? rh : S.view === 'front' || S.view === 'back' ? d : w;
   el.innerHTML = '';
   const out = h('span', {}, fmt(len * S.section[S.view]));
   el.append(h('label', {}, lab), h('input', { type: 'range', min: 0.05, max: 1, step: 0.01, value: S.section[S.view], oninput: (e) => { S.section[S.view] = +e.target.value; out.textContent = fmt(len * S.section[S.view]); } }), out);
@@ -872,7 +876,9 @@ function renderOnce(cam, view, vp) {
   renderer.clippingPlanes = clipFor(view);
   const showTags = view === 'top';
   for (const s of roomGroup.children) if (s.userData.tag) s.visible = showTags;
-  tc.getHelper().visible = view === S.view && !!tc.object;
+  tc.getHelper().visible = view === S.view && !!tc.object && view !== 'walk';
+  helpers.visible = view !== 'walk';
+  const dimsObj = roomGroup.getObjectByName('dims'); if (dimsObj) dimsObj.visible = view !== 'walk';
   if (vp) { renderer.setViewport(...vp); renderer.setScissor(...vp); }
   renderer.render(scene, cam);
 }
@@ -1176,7 +1182,9 @@ function exportCSV() {
 }
 
 /** Render any view to an image (used by PNG + PDF export). */
-function renderToDataURL({ view = 'persp', scene: sc = null, width = 1600, height = 1000, orthoSpan = null, type = 'image/jpeg', quality = 0.92, hideHelpers = true, pixelRatio = 1 } = {}) {
+function renderToDataURL({ view = 'persp', scene: sc = null, width = 1600, height = 1000, orthoSpan = null, type = 'image/jpeg', quality = 0.92, hideHelpers = true, pixelRatio = 1, bg = null } = {}) {
+  const prevBg = scene.background;
+  if (bg) scene.background = new THREE.Color(bg);
   const prevSize = renderer.getSize(new THREE.Vector2()), prevPR = renderer.getPixelRatio();
   const helperVis = [helpers.visible, tc.getHelper().visible, measureGroup.visible];
   if (hideHelpers) { helpers.visible = !!sc?.keepHelpers || S.showReflections && view !== 'persp' && false; tc.getHelper().visible = false; }
@@ -1200,6 +1208,7 @@ function renderToDataURL({ view = 'persp', scene: sc = null, width = 1600, heigh
   [helpers.visible, , measureGroup.visible] = helperVis;
   renderer.setPixelRatio(prevPR);
   renderer.setSize(prevSize.x, prevSize.y, false);
+  scene.background = prevBg;
   onResize();
   return url;
 }
@@ -1556,7 +1565,7 @@ function renderProps() {
   }
   const it = items[0], def = defOf(it.type);
   const area = areaOf(def, it.size), am = AC.ACOUSTIC_MATERIALS[it.acoustic];
-  pane.append(
+  paneAppend(pane,
     h('div', { class: 'pane-title' }, h('img', { src: S.thumbs[it.type] || '' }), h('div', {}, h('input', { class: 'name-input', value: it.name, onchange: (e) => { it.name = e.target.value; commit(); renderLayers(); } }), h('small', {}, def.cat))),
     def.desc ? h('p', { class: 'desc' }, def.desc) : null,
     actionRow(items),
@@ -1587,6 +1596,7 @@ function renderProps() {
       h('p', { class: 'hint' }, `Effective face area ${area.toFixed(2)} m² · NRC ≈ ${am ? ((am.a[1] + am.a[2] + am.a[3] + am.a[4]) / 4).toFixed(2) : '0'} · adds ${(area * (am?.a[2] || 0)).toFixed(2)} sabins @ 500 Hz${AC.DIFFUSIVE.has(it.acoustic) ? ' · diffusive' : ''}`)),
   );
 }
+function paneAppend(pane, ...kids) { pane.append(...kids.filter(Boolean)); }
 function actionRow(items) {
   const one = items[0];
   return h('div', { class: 'action-row' },
@@ -1643,7 +1653,7 @@ function renderAcoustics() {
   const A = analysis(); S.lastAnalysis = A;
   pane.innerHTML = '';
   const rt = A.rt;
-  pane.append(
+  paneAppend(pane,
     h('div', { class: 'kpis' },
       kpi('RT60 (mid)', rt.mid.toFixed(2) + ' s', `target ${rt.target.toFixed(2)} s`, Math.abs(rt.mid - rt.target) < rt.target * 0.35 ? 'good' : rt.mid > rt.target ? 'bad' : 'warn'),
       kpi('Volume', rt.V.toFixed(1) + ' m³', `${(rt.V * 35.315).toFixed(0)} ft³`),
@@ -1820,6 +1830,7 @@ const ACTIONS = {
   snap: () => { S.snap = !S.snap; $('[data-action="snap"]').classList.toggle('active', S.snap); applySnap(); toast(`Snapping ${S.snap ? 'on' : 'off'}`); },
   xray: () => { S.xray = !S.xray; $('[data-action="xray"]').classList.toggle('active', S.xray); buildRoom(); },
   clearMeasure: () => { S.measurements = []; drawMeasurements(); },
+  closeDrawers: () => closeDrawers(),
   toggleLeft: () => { document.body.classList.toggle('show-left'); document.body.classList.remove('show-right'); },
   toggleRight: () => { document.body.classList.toggle('show-right'); document.body.classList.remove('show-left'); },
 };

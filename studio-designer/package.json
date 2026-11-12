@@ -1,0 +1,12 @@
+{
+  "name": "roomtone-studio-designer",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Offline 3D studio & acoustic room designer",
+  "type": "module",
+  "scripts": {
+    "start": "npx --yes http-server -p 8080 -c-1 .",
+    "build": "node tools/build-standalone.mjs"
+  },
+  "devDependencies": { "esbuild": "0.24.0" }
+}

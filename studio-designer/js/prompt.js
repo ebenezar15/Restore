@@ -153,6 +153,8 @@ export function runPrompt(text, api) {
     let s = ' ' + raw.toLowerCase().replace(/[!?]/g, '').replace(/\s+/g, ' ') + ' ';
     const verbMatch = s.match(/\b(add|place|put|insert|create|make|paint|colou?r|set|change|move|shift|nudge|rotate|turn|spin|delete|remove|clear|select|show|view|go to|switch|dim|brighten|treat|mirror|duplicate|copy|clone|export|save|undo|redo|analy[sz]e|check|reset|new|resize|scale|hide)\b/);
     let verb = verbMatch ? verbMatch[1] : null;
+    if (!verb && /\blights?\b|\blighting\b/.test(s) && /\b(on|off|warm|cool|cold|daylight|mood|rgb|dim|bright)\b|#|\b(red|blue|purple|green|pink|amber|orange)\b/.test(s)) verb = 'set';
+    else if (!verb && !lastVerb && findColor(s) && !/\b(\d+|a|an)\s/.test(s)) verb = 'paint';
     const isAdd = (v) => ['add', 'place', 'put', 'insert', 'create'].includes(v);
     if (!verb && lastVerb) {
       const item = findItem(stripLoc(s));
@@ -293,7 +295,7 @@ function handle(s, verb, api) {
     if (!found) return { ok: false, msg: 'Which item? e.g. "add 2 absorbers on the left wall"' };
     let loc = findLocation(s);
     let qty = findQty(s, found.word);
-    const plural = new RegExp(`\\b${found.word}s\\b`).test(s);
+    const plural = /s$/.test(found.word) || new RegExp(`\\b${found.word}(e?s)\\b`).test(s);
     if (!qty) qty = loc === 'corners' ? 4 : loc === 'frontCorners' || loc === 'backCorners' || loc === 'sides' ? 2 : loc === 'reflections' ? 0 : found.type === 'monitor' && plural ? 2 : plural ? 2 : 1;
     const color = findColor(s.replace(/\bwood\b|\boak\b|\bwalnut\b/g, (m) => (found.type === 'desk' ? m : m)));
     const size = findSize(s);

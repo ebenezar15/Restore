@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>RoomTone Studio Designer</title>
+  <meta name="description" content="Offline 3D studio & acoustic room designer: treatment, aesthetics, analysis and PDF export." />
+  <meta name="theme-color" content="#15171b" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <link rel="stylesheet" href="css/app.css" />
+  <script type="importmap">
+    { "imports": { "three": "./vendor/three/three.module.min.js", "three/addons/": "./vendor/three/addons/" } }
+  </script>
+</head>
+<body>
+  <div id="loading"><div class="spinner"></div><p>Loading RoomTone…</p></div>
+  <div id="app">
+    <header id="topbar">
+      <button class="icon-btn mobile-only" data-action="toggleLeft" title="Library & room">☰</button>
+      <div class="brand"><img src="icon.svg" alt="" /><span>RoomTone</span><small>Studio Designer</small></div>
+
+      <div class="group">
+        <div class="menu">
+          <button class="btn" data-action="menu">File ▾</button>
+          <div class="menu-list">
+            <button data-action="new">New project</button>
+            <button data-action="open">Open project file…</button>
+            <button data-action="save">Save project file <kbd>Ctrl S</kbd></button>
+          </div>
+        </div>
+        <div class="menu">
+          <button class="btn" data-action="menu">Import ▾</button>
+          <div class="menu-list">
+            <button data-action="scan">📷 Camera scan & capture…</button>
+            <button data-action="importPhotoWall">Photo (walls, colours, art)…</button>
+            <button data-action="importModel">3D model / LiDAR room scan (GLB, OBJ)…</button>
+            <button data-action="importUnderlay">Floor-plan image (trace)…</button>
+          </div>
+        </div>
+        <div class="menu">
+          <button class="btn" data-action="menu">Export ▾</button>
+          <div class="menu-list">
+            <button data-action="pdf">📄 PDF drawings & report…</button>
+            <button data-action="png">High-res render of this view (PNG)</button>
+            <button data-action="pngAll">Every view & scene as PNG</button>
+            <button data-action="glb">3D model (GLB)</button>
+            <button data-action="obj">3D model (OBJ)</button>
+            <button data-action="csv">Item schedule (CSV)</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="group">
+        <button class="icon-btn" id="undo-btn" data-action="undo" title="Undo (Ctrl+Z)">↶</button>
+        <button class="icon-btn" id="redo-btn" data-action="redo" title="Redo (Ctrl+Y)">↷</button>
+      </div>
+
+      <div class="group tools">
+        <button class="icon-btn" data-tool="select" title="Select (V)"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M5 3l14 8-6 2-3 6z"/></svg></button>
+        <button class="icon-btn" data-tool="move" title="Move (M)"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 2v20M2 12h20M12 2l-3 3M12 2l3 3M12 22l-3-3M12 22l3-3M2 12l3-3M2 12l3 3M22 12l-3-3M22 12l-3 3"/></svg></button>
+        <button class="icon-btn" data-tool="rotate" title="Rotate (R)"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M20 12a8 8 0 1 1-3-6.2M20 4v5h-5"/></svg></button>
+        <button class="icon-btn" data-tool="scale" title="Scale / resize (S)"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 20h7v-7H4zM14 4h6v6M20 4l-8 8"/></svg></button>
+        <button class="icon-btn" data-tool="measure" title="Tape measure (T)"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 17L17 3l4 4L7 21zM7 13l2 2M10 10l2 2M13 7l2 2"/></svg></button>
+        <button class="icon-btn active" data-action="snap" title="Snap to grid / 15°">⌗</button>
+        <button class="icon-btn" data-action="xray" title="X-ray walls">◫</button>
+      </div>
+
+      <div class="group views">
+        <button class="vbtn" data-view="persp" title="3D (1)">3D</button>
+        <button class="vbtn" data-view="top" title="Plan (2)">Plan</button>
+        <button class="vbtn" data-view="front" title="Front elevation (3)">Front</button>
+        <button class="vbtn" data-view="back" title="Back elevation (4)">Back</button>
+        <button class="vbtn" data-view="left" title="Left elevation (5)">Left</button>
+        <button class="vbtn" data-view="right" title="Right elevation (6)">Right</button>
+        <button class="vbtn" data-view="quad" title="Quad view (7)">Quad</button>
+        <button class="vbtn" data-view="walk" title="Walkthrough (8)">Walk</button>
+      </div>
+
+      <div class="group right">
+        <button class="btn accent" data-action="treat" title="Place treatment automatically">✨ Auto-treat</button>
+        <button class="btn" data-action="pdf">PDF</button>
+        <button class="icon-btn" data-action="help" title="Help (?)">?</button>
+        <button class="icon-btn mobile-only" data-action="toggleRight" title="Properties & acoustics">⚙</button>
+      </div>
+    </header>
+
+    <aside id="left" class="side">
+      <nav class="tabs">
+        <button class="tab" data-tab="library">Library</button>
+        <button class="tab" data-tab="room">Room</button>
+        <button class="tab" data-tab="scenes">Scenes</button>
+      </nav>
+      <div class="pane" id="pane-library"></div>
+      <div class="pane" id="pane-room" hidden></div>
+      <div class="pane" id="pane-scenes" hidden></div>
+    </aside>
+
+    <main id="viewport-wrap">
+      <div id="viewport"></div>
+      <div id="view-label">3D Perspective</div>
+      <div id="quad-labels" hidden><span>3D</span><span>Plan</span><span>Front</span><span>Left</span></div>
+      <div id="section-ctl" hidden></div>
+      <div id="walk-pad" hidden>
+        <p>Drag to look · WASD / arrows to walk · Q/E down/up</p>
+        <div class="pad">
+          <span></span><button data-walk="fwd">▲</button><span></span>
+          <button data-walk="left">◀</button><button data-walk="back">▼</button><button data-walk="right">▶</button>
+        </div>
+      </div>
+      <button class="btn small measure-clear" data-action="clearMeasure" title="Clear measurements">Clear measurements</button>
+      <div id="prompt-bar">
+        <div id="prompt-log"></div>
+        <div id="prompt-suggest"></div>
+        <div class="prompt-row">
+          <span class="spark">✦</span>
+          <input id="prompt" autocomplete="off" placeholder="Describe a change… e.g. “add bass traps in all corners and a cloud above the listener”  ( / )" />
+          <button id="prompt-go" class="btn primary">Do it</button>
+        </div>
+      </div>
+      <div id="toasts"></div>
+    </main>
+
+    <aside id="right" class="side">
+      <nav class="tabs">
+        <button class="tab" data-tab="props">Properties</button>
+        <button class="tab" data-tab="acoustics">Acoustics</button>
+        <button class="tab" data-tab="layers">Layers</button>
+      </nav>
+      <div class="pane" id="pane-props"></div>
+      <div class="pane" id="pane-acoustics" hidden></div>
+      <div class="pane" id="pane-layers" hidden></div>
+    </aside>
+
+    <footer id="statusbar">
+      <span id="status-sel"></span>
+      <span class="spacer"></span>
+      <span id="save-state">Saved offline ✓</span>
+      <span id="net"></span>
+    </footer>
+  </div>
+  <div id="modal" hidden></div>
+  <div class="scrim" data-action="closeDrawers"></div>
+
+  <script src="vendor/jspdf.umd.min.js"></script>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

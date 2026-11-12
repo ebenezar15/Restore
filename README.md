@@ -36,3 +36,12 @@ The sparkle button shows a random restoration story.
 
 - Quotations marked WEB are from the World English Bible (public domain); other references are summarised.
 - The app respects `prefers-reduced-motion`.
+
+---
+
+## RoomTone Studio Designer
+
+This repository also contains an offline 3D studio & acoustic room designer in
+[`studio-designer/`](studio-designer/). Open
+`studio-designer/dist/RoomTone-standalone.html` directly in a browser, or see its
+[README](studio-designer/README.md).
