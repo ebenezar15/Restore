@@ -9,6 +9,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
 import { CATALOG, CATEGORIES, BY_TYPE, buildItem, areaOf, defaultParams, PROFILES, LATHES } from './catalog.js';
 import { openShapeBuilder } from './shapebuilder.js';
+import { STUDIO_MATERIALS, SMAT, MAT_CATS, ASSEMBLIES, LAYER_GROUP, estimateIsolation, openingRw, compositeRw, layerMass, TL_BANDS } from './studiomaterials.js';
 import { openModeCalculator, modeReport, computeModes, speedOfSound, psi, divergeColor, treatmentFor, modalResponse, logFreqs, describeMode, noteOf } from './modes.js';
 import { mat, FINISHES, FINISH_CATS, FABRIC_COLORS, finishSwatch, isGlass, imageTexture, COLOR_NAMES } from './materials.js';
 import * as AC from './acoustics.js';
@@ -290,11 +291,13 @@ function buildRoom() {
   const fg = new THREE.Group(); fg.userData.surface = 'floor';
   const floorShape = new THREE.Shape(room.poly.map((p) => new THREE.Vector2(p.x, -p.z)));
   const floor = mk(new THREE.ShapeGeometry(floorShape), surfaceMaterial('floor', { repeat: [1 / 1.2, 1 / 1.2] }), 'floor');
-  floor.rotation.x = -Math.PI / 2; fg.add(floor);
+  floor.rotation.x = -Math.PI / 2; floor.userData.layer = 'surfaces'; fg.add(floor);
   const slabShape = new THREE.Shape(ring.map(([x, z]) => new THREE.Vector2(x, -z)));
   const slabGeo = new THREE.ExtrudeGeometry(slabShape, { depth: 0.15, bevelEnabled: false });
   slabGeo.rotateX(-Math.PI / 2); slabGeo.translate(0, -0.152, 0);
-  fg.add(mk(slabGeo, shellMat, 'floor'));
+  const floorAsm = surf('floor').assembly?.layers || [];
+  if (!floorAsm.length) { const slab = mk(slabGeo, shellMat, 'floor'); slab.userData.layer = 'structure'; fg.add(slab); }
+  else addPlanAssembly(fg, floorAsm, 'floor');
   roomGroup.add(fg); wallObjs.floor = fg;
   // walls (each edge: inner face with openings, outer shell, top cap, reveals)
   E.forEach((e, i) => {
@@ -304,12 +307,14 @@ function buildRoom() {
     const inner = (u) => [e.a[0] + e.dir[0] * u, e.a[1] + e.dir[1] * u];
     const oA = ring[i], oB = ring[(i + 1) % ring.length];
     const outer = (u) => [oA[0] + (oB[0] - oA[0]) * (u / e.len), oA[1] + (oB[1] - oA[1]) * (u / e.len)];
-    g.add(mk(wallFaceGeometry(e, top, holes, inner, !!photo), surfaceMaterial(e.id, { xray: true }), e.id));
+    const face = mk(wallFaceGeometry(e, top, holes, inner, !!photo), surfaceMaterial(e.id, { xray: true }), e.id); face.userData.layer = 'surfaces'; g.add(face);
+    const asm = sf.assembly?.layers || [];
     const og = wallFaceGeometry(e, top, holes, outer, false);
     const idx = og.index.array; for (let k = 0; k < idx.length; k += 3) { const tmp = idx[k + 1]; idx[k + 1] = idx[k + 2]; idx[k + 2] = tmp; }
     og.computeVertexNormals();
     const glassWall = isGlass(sf.finish);
-    const shell = mk(og, glassWall ? surfaceMaterial(e.id) : shellMat, e.id); shell.castShadow = !glassWall; g.add(shell);
+    const shell = mk(og, glassWall ? surfaceMaterial(e.id) : shellMat, e.id); shell.castShadow = !glassWall; shell.userData.layer = 'structure';
+    if (!asm.length) g.add(shell); else addWallAssembly(g, e, asm, holes, top);
     const quads = [];
     for (let k = 0; k < top.length - 1; k++) {
       const [u0, y0] = top[k], [u1, y1] = top[k + 1], i0 = inner(u0), i1 = inner(u1), o0 = outer(u0), o1 = outer(u1);
@@ -324,13 +329,13 @@ function buildRoom() {
       const dh = Math.min(sf.dado.height, Math.min(...top.map((q) => q[1])) - 0.01);
       const dHoles = holes.filter((o) => o.y0 < dh - 0.02).map((o) => ({ ...o, y1: Math.min(o.y1, dh - 0.005), shape: o.y1 > dh ? 'rect' : o.shape }));
       const off = (u) => { const q = inner(u); return [q[0] + e.n[0] * 0.004, q[1] + e.n[1] * 0.004]; };
-      g.add(mk(wallFaceGeometry(e, [[0, dh], [e.len, dh]], dHoles, off, false), mat(sf.dado.color, sf.dado.finish), e.id));
+      const dado = mk(wallFaceGeometry(e, [[0, dh], [e.len, dh]], dHoles, off, false), mat(sf.dado.color, sf.dado.finish), e.id); dado.userData.layer = 'surfaces'; g.add(dado);
       if (sf.dado.rail !== false) {
         const rail = new THREE.Mesh(new THREE.BoxGeometry(e.len, 0.045, 0.025), mat(sf.dado.color, sf.dado.finish));
-        rail.position.set(e.mid[0] + e.n[0] * 0.0125, dh, e.mid[1] + e.n[1] * 0.0125); rail.rotation.y = -Math.atan2(e.dir[1], e.dir[0]); rail.userData.surface = e.id; g.add(rail);
+        rail.position.set(e.mid[0] + e.n[0] * 0.0125, dh, e.mid[1] + e.n[1] * 0.0125); rail.rotation.y = -Math.atan2(e.dir[1], e.dir[0]); rail.userData.surface = e.id; rail.userData.layer = 'surfaces'; g.add(rail);
       }
     }
-    if (quads.length) g.add(mk(quadsGeometry(quads), glassWall ? mat('#2a2b2e', 'blackSteel', { side: THREE.DoubleSide }) : shellMat, e.id));
+    if (quads.length && !asm.length) { const q = mk(quadsGeometry(quads), glassWall ? mat('#2a2b2e', 'blackSteel', { side: THREE.DoubleSide }) : shellMat, e.id); q.userData.layer = 'structure'; g.add(q); }
     roomGroup.add(g); wallObjs[e.id] = g;
   });
   // ceiling (flat, sloped, pitched, vaulted or domed)
@@ -339,7 +344,9 @@ function buildRoom() {
   for (const tri of tris) for (const [x, y, z] of tri) { cv.push(x, y, z); cuv.push(x / 1.2, z / 1.2); }
   const cgeo = new THREE.BufferGeometry();
   cgeo.setAttribute('position', new THREE.Float32BufferAttribute(cv, 3)); cgeo.setAttribute('uv', new THREE.Float32BufferAttribute(cuv, 2)); cgeo.computeVertexNormals();
-  cg.add(mk(cgeo, surfaceMaterial('ceiling', { side: THREE.DoubleSide }), 'ceiling'));
+  const ceilMesh = mk(cgeo, surfaceMaterial('ceiling', { side: THREE.DoubleSide }), 'ceiling'); ceilMesh.userData.layer = 'surfaces'; cg.add(ceilMesh);
+  const ceilAsm = surf('ceiling').assembly?.layers || [];
+  if (ceilAsm.length) addPlanAssembly(cg, ceilAsm, 'ceiling');
   roomGroup.add(cg); wallObjs.ceiling = cg;
   // grid clipped to the floor outline
   if (S.showGrid) {
@@ -348,10 +355,10 @@ function buildRoom() {
     for (let x = -w / 2; x <= w / 2 + 1e-6; x += step) for (let z = -d / 2; z < d / 2 - 1e-6; z += seg) add(x, z, x, Math.min(z + seg, d / 2));
     for (let z = -d / 2; z <= d / 2 + 1e-6; z += step) for (let x = -w / 2; x < w / 2 - 1e-6; x += seg) add(x, z, Math.min(x + seg, w / 2), z);
     const grid = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: '#000000', transparent: true, opacity: 0.12 }));
-    grid.userData.helper = true; roomGroup.add(grid);
+    grid.userData.helper = true; grid.userData.layer = 'annotations'; roomGroup.add(grid);
   }
   if (S.showDims) {
-    const dims = new THREE.Group(); dims.userData.helper = true; dims.name = 'dims';
+    const dims = new THREE.Group(); dims.userData.helper = true; dims.name = 'dims'; dims.userData.layer = 'annotations';
     const rect = G.isRect(room);
     for (const e of E) {
       if (e.len < 0.6 && !rect) continue;
@@ -377,7 +384,9 @@ function buildRoom() {
   applyAmbient();
   buildUnderlay();
   drawShapeHandles();
+  applyRoomLayers();
 }
+function applyRoomLayers() { roomGroup.traverse((o) => { if (o.userData.layer) o.visible = layerOn(o.userData.layer); }); }
 function applyAmbient() {
   const a = R().ambient ?? 0.8;
   hemi.intensity = 0.25 + a * 0.55;
@@ -955,7 +964,7 @@ function updateHelpers(light = false) {
     if (bb.min.y > 0.05) g.add(dimLine([c.x, 0, c.z], [c.x, bb.min.y, c.z], fmt(bb.min.y), [0, 0, 0], '#ffd166'));
     helpers.add(g);
   }
-  if (S.showReflections) {
+  if (S.showReflections && layerOn('annotations')) {
     const pts = reflectionPoints(), sp = getSpeakers(), E = ear(getListener());
     const treated = treatedCheck(pts);
     pts.forEach((p, i) => {
@@ -1053,7 +1062,7 @@ function cutaway(cam, view) {
   const hiddenEdges = view === 'persp' ? wallEdges().filter((e) => hidden[e.id]) : [];
   for (const it of P().items) {
     const o = objMap.get(it.id); if (!o) continue;
-    let vis = !it.hidden;
+    let vis = !it.hidden && layerOn(catLayer(defOf(it.type)));
     if (vis && hiddenEdges.length) {
       const m = defOf(it.type).mount;
       if ((m === 'wall' || m === 'corner') && hiddenEdges.some((e) => G.distToSegment(it.pos[0], it.pos[2], e.a, e.b).d < 0.45)) vis = false;
@@ -1791,6 +1800,7 @@ function surfaceEditor(name, compact = false) {
     materialField('Material', sf.finish, sf.color, ({ finish, color }) => { sf.finish = finish; if (color) sf.color = color; const ac = FINISHES[finish]?.ac; if (ac) sf.acoustic = name === 'floor' && ac === 'plywood' ? 'wood_floor' : ac; buildRoom(); commit(); renderPanels(); }, { cats: name === 'floor' ? ['Flooring', 'Wood', 'Stone & masonry', 'Tile', 'Fabric & upholstery', 'Paint & plaster', 'Metal', 'Other'] : null }),
     colorField('Colour', sf.color, (c, done) => { sf.color = c; buildRoom(); if (done) commit(); }, { fabric: ['Fabric & upholstery', 'Wallcovering'].includes(FINISHES[sf.finish]?.cat) }),
     name !== 'floor' && name !== 'ceiling' ? dadoEditor(name, sf) : null,
+    assemblyEditor(name),
     selectField('Acoustic material', sf.acoustic, acousticOptions(), (v) => { sf.acoustic = v; commit(); }),
     h('div', { class: 'row gap' },
       h('button', { class: 'btn small', onclick: () => openScanner(scannerApi(), { target: name }) }, '📷 Photo from camera'),
@@ -2141,6 +2151,7 @@ function paramFields(it, def) {
     const v = it.params[k] ?? p.default;
     const set = (val) => { updateItem(it, { params: { [k]: val } }); commit(); };
     if (p.type === 'hidden') continue;
+    if (p.type === 'smat') { out.push(h('label', { class: 'field' }, h('span', {}, p.label), matSelect(v, (val) => { const sm = SMAT[val]; const patch = { params: { [k]: val } }; if (it.type === 'sheet' && sm) { patch.size = [it.size[0], it.size[1], Math.max(sm.t, 0.002)]; patch.name = sm.name; if (sm.ac) patch.acoustic = sm.ac; } updateItem(it, patch); commit(); renderProps(); }, p.kinds))); continue; }
     if (p.type === 'finish') { out.push(materialField(p.label, v, it.color2 || '#888888', ({ finish, color }) => { updateItem(it, { params: { [k]: finish }, ...(color ? { color2: color } : {}) }); commit(); renderProps(); })); continue; }
     if (p.type === 'bool') out.push(h('label', { class: 'check' }, h('input', { type: 'checkbox', checked: !!v, onchange: (e) => set(e.target.checked) }), ' ' + p.label));
     else if (p.type === 'select') out.push(selectField(p.label, v, p.options.map((o) => [o, String(o)]), (val) => set(typeof p.default === 'number' ? +val : val)));
@@ -2157,6 +2168,7 @@ function paramFields(it, def) {
 function renderLayers() {
   const pane = $('#pane-layers'); if (!pane || S.rightTab !== 'layers') return;
   pane.innerHTML = '';
+  pane.append(section('Visibility layers', layerControls()));
   const groups = {};
   for (const it of P().items) (groups[defOf(it.type).cat] ||= []).push(it);
   if (!P().items.length) pane.append(h('p', { class: 'hint pad' }, 'No items yet.'));
@@ -2206,6 +2218,7 @@ function renderAcoustics() {
       h('div', { class: 'row gap wrap' },
         h('button', { class: 'btn small primary', onclick: () => { addMany('absorber', { qty: 0, loc: 'reflections' }); addMany('cloud', { qty: 0, loc: 'reflections' }); renderAcoustics(); } }, 'Treat reflection points'),
         h('label', { class: 'check' }, h('input', { type: 'checkbox', checked: S.showReflections, onchange: (e) => { S.showReflections = e.target.checked; updateHelpers(); } }), ' Show in 3D'))),
+    isolationSection(),
     A.sbir.length ? section('Boundary interference (SBIR)', h('div', { class: 'kv' }, A.sbir.map((s) => kvRow(s.name, `front ${s.front.f.toFixed(0)} Hz · side ${s.side.f.toFixed(0)} Hz · floor ${s.floor.f.toFixed(0)} Hz`))), h('p', { class: 'hint' }, 'Quarter-wavelength cancellation frequencies from the nearest boundaries.')) : null,
   );
 }
@@ -2294,6 +2307,8 @@ function promptApi() {
     openPdf: () => openPdfDialog(exportApi()), exportGLB, openModes: () => openModes(), showAcoustics: () => { S.rightTab = 'acoustics'; renderRightTabs(); document.body.classList.add('show-right'); },
     findTemplate: (s) => Object.keys(TEMPLATES).find((k) => s.includes(k.toLowerCase()) || s.includes(k.toLowerCase().split(' ')[0] + ' ' + (k.toLowerCase().split(' ')[1] || ''))),
     applyTemplate,
+    setLayers: (patch, only = false) => { if (patch === 'all') return setLayers(LAYER_PRESETS['Show everything']()); if (only) { const all = Object.fromEntries(LAYERS.map(([k]) => [k, false])); setLayers({ ...all, ...patch, structure: patch.structure ?? Object.keys(patch).some((k) => CONSTRUCTION_LAYERS.includes(k)) }); } else setLayers(patch); },
+    applyConstructionSet,
     setShape: (key) => { changeShape(() => G.applyShape(R(), key)); return G.SHAPES[key]?.label; },
     setCeiling: (patch) => { Object.assign(R().ceiling, patch); if (patch.h != null) R().h = patch.h; delete R().ceiling.h; refitItemsToRoom(); buildRoom(); rebuildAllItems(); commit(); renderRoom(); return G.CEILINGS[R().ceiling.type]; },
     curveWall: (name, sag) => { const e = edgeFor(name); if (!e) return false; changeShape(() => { const src = surf(e.id); const ids = G.curveEdge(R(), e.i, sag) || []; for (const id of ids) R().surfaces[id] = { ...JSON.parse(JSON.stringify(src)) }; }); return true; },
@@ -2345,6 +2360,350 @@ function shapeApi() {
   };
 }
 function openBuilder(opts = {}) { openShapeBuilder(shapeApi(), opts); closeDrawers(); }
+
+
+// ===================================================================== construction build-ups (walls / floor / ceiling)
+const LAYERS = [
+  ['surfaces', 'Plain wall, floor & ceiling surfaces'], ['structure', 'Structure (existing walls, masonry, slab)'], ['boards', 'Boards & sheathing (drywall, ply, OSB…)'],
+  ['membranes', 'Membranes & damping (MLV, compound, underlay)'], ['insulation', 'Insulation & cavities'], ['framing', 'Framing (studs, joists, battens)'],
+  ['hardware', 'Isolation hardware (clips, channels, hangers, pads, seals)'], ['treatment', 'Acoustic treatment'], ['openings', 'Doors & windows'],
+  ['partitions', 'Partitions, glass & cladding'], ['construction', 'Placed construction items'], ['furniture', 'Furniture & decor'], ['gear', 'Gear & instruments'],
+  ['lighting', 'Lighting'], ['shapes', 'Shapes & imported models'], ['annotations', 'Dimensions, grid & reflection points'],
+];
+const CONSTRUCTION_LAYERS = ['structure', 'boards', 'membranes', 'insulation', 'framing', 'hardware'];
+function layerOn(k) { return (P().layers || {})[k] !== false; }
+function catLayer(def) {
+  const c = def.cat;
+  if (['Absorption', 'Bass Control', 'Diffusion', 'Reflection Control', 'Ceiling'].includes(c)) return 'treatment';
+  if (c === 'Doors & Windows') return 'openings';
+  if (c === 'Walls & Glass' || c === 'Architecture') return 'partitions';
+  if (c === 'Studio Furniture' || c === 'Decor') return 'furniture';
+  if (c === 'Gear & Instruments') return 'gear';
+  if (c === 'Lighting') return 'lighting';
+  if (c === 'Construction & Isolation') return 'construction';
+  return 'shapes';
+}
+function setLayers(patch) {
+  P().layers = { ...(P().layers || {}), ...patch };
+  buildRoom(); updateHelpers(); renderLayers(); renderLayerMenu(); commit();
+}
+const LAYER_PRESETS = {
+  'Show everything': () => Object.fromEntries(LAYERS.map(([k]) => [k, true])),
+  'Plain room': () => Object.fromEntries(LAYERS.map(([k]) => [k, ['surfaces', 'structure', 'openings', 'annotations'].includes(k)])),
+  'Construction only': () => Object.fromEntries(LAYERS.map(([k]) => [k, [...CONSTRUCTION_LAYERS, 'openings', 'construction', 'annotations'].includes(k)])),
+  'Framing & hardware': () => Object.fromEntries(LAYERS.map(([k]) => [k, ['framing', 'hardware', 'structure', 'openings', 'construction'].includes(k)])),
+  'Treatment only': () => Object.fromEntries(LAYERS.map(([k]) => [k, ['surfaces', 'structure', 'treatment', 'openings', 'annotations'].includes(k)])),
+  'Interior design': () => Object.fromEntries(LAYERS.map(([k]) => [k, !CONSTRUCTION_LAYERS.includes(k) || k === 'structure'])),
+};
+function layerControls() {
+  return h('div', { class: 'vis-layers' },
+    h('div', { class: 'row gap wrap' }, Object.keys(LAYER_PRESETS).map((n) => h('button', { class: 'btn small', onclick: () => setLayers(LAYER_PRESETS[n]()) }, n))),
+    LAYERS.map(([k, label]) => h('div', { class: 'vis-row' + (layerOn(k) ? '' : ' off') },
+      h('button', { class: 'icon-btn tiny', title: layerOn(k) ? 'Hide' : 'Show', html: svg(layerOn(k) ? 'eye' : 'eyeOff', 14), onclick: () => setLayers({ [k]: !layerOn(k) }) }),
+      h('span', { onclick: () => setLayers({ [k]: !layerOn(k) }) }, label),
+      h('button', { class: 'btn tiny-btn', title: 'Show only this layer (+ room outline)', onclick: () => setLayers(Object.fromEntries(LAYERS.map(([kk]) => [kk, kk === k || (kk === 'structure' && k !== 'structure' && CONSTRUCTION_LAYERS.includes(k))]))) }, 'solo'))));
+}
+function renderLayerMenu() {
+  const el = $('#layer-menu'); if (!el) return;
+  el.innerHTML = '';
+  el.append(h('div', { class: 'menu-title' }, 'Visibility layers'), layerControls());
+}
+
+/** Outward distance mapping for a wall edge: world point at (u along wall, y, d outward from the finished face). */
+const wallPt = (e, u, y, d) => new THREE.Vector3(e.a[0] + e.dir[0] * u - e.n[0] * d, y, e.a[1] + e.dir[1] * u - e.n[1] * d);
+/** Instanced boxes: list of {c: Vector3, ry, s:[sx,sy,sz]}. */
+function instMembers(list, material, layer, surfaceId) {
+  if (!list.length) return null;
+  const im = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), material, list.length), o = new THREE.Object3D();
+  list.forEach((b, i) => { o.position.copy(b.c); o.rotation.set(0, b.ry || 0, 0); o.scale.set(...b.s.map((v) => Math.max(v, 1e-4))); o.updateMatrix(); im.setMatrixAt(i, o.matrix); });
+  im.instanceMatrix.needsUpdate = true; im.computeBoundingSphere();
+  im.castShadow = true; im.receiveShadow = true; im.userData.layer = layer; im.userData.surface = surfaceId;
+  return im;
+}
+const holeAt = (holes, u0, u1) => holes.filter((o) => u1 > o.u0 - 0.02 && u0 < o.u1 + 0.02);
+function runsOutsideHoles(len, holes, y0, y1) {
+  // 1D intervals along the wall not blocked by an opening that spans y0…y1
+  let runs = [[0, len]];
+  for (const o of holes) if (o.y0 < y1 && o.y1 > y0) runs = runs.flatMap(([a, b]) => (o.u1 <= a || o.u0 >= b ? [[a, b]] : [[a, o.u0], [o.u1, b]].filter(([x, y]) => y - x > 0.03)));
+  return runs;
+}
+function addWallAssembly(g, e, layers, holes, top) {
+  const ry = -Math.atan2(e.dir[1], e.dir[0]), minTop = Math.min(...top.map((t) => t[1]));
+  const topAt = (u) => { for (let k = 1; k < top.length; k++) if (u <= top[k][0]) { const [u0, y0] = top[k - 1], [u1, y1] = top[k]; return y0 + ((y1 - y0) * (u - u0)) / Math.max(1e-6, u1 - u0); } return top[top.length - 1][1]; };
+  let off = 0;
+  for (const L of layers) {
+    const m = SMAT[L.mat]; if (!m) continue;
+    const t = L.t ?? m.t, grp = LAYER_GROUP[m.kind] || 'boards', kind = m.kind, d0 = off, d1 = off + t;
+    off += t;
+    if (!layerOn(grp)) continue;
+    const material = mat(m.color, FINISHES[m.finish] ? m.finish : 'paint');
+    if (['board', 'masonry', 'membrane', 'glazing', 'insulation', 'damping', 'underlay', 'finish'].includes(kind)) {
+      if (t < 0.0005) continue;
+      const ext = d1, sh = new THREE.Shape();
+      sh.moveTo(-ext, 0); sh.lineTo(e.len + ext, 0); sh.lineTo(e.len + ext, topAt(e.len));
+      for (let k = top.length - 1; k >= 0; k--) sh.lineTo(top[k][0], top[k][1]);
+      sh.lineTo(-ext, topAt(0)); sh.closePath();
+      for (const o of holes) { const hp = new THREE.Path(); holePts(o).slice().reverse().forEach(([u, y], i) => (i ? hp.lineTo(u, y) : hp.moveTo(u, y))); hp.closePath(); sh.holes.push(hp); }
+      const geo = new THREE.ExtrudeGeometry(sh, { depth: Math.max(t, 0.0008), bevelEnabled: false, curveSegments: 6 });
+      const pos = geo.attributes.position;
+      for (let i = 0; i < pos.count; i++) { const v = wallPt(e, pos.getX(i), pos.getY(i), d0 + pos.getZ(i)); pos.setXYZ(i, v.x, v.y, v.z); }
+      geo.computeVertexNormals();
+      const me = new THREE.Mesh(geo, kind === 'insulation' || kind === 'damping' ? mat(m.color, FINISHES[m.finish] ? m.finish : 'felt', { side: THREE.DoubleSide }) : mat(m.color, FINISHES[m.finish] ? m.finish : 'paint', { side: THREE.DoubleSide }));
+      me.userData.layer = grp; me.userData.surface = e.id; me.castShadow = true; me.receiveShadow = true;
+      g.add(me);
+    } else if (kind === 'studs') {
+      const s2 = L.s ?? m.s ?? 0.6, w = m.w || 0.045, list = [], plates = [];
+      const n = Math.max(1, Math.round(e.len / s2));
+      for (let k = 0; k <= n; k++) {
+        const u = clamp((e.len * k) / n, w / 2, e.len - w / 2), hgt = topAt(u) - 0.09;
+        const dd = m.stagger ? (k % 2 ? [d0, d0 + t * 0.62] : [d0 + t * 0.38, d1]) : [d0, d1];
+        const segs = [[0.045, hgt]];
+        const hs = holeAt(holes, u - w / 2, u + w / 2);
+        const pieces = hs.length ? segs.flatMap(([a, b]) => { let out = [[a, b]]; for (const o of hs) out = out.flatMap(([x, y]) => (o.y1 <= x || o.y0 >= y ? [[x, y]] : [[x, o.y0 - 0.045], [o.y1 + 0.09, y]].filter(([p, q]) => q - p > 0.05))); return out; }) : segs;
+        for (const [a, b] of pieces) list.push({ c: wallPt(e, u, (a + b) / 2, (dd[0] + dd[1]) / 2), ry, s: [w, b - a, dd[1] - dd[0]] });
+      }
+      for (const o of holes) { plates.push({ c: wallPt(e, (o.u0 + o.u1) / 2, o.y1 + 0.045, (d0 + d1) / 2), ry, s: [o.u1 - o.u0 + 2 * w, 0.09, t] }); if (o.y0 > 0.1) plates.push({ c: wallPt(e, (o.u0 + o.u1) / 2, o.y0 - 0.0225, (d0 + d1) / 2), ry, s: [o.u1 - o.u0, 0.045, t] }); }
+      for (const [a, b] of runsOutsideHoles(e.len, holes, 0, 0.05)) plates.push({ c: wallPt(e, (a + b) / 2, 0.0225, (d0 + d1) / 2), ry, s: [b - a, 0.045, t] });
+      plates.push({ c: wallPt(e, e.len / 2, minTop - 0.045, (d0 + d1) / 2), ry, s: [e.len, 0.09, t] });
+      [instMembers(list, material, grp, e.id), instMembers(plates, material, grp, e.id)].forEach((x) => x && g.add(x));
+    } else if (['channel', 'battens', 'clips', 'hangers', 'pads', 'springs'].includes(kind)) {
+      const rowS = m.rows || (kind === 'battens' ? 0.4 : 0.6), list = [], clips = [];
+      const rowH = kind === 'battens' ? 0.05 : 0.04;
+      for (let y = 0.15; y < minTop - 0.05; y += rowS) {
+        for (const [a, b] of runsOutsideHoles(e.len, holes, y - rowH, y + rowH)) {
+          if (kind === 'clips' || kind === 'hangers' || kind === 'pads' || kind === 'springs') {
+            list.push({ c: wallPt(e, (a + b) / 2, y, d0 + 0.0125), ry, s: [b - a, 0.035, 0.025] });
+            for (let u = Math.ceil((a + 0.05) / (L.s ?? m.s ?? 0.6)) * (L.s ?? m.s ?? 0.6); u < b - 0.05; u += L.s ?? m.s ?? 0.6) clips.push({ c: wallPt(e, u, y, d0 + 0.025 + (t - 0.025) / 2), ry, s: [0.05, 0.07, Math.max(0.01, t - 0.025)] });
+          } else list.push({ c: wallPt(e, (a + b) / 2, y, (d0 + d1) / 2), ry, s: [b - a, rowH, t] });
+        }
+      }
+      const g1 = instMembers(list, kind === 'battens' ? material : mat('#9aa0a6', 'metal'), grp, e.id); if (g1) g.add(g1);
+      const g2 = instMembers(clips, mat(m.color, FINISHES[m.finish] ? m.finish : 'plastic'), grp, e.id); if (g2) g.add(g2);
+    } else if (kind === 'sealant') {
+      const bead = [];
+      for (const [a, b] of runsOutsideHoles(e.len, holes, 0, 0.02)) bead.push({ c: wallPt(e, (a + b) / 2, 0.006, d0 + 0.006), ry, s: [b - a, 0.012, 0.012] });
+      bead.push({ c: wallPt(e, e.len / 2, minTop - 0.006, d0 + 0.006), ry, s: [e.len, 0.012, 0.012] });
+      const x = instMembers(bead, mat(m.color, 'paint'), grp, e.id); if (x) g.add(x);
+    }
+  }
+  return off;
+}
+/** Floor (downward) and ceiling (upward) build-ups. */
+function addPlanAssembly(g, layers, which) {
+  const room = R(), poly = room.poly, flat = (room.ceiling?.type || 'flat') === 'flat';
+  const sign = which === 'floor' ? -1 : 1;
+  const runsAlongX = (z) => { const runs = []; let start = null; for (let x = -room.w / 2; x <= room.w / 2 + 1e-6; x += 0.05) { const inside = insideRoom(x, z); if (inside && start == null) start = x; if ((!inside || x >= room.w / 2 - 1e-6) && start != null) { runs.push([start, x]); start = null; } } return runs.filter(([a, b]) => b - a > 0.08); };
+  const baseY = (x, z) => (which === 'floor' ? 0 : G.heightAt(room, x, z));
+  let off = 0;
+  for (const L of layers) {
+    const m = SMAT[L.mat]; if (!m) continue;
+    const t = L.t ?? m.t, grp = LAYER_GROUP[m.kind] || 'boards', kind = m.kind, d0 = off, d1 = off + t;
+    off += t;
+    if (!layerOn(grp)) continue;
+    const material = mat(m.color, FINISHES[m.finish] ? m.finish : 'paint', { side: THREE.DoubleSide });
+    if (['board', 'masonry', 'membrane', 'glazing', 'insulation', 'damping', 'underlay', 'finish'].includes(kind)) {
+      if (t < 0.0005) continue;
+      if (which === 'floor' || flat) {
+        const shp = new THREE.Shape(poly.map((p) => new THREE.Vector2(p.x, -p.z)));
+        const geo = new THREE.ExtrudeGeometry(shp, { depth: Math.max(t, 0.0008), bevelEnabled: false });
+        geo.rotateX(-Math.PI / 2);
+        geo.translate(0, which === 'floor' ? -d1 - 0.001 : room.h + d0 + 0.001, 0);
+        const me = new THREE.Mesh(geo, material); me.userData.layer = grp; me.userData.surface = which; me.receiveShadow = true; g.add(me);
+      } else {
+        const v = [];
+        for (const tri of G.ceilingTriangles(room)) for (const [x, y, z] of tri) v.push(x, y + d0 + t / 2, z);
+        const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(v, 3)); geo.computeVertexNormals();
+        const me = new THREE.Mesh(geo, material); me.userData.layer = grp; me.userData.surface = which; g.add(me);
+      }
+    } else if (['studs', 'joists', 'battens', 'channel', 'clips', 'hangers'].includes(kind)) {
+      const s2 = L.s ?? m.s ?? 0.6, w = kind === 'channel' || kind === 'clips' || kind === 'hangers' ? 0.04 : (m.w || 0.045), list = [], extra = [];
+      for (let z = -room.d / 2 + s2 / 2; z < room.d / 2; z += s2) for (const [a, b] of runsAlongX(z)) {
+        const segs = flat || which === 'floor' ? [[a, b]] : Array.from({ length: Math.max(1, Math.ceil((b - a) / 0.4)) }, (_, k, arr) => [a + ((b - a) * k) / arr.length, a + ((b - a) * (k + 1)) / arr.length]);
+        for (const [x0, x1] of segs) {
+          const by = baseY((x0 + x1) / 2, z);
+          const memH = kind === 'hangers' ? 0.04 : kind === 'clips' ? 0.025 : t;
+          const y = by + sign * (d0 + memH / 2 + 0.001);
+          list.push({ c: new THREE.Vector3((x0 + x1) / 2, y, z), s: [x1 - x0, memH, w] });
+        }
+        if (kind === 'hangers' || kind === 'clips') for (let x = Math.ceil(a / 1.2) * 1.2; x < b; x += kind === 'hangers' ? 1.2 : 0.6) {
+          const by = baseY(x, z), len = t - 0.04;
+          if (kind === 'hangers') { extra.push({ c: new THREE.Vector3(x, by + sign * (d0 + 0.04 + len / 2), z), s: [0.008, len, 0.008] }, { c: new THREE.Vector3(x, by + sign * (d0 + 0.04 + len * 0.45), z), s: [0.05, 0.08, 0.05], spring: true }); }
+          else extra.push({ c: new THREE.Vector3(x, by + sign * (d0 + 0.025 + (t - 0.025) / 2), z), s: [0.05, t - 0.025, 0.07], spring: true });
+        }
+      }
+      const g1 = instMembers(list, kind === 'studs' || kind === 'joists' || kind === 'battens' ? material : mat('#9aa0a6', 'metal'), grp, which); if (g1) g.add(g1);
+      const rods = extra.filter((x) => !x.spring), springs = extra.filter((x) => x.spring);
+      const g2 = instMembers(rods, mat('#c0c4c8', 'metal'), grp, which); if (g2) g.add(g2);
+      const g3 = instMembers(springs, mat(m.color, FINISHES[m.finish] ? m.finish : 'plastic'), grp, which); if (g3) g.add(g3);
+    } else if (kind === 'pads' || kind === 'springs') {
+      const s2 = L.s ?? m.s ?? 0.4, list = [];
+      for (let z = -room.d / 2 + s2 / 2; z < room.d / 2; z += s2) for (let x = -room.w / 2 + s2 / 2; x < room.w / 2; x += s2) if (insideRoom(x, z)) list.push({ c: new THREE.Vector3(x, baseY(x, z) + sign * (d0 + t / 2), z), s: [kind === 'springs' ? 0.12 : 0.09, t, kind === 'springs' ? 0.12 : 0.09] });
+      const g1 = instMembers(list, mat(m.color, FINISHES[m.finish] ? m.finish : 'plastic'), grp, which); if (g1) g.add(g1);
+    } else if (kind === 'sealant') {
+      const bead = wallEdges().map((e) => ({ c: new THREE.Vector3(e.mid[0] + e.n[0] * 0.006, which === 'floor' ? 0.006 : G.heightAt(room, e.mid[0], e.mid[1]) - 0.006, e.mid[1] + e.n[1] * 0.006), ry: -Math.atan2(e.dir[1], e.dir[0]), s: [e.len, 0.012, 0.012] }));
+      const x = instMembers(bead, mat(m.color, 'paint'), grp, which); if (x) g.add(x);
+    }
+  }
+}
+
+// ---------------------------------------------------------------- assembly editor & isolation
+const surfKind = (id) => (id === 'floor' ? 'floor' : id === 'ceiling' ? 'ceiling' : 'wall');
+function matSelect(value, onChange, kinds = null) {
+  const sel = h('select', { onchange: (e) => onChange(e.target.value) });
+  for (const c of MAT_CATS) {
+    const list = STUDIO_MATERIALS.filter((m) => m.cat === c && (!kinds || kinds.includes(m.kind)));
+    if (!list.length) continue;
+    const og = h('optgroup', { label: c });
+    for (const m of list) og.append(h('option', { value: m.id, selected: m.id === value }, m.name));
+    sel.append(og);
+  }
+  return sel;
+}
+function sectionSVG(layers, kind) {
+  const total = layers.reduce((a, L) => a + (L.t ?? SMAT[L.mat]?.t ?? 0), 0) || 0.01, W = 300, H = 120, k = Math.min(240 / total, 1500);
+  let x = 30, s = `<svg viewBox="0 0 ${W} ${H}" class="chart section-svg"><text x="4" y="12" class="legend">ROOM</text><line x1="${x}" y1="14" x2="${x}" y2="${H - 22}" class="gl"/>`;
+  for (const L of layers) {
+    const m = SMAT[L.mat]; if (!m) continue;
+    const t = (L.t ?? m.t) * k, wv = Math.max(t, m.kind === 'sealant' ? 0 : 1.2);
+    const col = m.color, pat = m.kind === 'insulation' ? 'url(#insul)' : m.kind === 'cavity' ? 'none' : col;
+    if (m.kind === 'studs' || m.kind === 'joists' || m.kind === 'battens') s += `<rect x="${x}" y="14" width="${wv}" height="${H - 36}" fill="none" stroke="${col}" stroke-dasharray="3 3"/><rect x="${x}" y="40" width="${wv}" height="22" fill="${col}"/>`;
+    else if (['channel', 'clips', 'hangers', 'pads', 'springs'].includes(m.kind)) s += `<rect x="${x}" y="14" width="${wv}" height="${H - 36}" fill="none" stroke="#666"/>${[30, 60, 90].map((yy) => `<rect x="${x}" y="${yy - 4}" width="${wv}" height="8" fill="${col}" stroke="#999" stroke-width=".5"/>`).join('')}`;
+    else s += `<rect x="${x}" y="14" width="${wv}" height="${H - 36}" fill="${pat}" stroke="rgba(0,0,0,.35)" stroke-width=".5"><title>${m.name} ${(L.t ?? m.t) * 1000} mm</title></rect>`;
+    x += wv;
+  }
+  s += `<text x="${Math.min(x + 4, W - 40)}" y="12" class="legend">${kind === 'floor' ? 'BELOW' : kind === 'ceiling' ? 'ABOVE' : 'OUTSIDE'}</text><text x="30" y="${H - 6}" class="legend">total ${(total * 1000).toFixed(0)} mm</text>`;
+  s += `<defs><pattern id="insul" width="6" height="6" patternUnits="userSpaceOnUse"><rect width="6" height="6" fill="#d8c48a"/><path d="M0 6 L6 0" stroke="#b89a50" stroke-width="1"/></pattern></defs></svg>`;
+  return h('div', { html: s });
+}
+function isolationBlock(layers) {
+  const r = estimateIsolation(layers);
+  const max = 80, bw = 34;
+  let s = `<svg viewBox="0 0 260 100" class="chart">`;
+  r.tl.forEach((v, i) => { const hh = (v / max) * 70; s += `<rect x="${10 + i * bw}" y="${80 - hh}" width="${bw - 8}" height="${hh}" rx="2" class="bar ${v < 35 ? 'bad' : v < 50 ? 'warn' : 'good'}"/><text x="${10 + i * bw + (bw - 8) / 2}" y="${76 - hh}" text-anchor="middle" class="val">${v.toFixed(0)}</text><text x="${10 + i * bw + (bw - 8) / 2}" y="94" text-anchor="middle">${TL_BANDS[i] >= 1000 ? TL_BANDS[i] / 1000 + 'k' : TL_BANDS[i]}</text>`; });
+  s += '</svg>';
+  return h('div', { class: 'iso-block' },
+    h('div', { class: 'kpis' },
+      kpi('Rw / STC ≈', r.rw ? `${r.rw} dB` : '—', 'estimated rating', r.rw >= 60 ? 'good' : r.rw >= 45 ? 'warn' : 'bad'),
+      kpi('Resonance f₀', r.f0 ? `${r.f0.toFixed(0)} Hz` : '—', 'mass–air–mass', r.f0 && r.f0 > 50 ? 'bad' : r.f0 ? 'good' : ''),
+      kpi('Thickness', `${(r.thick * 1000).toFixed(0)} mm`, S.units === 'ft' ? `${(r.thick / 0.0254).toFixed(1)} in` : ''),
+      kpi('Surface mass', `${r.mass.toFixed(0)} kg/m²`, `${r.leaves.length} leaf${r.leaves.length === 1 ? '' : 's'}`)),
+    h('div', { html: s }), h('small', { class: 'hint' }, 'Transmission loss per octave (dB). Lab-style estimate — real installations are typically 3–7 dB lower because of flanking and workmanship.'),
+    r.warn.length ? h('ul', { class: 'advice small' }, r.warn.map((w) => h('li', { class: 'warn' }, w))) : null);
+}
+function assemblyEditor(name) {
+  const kind = surfKind(name), sf = surf(name);
+  const asm = sf.assembly || { preset: 'none', layers: [] };
+  const presets = ASSEMBLIES[kind];
+  const set = (layers, preset = 'custom') => { sf.assembly = { preset, layers }; buildRoom(); commit(); renderPanels(); };
+  const layers = asm.layers.map((L) => ({ ...L }));
+  const rows = layers.map((L, i) => {
+    const m = SMAT[L.mat] || {}, member = ['studs', 'joists', 'battens', 'channel', 'clips', 'hangers', 'pads', 'springs'].includes(m.kind);
+    const upd = (patch) => { layers[i] = { ...layers[i], ...patch }; set(layers); };
+    return h('div', { class: 'asm-row' },
+      h('i', { class: 'dot', style: { background: m.color } }),
+      matSelect(L.mat, (v) => upd({ mat: v, t: SMAT[v].t, ...(SMAT[v].s ? { s: SMAT[v].s } : { s: undefined }) })),
+      h('input', { type: 'number', step: 0.5, min: 0, value: +((L.t ?? m.t) * 1000).toFixed(1), title: 'Thickness (mm)', onchange: (e) => upd({ t: Math.max(0, +e.target.value) / 1000 }) }),
+      member ? h('input', { type: 'number', step: 10, min: 100, value: Math.round((L.s ?? m.s ?? 0.6) * 1000), title: 'Spacing (mm)', onchange: (e) => upd({ s: Math.max(0.1, +e.target.value / 1000) }) }) : h('span', { class: 'hint' }, `${layerMass(L).toFixed(1)} kg/m²`),
+      h('button', { class: 'icon-btn tiny', title: 'Move toward room', html: '▲', disabled: i === 0, onclick: () => { [layers[i - 1], layers[i]] = [layers[i], layers[i - 1]]; set(layers); } }),
+      h('button', { class: 'icon-btn tiny', title: 'Move outward', html: '▼', disabled: i === layers.length - 1, onclick: () => { [layers[i + 1], layers[i]] = [layers[i], layers[i + 1]]; set(layers); } }),
+      h('button', { class: 'icon-btn tiny', title: 'Remove layer', html: '&times;', onclick: () => { layers.splice(i, 1); set(layers); } }));
+  });
+  const addSel = matSelect('', (v) => { if (!v) return; const m = SMAT[v]; layers.push({ mat: v, t: m.t, ...(m.s ? { s: m.s } : {}) }); set(layers); });
+  addSel.prepend(h('option', { value: '', selected: true }, '+ Add a layer…'));
+  return h('details', { class: 'sub asm', open: layers.length > 0 }, h('summary', {}, `🧱 Construction & isolation${layers.length ? ` — ${presets[asm.preset]?.name || 'custom'}` : ''}`),
+    selectField('Build-up preset', presets[asm.preset] ? asm.preset : 'custom', [...Object.entries(presets).map(([k, a]) => [k, a.name]), ...(presets[asm.preset] ? [] : [['custom', 'Custom build-up']])], (v) => { if (v !== 'custom') set(JSON.parse(JSON.stringify(presets[v].layers)), v); }),
+    kind === 'wall' ? h('div', { class: 'row gap wrap' }, h('button', { class: 'btn small', onclick: () => { for (const e of wallEdges()) surf(e.id).assembly = JSON.parse(JSON.stringify(sf.assembly || { preset: 'none', layers: [] })); buildRoom(); commit(); renderPanels(); toast('Build-up applied to every wall', 'ok'); } }, 'Apply to all walls'), h('button', { class: 'btn small', onclick: () => openMaterialsLibrary() }, '📚 Materials library')) : h('button', { class: 'btn small', onclick: () => openMaterialsLibrary() }, '📚 Materials library'),
+    h('p', { class: 'hint' }, `Layers listed from the room side outward${kind === 'floor' ? ' (downward)' : kind === 'ceiling' ? ' (upward)' : ''}. Thickness in mm; members also show spacing.`),
+    h('div', { class: 'asm-list' }, rows.length ? rows : h('p', { class: 'hint' }, 'No build-up yet — pick a preset or add layers.')),
+    addSel,
+    layers.length ? sectionSVG(layers, kind) : null,
+    layers.length ? isolationBlock(layers) : null);
+}
+function isolationData() {
+  const rows = [];
+  for (const id of surfaceIds()) {
+    const sf = surf(id), layers = sf.assembly?.layers || [];
+    const est = estimateIsolation(layers);
+    let comp = est.rw, openings = [];
+    if (surfKind(id) === 'wall') {
+      const e = wallEdges().find((x) => x.id === id);
+      const ops = e ? openingsOn(e) : [];
+      openings = ops.map((o) => { const it = itemById(o.id); return { name: it?.name || 'Opening', area: polyArea(holePts(o)), rw: it ? openingRw(it) : 0 }; });
+      if (openings.length && layers.length) comp = compositeRw([{ area: surfaceArea(id), rw: est.rw }, ...openings]);
+    }
+    rows.push({ id, label: surfLabel(id), preset: ASSEMBLIES[surfKind(id)][sf.assembly?.preset]?.name || (layers.length ? 'Custom' : 'None'), layers, est, comp, openings });
+  }
+  return rows;
+}
+function isolationSection() {
+  const rows = isolationData(), withAsm = rows.filter((r) => r.layers.length);
+  const worst = withAsm.length ? withAsm.reduce((a, b) => (b.comp < a.comp ? b : a)) : null;
+  return section('Sound isolation (construction)',
+    withAsm.length ? h('table', { class: 'tbl' }, h('tr', {}, h('th', {}, 'Surface'), h('th', {}, 'Build-up'), h('th', {}, 'Rw'), h('th', {}, 'With openings'), h('th', {}, 'f₀')),
+      rows.map((r) => h('tr', { class: r === worst ? 'no' : '' }, h('td', {}, h('button', { class: 'link', onclick: () => selectSurface(r.id) }, r.label)), h('td', {}, r.preset), h('td', {}, r.layers.length ? r.est.rw : '—'), h('td', {}, r.layers.length && r.openings.length ? `${r.comp.toFixed(0)} (${r.openings.map((o) => `${o.name.split(' ')[0]} ${o.rw}`).join(', ')})` : '—'), h('td', {}, r.est.f0 ? r.est.f0.toFixed(0) + ' Hz' : '—'))))
+      : h('p', { class: 'hint' }, 'No construction build-ups yet. Select a wall, the floor or the ceiling and open “Construction & isolation”, or use the buttons below.'),
+    worst ? h('p', { class: 'hint' }, `Weakest element: ${worst.label} (≈ ${worst.comp.toFixed(0)} dB) — isolation is only as good as the weakest path (doors, windows, ducts and flanking).`) : null,
+    h('div', { class: 'row gap wrap' },
+      h('button', { class: 'btn small', onclick: () => { applyConstructionSet('pro'); } }, 'Apply pro studio set'),
+      h('button', { class: 'btn small', onclick: () => { applyConstructionSet('home'); } }, 'Apply home-studio set'),
+      h('button', { class: 'btn small', onclick: () => openMaterialsLibrary() }, '📚 Materials library')));
+}
+function applyConstructionSet(kind) {
+  const set = kind === 'pro' ? { wall: 'roomInRoom', floor: 'padsDeck', ceiling: 'hangers' } : { wall: 'clipsStud', floor: 'underlay', ceiling: 'clips' };
+  for (const id of surfaceIds()) { const k = surfKind(id); surf(id).assembly = { preset: set[k], layers: JSON.parse(JSON.stringify(ASSEMBLIES[k][set[k]].layers)) }; }
+  buildRoom(); commit(); renderPanels();
+  toast(`Applied ${kind === 'pro' ? 'room-in-room pro' : 'home-studio'} construction to every surface — toggle layers to inspect`, 'ok');
+}
+
+// ---------------------------------------------------------------- materials library browser
+function openMaterialsLibrary(tab = 'studio') {
+  let cur = tab, q = '';
+  const body = h('div', { class: 'matlib' }), tabs = h('div', { class: 'mat-tabs' }), search = h('input', { type: 'search', placeholder: 'Search all materials…' });
+  search.addEventListener('input', () => { q = search.value.toLowerCase(); draw(); });
+  const TABS = [['studio', `Construction, isolation & treatment (${STUDIO_MATERIALS.length})`], ['absorption', `Absorption coefficients (${Object.keys(AC.ACOUSTIC_MATERIALS).length})`], ['finishes', `Finishes & aesthetics (${Object.keys(FINISHES).length})`]];
+  function draw() {
+    tabs.innerHTML = ''; body.innerHTML = '';
+    for (const [k, l] of TABS) tabs.append(h('button', { class: 'pal-tab' + (cur === k ? ' active' : ''), onclick: () => { cur = k; draw(); } }, l));
+    if (cur === 'studio') {
+      for (const c of MAT_CATS) {
+        const list = STUDIO_MATERIALS.filter((m) => m.cat === c && (!q || (m.name + ' ' + m.cat + ' ' + (m.note || '')).toLowerCase().includes(q)));
+        if (!list.length) continue;
+        body.append(h('h4', {}, c), h('table', { class: 'tbl matlib-tbl' }, h('tr', {}, ['', 'Material', 'Type', 'Thick.', 'Density / mass', 'Decoupling', 'Notes', ''].map((t) => h('th', {}, t))),
+          list.map((m) => h('tr', {},
+            h('td', {}, h('i', { class: 'dot', style: { background: m.color } })), h('td', {}, h('b', {}, m.name)), h('td', {}, m.kind),
+            h('td', {}, m.t ? `${(m.t * 1000).toFixed(m.t < 0.01 ? 1 : 0)} mm` : '—'),
+            h('td', {}, m.mass != null ? `${m.mass} kg/m²` : m.rho ? `${m.rho} kg/m³ (${((m.rho || 0) * m.t).toFixed(1)} kg/m²)` : '—'),
+            h('td', {}, m.q != null ? `${Math.round(m.q * 100)} %` : '—'), h('td', { class: 'note' }, m.note || ''),
+            h('td', {}, ['board', 'membrane', 'insulation', 'glazing', 'masonry', 'clips', 'hangers', 'pads', 'springs', 'channel', 'studs', 'joists', 'battens'].includes(m.kind) ? h('button', { class: 'btn small', onclick: () => { addConstructionItem(m); toast(`Added ${m.name}`, 'ok'); } }, '+ Place') : '')))));
+      }
+    } else if (cur === 'absorption') {
+      const list = Object.entries(AC.ACOUSTIC_MATERIALS).filter(([k, m]) => !q || m.name.toLowerCase().includes(q));
+      body.append(h('table', { class: 'tbl matlib-tbl' }, h('tr', {}, h('th', {}, 'Material'), ...AC.BANDS.map((f) => h('th', {}, f >= 1000 ? f / 1000 + 'k' : f)), h('th', {}, 'NRC')),
+        list.map(([k, m]) => h('tr', {}, h('td', {}, m.name), ...m.a.map((v) => h('td', { class: 'abs', style: { background: `rgba(53,196,181,${v * 0.5})` } }, v.toFixed(2))), h('td', {}, ((m.a[1] + m.a[2] + m.a[3] + m.a[4]) / 4).toFixed(2))))));
+    } else {
+      for (const c of FINISH_CATS) {
+        const list = Object.entries(FINISHES).filter(([k, f]) => f.cat === c && (!q || f.label.toLowerCase().includes(q)));
+        if (!list.length) continue;
+        body.append(h('h4', {}, c), h('div', { class: 'mat-grid' }, list.map(([k, f]) => h('div', { class: 'mat-card' }, h('img', { src: finishSwatch(k, f.color || '#cccccc', 72) }), h('span', {}, f.label), h('small', {}, f.ac ? AC.ACOUSTIC_MATERIALS[f.ac]?.name : '')))));
+      }
+    }
+  }
+  draw();
+  modal('Studio materials library', h('div', { class: 'matlib-wrap' }, h('div', { class: 'row gap' }, search, h('button', { class: 'btn small', onclick: () => exportMaterialsCSV() }, '⤓ CSV')), tabs, body), [], { wide: true, xwide: true });
+}
+function exportMaterialsCSV() {
+  const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const lines = ['Category,Material,Type,Thickness (mm),Density (kg/m3),Surface mass (kg/m2),Decoupling,Notes'];
+  for (const m of STUDIO_MATERIALS) lines.push([m.cat, m.name, m.kind, (m.t * 1000).toFixed(1), m.rho ?? '', m.mass ?? ((m.rho || 0) * m.t).toFixed(1), m.q ?? '', m.note ?? ''].map(esc).join(','));
+  download('studio-materials.csv', lines.join('\n'), 'text/csv');
+}
+function addConstructionItem(m) {
+  const map = { board: 'sheet', membrane: 'sheet', insulation: 'sheet', glazing: 'sheet', masonry: 'sheet', clips: 'isoClipItem', channel: 'channelRun', battens: 'channelRun', hangers: 'hangerItem', pads: 'isoPadItem', springs: 'isoPadItem', studs: 'studFrame', joists: 'studFrame' };
+  const type = map[m.kind] || 'sheet';
+  const [it] = addMany(type, { params: type === 'sheet' ? { mat: m.id } : type === 'studFrame' ? { stud: m.id } : type === 'channelRun' ? { mat: m.id } : type === 'isoPadItem' ? { spring: m.kind === 'springs' } : type === 'hangerItem' ? { spring: !!m.spring } : {} });
+  if (it && type === 'sheet') { it.size = [1.2, 2.4, Math.max(m.t, 0.002)]; it.name = m.name; it.acoustic = m.ac || 'none'; rebuildItem(it); commit(); }
+  closeModals();
+}
 
 // ===================================================================== room modes glue
 function modeRoom() {
@@ -2498,7 +2857,7 @@ function exportApi() {
   return {
     h, toast, modal, project: P, room: R, analysis, scheduleRows, renderToDataURL, viewNames: VIEW_NAMES,
     fmt, acousticName: (k) => AC.ACOUSTIC_MATERIALS[k]?.name || k, finishName: (k) => FINISHES[k]?.label || k, surfaceList: () => surfaceIds().map((id) => ({ id, label: surfLabel(id), s: surf(id) })), floorArea: () => G.floorArea(R()), wallCount: () => wallEdges().length, ceilingName: () => G.CEILINGS[R().ceiling?.type || 'flat'], hmax: () => S.hmax,
-    safeName, download, closeModals, modeData, bands: AC.BANDS, noteName, colorNames: COLOR_NAMES, defOf,
+    safeName, download, closeModals, modeData, isolationData, smat: SMAT, bands: AC.BANDS, noteName, colorNames: COLOR_NAMES, defOf,
   };
 }
 
@@ -2513,6 +2872,8 @@ const ACTIONS = {
   importPhotoWall: () => openScanner(scannerApi(), { mode: 'upload' }),
   pdf: () => openPdfDialog(exportApi()),
   modes: () => openModes(),
+  matlib: () => openMaterialsLibrary(),
+  layersMenu: () => {},
   units: () => setUnits(S.units === 'm' ? 'ft' : 'm'),
   png: hqRender, pngAll: exportAllViewsPNG, glb: exportGLB, obj: exportOBJ, csv: exportCSV,
   help: () => showHelp(),
@@ -2641,7 +3002,8 @@ window.addEventListener('online', () => $('#net').textContent = 'Online');
 window.addEventListener('offline', () => $('#net').textContent = 'Offline ✓');
 $('#net').textContent = navigator.onLine ? 'Online' : 'Offline ✓';
 $('[data-action="units"]').textContent = S.units;
+renderLayerMenu();
 
 // expose for debugging / automation
-window.roomtone = { S, P, openModes, showOverlay, addMany, autoTreat, setView, runPromptText, analysis, renderToDataURL, applyTemplate, select };
+window.roomtone = { S, P, openModes, setLayers, applyConstructionSet, openMaterialsLibrary, showOverlay, addMany, autoTreat, setView, runPromptText, analysis, renderToDataURL, applyTemplate, select };
 boot();

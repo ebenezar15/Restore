@@ -73,6 +73,11 @@ function findFinish(s) { for (const w of MATERIAL_KEYS) if (new RegExp(`(^|[^a-z
 const GLASS_TYPES = { frosted: 'frosted', tinted: 'tinted', fluted: 'fluted', reeded: 'fluted', bronze: 'bronzeGlass', reflective: 'reflective', 'acoustic glass': 'acousticGlass', laminated: 'acousticGlass', clear: 'glass' };
 // Styled items: "barn door", "arched window", "hexagon panels", "glass wall"…
 const STYLE_WORDS = [
+  [/\b(mlv|mass[- ]loaded vinyl)\b/, 'sheet', { mat: 'mlv5' }], [/\b(drywall|plasterboard|gypsum board)s?\b/, 'sheet', { mat: 'gyp15' }], [/\b(plywood) (sheet|board)s?\b/, 'sheet', { mat: 'ply18' }],
+  [/\bosb\b/, 'sheet', { mat: 'osb18' }], [/\bmdf (sheet|board)s?\b/, 'sheet', { mat: 'mdf18' }], [/\b(insulation|mineral wool|rockwool) (batt|slab|sheet)s?\b/, 'sheet', { mat: 'mw60' }],
+  [/\b(floating floor|floor platform|drum riser)s?\b/, 'floatingFloor', {}], [/\b(stud frame|stud wall|studwork|framing)s?\b/, 'studFrame', {}], [/\bsteel stud(s| wall| frame)?\b/, 'studFrame', { stud: 'steelStud92' }],
+  [/\b(isolation|sound|rsic) clips?\b/, 'isoClipItem', {}], [/\bhat channels?\b/, 'channelRun', { mat: 'hatChannel' }], [/\bresilient channels?\b/, 'channelRun', { mat: 'rc' }], [/\b(wood channel|furring strip|batten)s?\b/, 'channelRun', { mat: 'woodChannel' }],
+  [/\b(spring hanger|isolation hanger|ceiling hanger)s?\b/, 'hangerItem', {}], [/\b(isolation pad|neoprene pad|puck)s?\b/, 'isoPadItem', {}], [/\b(spring mount|spring isolator)s?\b/, 'isoPadItem', { spring: true }],
   [/\bbarn doors?\b/, 'door', { style: 'barn' }], [/\b(sliding|pocket) (glass )?doors?\b/, 'door', { style: 'sliding' }], [/\bfrench doors?\b/, 'doubleDoor', { style: 'french' }], [/\bdouble doors?\b/, 'doubleDoor', { style: 'double' }],
   [/\bglass doors?\b/, 'door', { style: 'glass' }], [/\bhalf[- ]glass doors?\b/, 'door', { style: 'half' }], [/\bpanel(led)? doors?\b/, 'door', { style: 'panel' }], [/\bflush doors?\b/, 'door', { style: 'flush' }], [/\b(acoustic|studio|soundproof) doors?\b/, 'door', { style: 'acoustic' }],
   [/\b(arched|arch) windows?\b/, 'window', { style: 'arch' }], [/\b(round|circular|porthole) windows?\b|\bporthole\b/, 'window', { style: 'round' }], [/\bcasement windows?\b/, 'window', { style: 'casement' }], [/\bsliding windows?\b/, 'window', { style: 'sliding' }], [/\b(grid|georgian) windows?\b/, 'window', { style: 'grid' }],
@@ -158,6 +163,9 @@ export const PROMPT_EXAMPLES = [
   'sloped ceiling 2.4 to 3.4',
   'curve the back wall 0.6',
   'add a barn door on the right wall',
+  'make it room in room',
+  'show only framing',
+  'hide treatment',
   'add 6 hexagon panels on the back wall',
   'make the floor herringbone',
   'add bass traps in all corners',
@@ -221,6 +229,21 @@ function handle(s, verb, api) {
   }
   if (/\b(room modes?|modes?|mode calculator|amroc|bonello|standing waves?|best seat|best listening position|trap tuning)\b/.test(s) && !/\b(add|place)\b/.test(s) && !/\broom\s+\d/.test(s)) { api.openModes(); return { ok: true, msg: 'Opened the Room Mode Calculator' }; }
   if (/\b(analy[sz]e|check|rt60|reverb|room modes?|acoustics?)\b/.test(s) && !/\b(add|place)\b/.test(s)) { api.showAcoustics(); return { ok: true, msg: 'Showing acoustic analysis' }; }
+
+  // ---- visibility layers & construction sets
+  const LAYER_WORDS = [['treatment', 'treatment'], ['acoustic', 'treatment'], ['panels', 'treatment'], ['construction', '*construction'], ['build-up', '*construction'], ['framing', 'framing'], ['studs', 'framing'], ['joists', 'framing'], ['insulation', 'insulation'], ['hardware', 'hardware'], ['clips', 'hardware'], ['channels', 'hardware'], ['hangers', 'hardware'], ['boards', 'boards'], ['drywall', 'boards'], ['plywood', 'boards'], ['membranes', 'membranes'], ['mlv', 'membranes'], ['structure', 'structure'], ['surfaces', 'surfaces'], ['plain walls', 'surfaces'], ['finishes', 'surfaces'], ['furniture', 'furniture'], ['gear', 'gear'], ['lighting', 'lighting'], ['doors', 'openings'], ['windows', 'openings'], ['partitions', 'partitions'], ['dimensions', 'annotations'], ['labels', 'annotations']];
+  if (/\b(hide|show|solo|only|toggle)\b/.test(s) && !/\b(view|modes?)\b/.test(s)) {
+    const found = LAYER_WORDS.filter(([w]) => new RegExp(`\\b${w}\\b`).test(s)).map(([, k]) => k);
+    const CON = ['structure', 'boards', 'membranes', 'insulation', 'framing', 'hardware'];
+    const keys = [...new Set(found.flatMap((k) => (k === '*construction' ? CON : [k])))];
+    if (/\b(show|all)\b.*\b(everything|all layers)\b|\bshow all\b/.test(s)) { api.setLayers('all'); return { ok: true, msg: 'Showing all layers' }; }
+    if (keys.length) {
+      const only = /\b(only|solo|just)\b/.test(s), hide = /\bhide\b/.test(s);
+      api.setLayers(Object.fromEntries(keys.map((k) => [k, !hide])), only);
+      return { ok: true, msg: `${only ? 'Showing only' : hide ? 'Hid' : 'Showing'} ${keys.join(', ')}` };
+    }
+  }
+  if (/\b(room[- ]in[- ]room|soundproof|sound ?proof|isolate the room|decouple the room)\b/.test(s)) { api.applyConstructionSet(/\b(home|budget|cheap)\b/.test(s) ? 'home' : 'pro'); return { ok: true, msg: 'Applied isolation build-ups to every wall, floor and ceiling' }; }
 
   // ---- room shape / ceiling / curved walls
   const SHAPE_WORDS = [['l-shape', 'lshape'], ['l shape', 'lshape'], ['l-shaped', 'lshape'], ['l shaped', 'lshape'], ['t-shape', 'tshape'], ['t shape', 'tshape'], ['t-shaped', 'tshape'], ['u-shape', 'ushape'], ['u shape', 'ushape'], ['u-shaped', 'ushape'],

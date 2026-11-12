@@ -71,6 +71,31 @@ The camera needs `https://` or `localhost`. On phones, "Upload photo" also opens
   - Image-source first-reflection points, drawn in 3D and marked green when treated and red when not.
   - SBIR null frequencies, the stereo listening triangle and the 38 % rule.
   - Plain-language recommendations.
+- **🧱 Construction & sound isolation:**
+  - **Studio materials library (84 materials):**
+    - **Mass & boards:** drywall types, laminated damped gypsum, cement board, gypsum fibreboard, OSB, plywood, MDF, CLT, mass-loaded vinyl, lead.
+    - **Structure:** concrete, block, brick, AAC, screed.
+    - **Damping:** viscoelastic compound, damping tape, constrained-layer damping sheets.
+    - **Decoupling hardware:** isolation clips + hat channel, resilient channel, wood channel/battens, neoprene and spring hangers, isolation pads, spring floor isolators, elastomer strips.
+    - **Framing:** timber and steel studs, staggered and independent studs, joists, sleepers.
+    - **Insulation & cavity:** mineral wool, glass wool, rigid fibreglass, PET, cellulose, wood fibre, cotton, air gaps.
+    - **Seals & joints:** acoustic sealant, perimeter strip, putty pads, backer rod.
+    - **Floor build-up:** underlays, hardwood, engineered wood, rubber.
+    - **Glazing:** float and laminated acoustic glass.
+    - **Treatment media:** melamine, PU foam, wood-wool, PET felt, perforated MDF, acoustic plaster, stretch-fabric systems, ceiling tile.
+    - **Extras:** the library also lists the absorption-coefficient tables and every aesthetic finish. It can be searched and exported to CSV.
+  - **Build-ups for every wall, the floor and the ceiling:** start from a preset or build your own layer by layer (material, thickness, spacing), reorder layers, and apply one build-up to all walls.
+    - **Wall presets:** single/double/staggered stud, resilient channel, clips + hat channel, steel stud, room-in-room, double stud, battens.
+    - **Floor presets:** slab, floating floor on pads, floating deck on rubber underlay, floating screed, spring jack-up slab, raised joist floor.
+    - **Ceiling presets:** resilient channel, clips, spring hangers, independent joists.
+  - **3D construction:** layers render with the openings cut through them. Studs and plates frame around doors and windows, with channels, clips, hangers, pads and sealant beads.
+  - **Section and isolation per surface:** a section drawing plus an isolation estimate — transmission loss per octave, an Rw/STC-style rating, mass–air–mass resonance f₀, thickness and surface mass, with warnings (rigid bridging, f₀ too high, empty cavity, no damping).
+  - **Isolation summary (Acoustics tab):** composite ratings that include the doors and windows (Rw estimated by door/window style), the weakest element highlighted, and one-click "pro" (room-in-room) and "home-studio" construction sets.
+  - **Placeable construction items:** boards/sheets of any library material, stud frame sections, isolation clips, channel/batten runs, ceiling hangers, pads/spring mounts and a floating floor platform.
+- **👁 Visibility layers** (toolbar *Layers ▾* and the Layers tab):
+  - **Layers:** plain surfaces, structure, boards, membranes, insulation, framing, isolation hardware, treatment, doors/windows, partitions, placed construction items, furniture, gear, lighting, shapes and annotations.
+  - **Controls:** a show/hide eye and a *solo* button on each layer, plus presets (Plain room, Construction only, Framing & hardware, Treatment only, Interior design).
+  - **Prompt support:** e.g. "show only framing", "hide treatment", "make it room in room", "add a floating floor", "add MLV sheet on the left wall".
 - **🎛 Room Mode Calculator (AMROC-style, `K`):**
   - **Inputs:** length, width and height in **metres or feet**, temperature (°C/°F, which sets the speed of sound), and a range up to 150–500 Hz.
   - **Mode table:** every axial, tangential and oblique mode with its indices, a description, the musical note and cents, wavelength, spacing and flags for coincident modes. Play any mode as a tone, or export the table as CSV.
@@ -110,6 +135,7 @@ css/app.css           UI theme (responsive; drawers on phones/tablets)
 js/main.js            scene, views, tools, placement, panels, history, I/O
 js/catalog.js         item definitions + procedural 3D builders
 js/acoustics.js       RT60, modes, ratios, reflections, SBIR
+js/studiomaterials.js studio materials DB, build-up presets, sound-isolation estimator
 js/modes.js           room-mode calculator, modal simulation, trap tuning, tone generator
 js/geometry.js        room outlines, ceiling profiles, areas & volume, shape presets
 js/prompt.js          offline natural-language command interpreter

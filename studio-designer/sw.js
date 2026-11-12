@@ -1,6 +1,6 @@
 // Offline cache: every file the app needs is precached on install, so after the
 // first visit RoomTone runs with no network connection at all.
-const CACHE = 'roomtone-v5';
+const CACHE = 'roomtone-v6';
 const FILES = [
   './',
   "css/app.css",
@@ -16,6 +16,7 @@ const FILES = [
   "js/prompt.js",
   "js/scan.js",
   "js/shapebuilder.js",
+  "js/studiomaterials.js",
   "manifest.webmanifest",
   "vendor/jspdf.umd.min.js",
   "vendor/three/addons/controls/OrbitControls.js",

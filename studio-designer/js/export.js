@@ -27,6 +27,7 @@ export function openPdfDialog(app) {
     cb('materials', 'Colour & material board'),
     cb('acoustics', 'Acoustic report (RT60, modes, reflections)'),
     cb('modes', 'Room modes & low-frequency treatment zones'),
+    cb('construction', 'Construction build-ups & sound isolation'),
     h('div', { class: 'grid2' },
       h('label', { class: 'field' }, h('span', {}, 'Designer'), h('input', { name: 'designer', value: p.designer })),
       h('label', { class: 'field' }, h('span', {}, 'Client'), h('input', { name: 'client', value: p.client }))),
@@ -335,12 +336,44 @@ async function buildPdf(app, o) {
     }
   }
 
+  // ---------------------------------------------------------------- construction
+  if (o.construction) {
+    const rows = app.isolationData().filter((r) => r.layers.length);
+    if (rows.length) {
+      await tick('Construction…');
+      let a = frame('Construction build-ups & sound isolation'), y = a.y + 6;
+      const colW = a.w;
+      for (const r of rows) {
+        const need = 14 + r.layers.length * 3.6;
+        if (y + need > a.y + a.h) { a = frame('Construction (cont.)'); y = a.y + 6; }
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(20);
+        doc.text(txt(`${r.label} — ${r.preset}`), a.x, y);
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(60);
+        doc.text(txt(`Rw ~ ${r.est.rw} dB${r.openings.length ? ` (with openings ~ ${r.comp.toFixed(0)} dB)` : ''} - f0 ${r.est.f0 ? r.est.f0.toFixed(0) + ' Hz' : '-'} - ${(r.est.thick * 1000).toFixed(0)} mm - ${r.est.mass.toFixed(0)} kg/m2`), a.x + colW, y, { align: 'right' });
+        y += 4;
+        // section strip
+        const total = r.layers.reduce((s2, L) => s2 + (L.t ?? app.smat[L.mat]?.t ?? 0), 0) || 0.01, k = Math.min(120 / total, 1200);
+        let x = a.x + 2;
+        const sy = y;
+        for (const L of r.layers) { const m = app.smat[L.mat]; if (!m) continue; const t = Math.max((L.t ?? m.t) * k, m.kind === 'sealant' ? 0 : 0.4); if (m.kind !== 'cavity') { doc.setFillColor(...hex2(m.color)); doc.setDrawColor(120); doc.rect(x, sy, t, Math.max(10, r.layers.length * 3.6 - 1), 'FD'); } x += t; }
+        let ly = y + 2.5;
+        r.layers.forEach((L, i) => { const m = app.smat[L.mat]; if (!m) return; doc.setTextColor(40); doc.text(txt(`${i + 1}. ${m.name}  ${((L.t ?? m.t) * 1000).toFixed(1)} mm${L.s ? ` @ ${(L.s * 1000).toFixed(0)} mm` : ''}`), a.x + 130, ly); ly += 3.6; });
+        if (r.est.warn.length) { doc.setTextColor(190, 120, 20); doc.text(doc.splitTextToSize(txt(r.est.warn.join(' ')), colW - 260).slice(0, 4), a.x + 260, y + 2.5); }
+        y = Math.max(ly, sy + 12) + 5;
+        doc.setDrawColor(225); doc.line(a.x, y - 2.5, a.x + colW, y - 2.5);
+      }
+      doc.setFontSize(7); doc.setTextColor(120);
+      doc.text('Estimates use mass law, mass-air-mass resonance and decoupling factors (ISO 717-style rating). Field results are typically 3-7 dB lower; flanking paths, doors, ducts and penetrations often dominate.', a.x, a.y + a.h - 1);
+    }
+  }
+
   await tick('Saving…');
   doc.save(`${app.safeName()}-design.pdf`);
   app.toast(`PDF exported (${pageNo} pages)`, 'ok');
   app.closeModals();
 }
 
+function hex2(hex) { return hexRgb(hex); }
 function hexRgb(hex) {
   let h = String(hex || '#888').replace('#', '');
   if (h.length === 3) h = h.split('').map((c) => c + c).join('');

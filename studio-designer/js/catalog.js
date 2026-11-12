@@ -6,6 +6,7 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { mat, drawnTexture, imageTexture, FINISHES } from './materials.js';
+import { SMAT, STUDIO_MATERIALS } from './studiomaterials.js';
 
 const UNIT = new THREE.BoxGeometry(1, 1, 1);
 const DEG = Math.PI / 180;
@@ -700,6 +701,69 @@ const B = {
     const mm = new THREE.Mesh(new THREE.PlaneGeometry(w - 0.05, h - 0.05), mat('#e8eef2', 'mirror')); mm.position.set(0, h / 2, d / 2 + 0.001); g.add(mm);
     return g;
   },
+  sheet(it) {
+    const [w, h, d] = it.size, g = new THREE.Group(), m = SMAT[it.params.mat] || SMAT.gyp12;
+    const fin = FINISHES[m.finish] ? m.finish : 'paint';
+    g.add(box(w, h, Math.max(d, 0.002), mat(it.params.useColor ? it.color : m.color, fin), 0, h / 2, 0));
+    return g;
+  },
+  studFrame(it) {
+    const [w, h, d] = it.size, g = new THREE.Group(), P = it.params, m = SMAT[P.stud] || SMAT.stud2x4;
+    const fm = mat(m.color, FINISHES[m.finish] ? m.finish : 'wood'), sw = m.w || 0.045, s0 = P.spacing || m.s || 0.6;
+    const n = Math.max(1, Math.round(w / s0)), list = [];
+    for (let k = 0; k <= n; k++) list.push([-w / 2 + sw / 2 + ((w - sw) * k) / n, h / 2, 0, sw, h - 0.09, d]);
+    list.push([0, 0.0225, 0, w, 0.045, d], [0, h - 0.0225, 0, w, 0.045, d], [0, h - 0.0675, 0, w, 0.045, d]);
+    g.add(instBoxes(list, fm));
+    if (P.insulation) g.add(box(w - 0.02, h - 0.14, d * 0.9, mat('#d8c48a', 'felt'), 0, h / 2, 0));
+    const bm = SMAT[P.board] || SMAT.gyp12, bt = bm.t, bmat = mat(bm.color, FINISHES[bm.finish] ? bm.finish : 'paint');
+    if (P.sheathing === 'one' || P.sheathing === 'both') g.add(box(w, h, bt, bmat, 0, h / 2, d / 2 + bt / 2));
+    if (P.sheathing === 'both') g.add(box(w, h, bt, bmat, 0, h / 2, -d / 2 - bt / 2));
+    return g;
+  },
+  isoClipItem(it) {
+    const [w, h, d] = it.size, g = new THREE.Group(), rub = mat('#1d1d1f', 'rubber'), steel = mat('#9aa0a6', 'metal');
+    g.add(box(w, h * 0.55, d * 0.5, rub, 0, h * 0.5, -d / 4), box(w * 0.8, h * 0.9, 0.003, steel, 0, h * 0.5, -d / 2 + 0.0015));
+    if (it.params.channel !== false) { const cl = it.params.channelLength ?? 0.6; g.add(box(cl, 0.03, 0.025, steel, 0, h * 0.5, d / 2 - 0.0125)); }
+    return g;
+  },
+  channelRun(it) {
+    const [w, h, d] = it.size, g = new THREE.Group(), m = SMAT[it.params.mat] || SMAT.hatChannel;
+    const mm = mat(m.color, FINISHES[m.finish] ? m.finish : 'metal');
+    if (m.kind === 'battens') { g.add(box(w, h, d, mm, 0, h / 2, 0)); return g; }
+    g.add(box(w, 0.003, d, mm, 0, h - 0.0015, 0), box(w, h, 0.003, mm, 0, h / 2, -d / 2 + 0.0015), box(w, h, 0.003, mm, 0, h / 2, d / 2 - 0.0015));
+    g.add(box(w, 0.003, 0.012, mm, 0, 0.0015, -d / 2 - 0.006), box(w, 0.003, 0.012, mm, 0, 0.0015, d / 2 + 0.006));
+    return g;
+  },
+  hangerItem(it, ctx) {
+    const [w, h, d] = it.size, g = new THREE.Group(), steel = mat('#c0c4c8', 'metal');
+    const len = Math.max(0.05, (ctx.heightAt ? ctx.heightAt(it.pos[0], it.pos[2]) : ctx.room.h) - it.pos[1] - h);
+    g.add(box(w, h * 0.5, d, steel, 0, h * 0.75, 0), box(w * 0.9, 0.004, d * 0.9, steel, 0, h * 0.25, 0));
+    if (it.params.spring) { const sp = new THREE.Mesh(new THREE.TorusGeometry(w * 0.25, 0.004, 6, 16), mat('#c23b3b', 'metal')); for (let k = 0; k < 4; k++) { const c = sp.clone(); c.rotation.x = Math.PI / 2; c.position.y = h * 0.55 + k * 0.012; g.add(c); } }
+    else g.add(box(w * 0.6, h * 0.3, d * 0.6, mat('#1d1d1f', 'rubber'), 0, h * 0.6, 0));
+    g.add(cyl(0.004, 0.004, len, steel, 0, h + len / 2, 0, 8), cyl(0.004, 0.004, h * 0.6, steel, 0, h * 0.25, 0, 8));
+    g.add(box(0.6, 0.03, 0.025, mat('#9aa0a6', 'metal'), 0, 0.015, 0));
+    return g;
+  },
+  isoPadItem(it) {
+    const [w, h, d] = it.size, g = new THREE.Group();
+    if (it.params.spring) {
+      g.add(box(w, 0.01, d, mat('#9aa0a6', 'metal'), 0, 0.005, 0), box(w, 0.01, d, mat('#9aa0a6', 'metal'), 0, h - 0.005, 0));
+      const sp = new THREE.Mesh(new THREE.TorusGeometry(w * 0.22, 0.006, 6, 16), mat('#c23b3b', 'metal'));
+      for (let k = 0; k < 5; k++) { const c = sp.clone(); c.rotation.x = Math.PI / 2; c.position.y = 0.015 + k * (h - 0.03) / 4; g.add(c); }
+    } else g.add(cyl(w / 2, w / 2, h, mat('#2b2c2e', 'rubber'), 0, h / 2, 0, 24));
+    return g;
+  },
+  floatingFloor(it) {
+    const [w, h, d] = it.size, g = new THREE.Group(), P = it.params;
+    const pad = 0.025, sleeper = 0.07, deck = 0.036;
+    const pads = [], sl = [];
+    for (let z = -d / 2 + 0.2; z <= d / 2 - 0.19; z += 0.4) { sl.push([0, pad + sleeper / 2, z, w - 0.05, sleeper, 0.045]); for (let x = -w / 2 + 0.2; x <= w / 2 - 0.19; x += 0.4) pads.push([x, pad / 2, z, 0.09, pad, 0.09]); }
+    g.add(instBoxes(pads, mat('#2b2c2e', 'rubber')), instBoxes(sl, mat('#d2a96f', 'wood')));
+    if (P.insulation !== false) g.add(box(w - 0.06, sleeper * 0.9, d - 0.06, mat('#bba564', 'felt'), 0, pad + sleeper * 0.45, 0));
+    if (!P.exploded) g.add(box(w, deck, d, mat('#dcc095', 'plywood'), 0, pad + sleeper + deck / 2, 0), box(w, Math.max(0.005, h - (pad + sleeper + deck)), d, mat(it.color, it.finish), 0, pad + sleeper + deck + Math.max(0.005, h - (pad + sleeper + deck)) / 2, 0));
+    else g.add(box(w, deck, d, mat('#dcc095', 'plywood', { opacity: 0.35 }), 0, pad + sleeper + deck / 2 + 0.15, 0));
+    return g;
+  },
   custom(it) { return buildCustom(it); },
   column(it) {
     const [w, h, d] = it.size, g = new THREE.Group();
@@ -1049,6 +1113,13 @@ export const CATALOG = [
   // Decor
   D({ type: 'plant', name: 'Plant', cat: 'Decor', size: [0.5, 1.2, 0.5], color: '#3f8f4f', color2: '#e9e6df', finish: 'concrete', build: B.plant }),
   // Shapes
+  D({ type: 'sheet', name: 'Board / Sheet Material', cat: 'Construction & Isolation', mount: 'wall', size: [1.2, 2.4, 0.0125], color: '#e9e7e2', acoustic: 'none', area: AREA.none, build: B.sheet, params: { mat: { label: 'Material', type: 'smat', kinds: ['board', 'membrane', 'insulation', 'glazing', 'masonry', 'underlay'], default: 'gyp12' }, useColor: { label: 'Use my colour instead', type: 'bool', default: false } }, desc: 'Drywall, plywood, OSB, MDF, MLV, insulation, glass… — any board from the studio materials library.' }),
+  D({ type: 'studFrame', name: 'Stud Frame Section', cat: 'Construction & Isolation', size: [2.4, 2.4, 0.095], color: '#d2a96f', acoustic: 'none', area: AREA.none, build: B.studFrame, params: { stud: { label: 'Studs', type: 'smat', kinds: ['studs', 'joists'], default: 'stud2x4' }, spacing: { label: 'Spacing (m)', type: 'number', min: 0.2, max: 1.2, step: 0.05, default: 0.6 }, insulation: { label: 'Cavity insulation', type: 'bool', default: true }, sheathing: { label: 'Boards', type: 'select', options: ['none', 'one', 'both'], default: 'one' }, board: { label: 'Board', type: 'smat', kinds: ['board'], default: 'gyp15' } }, desc: 'Timber or steel stud panel with plates, optional insulation and boards — build partitions and room-in-room walls.' }),
+  D({ type: 'isoClipItem', name: 'Isolation Clip + Hat Channel', cat: 'Construction & Isolation', mount: 'wall', size: [0.06, 0.08, 0.06], color: '#1d1d1f', acoustic: 'none', area: AREA.none, build: B.isoClipItem, params: { channel: { label: 'Show channel', type: 'bool', default: true }, channelLength: { label: 'Channel length (m)', type: 'number', min: 0.1, max: 3.6, step: 0.05, default: 0.6 } } }),
+  D({ type: 'channelRun', name: 'Channel / Batten Run', cat: 'Construction & Isolation', mount: 'wall', size: [2.4, 0.025, 0.06], color: '#9aa0a6', acoustic: 'none', area: AREA.none, build: B.channelRun, params: { mat: { label: 'Type', type: 'smat', kinds: ['channel', 'battens'], default: 'hatChannel' } } }),
+  D({ type: 'hangerItem', name: 'Ceiling Isolation Hanger', cat: 'Construction & Isolation', mount: 'ceiling', drop: 0.3, size: [0.07, 0.12, 0.05], color: '#c0c4c8', acoustic: 'none', area: AREA.none, build: B.hangerItem, params: { spring: { label: 'Spring (instead of neoprene)', type: 'bool', default: true } } }),
+  D({ type: 'isoPadItem', name: 'Isolation Pad / Spring Mount', cat: 'Construction & Isolation', size: [0.09, 0.025, 0.09], color: '#2b2c2e', acoustic: 'none', area: AREA.none, build: B.isoPadItem, params: { spring: { label: 'Steel spring', type: 'bool', default: false } } }),
+  D({ type: 'floatingFloor', name: 'Floating Floor Platform', cat: 'Construction & Isolation', size: [2.4, 0.16, 2.4], color: '#b88a5c', finish: 'plank', acoustic: 'wood_floor', area: AREA.top, build: B.floatingFloor, params: { insulation: { label: 'Mineral wool between sleepers', type: 'bool', default: true }, exploded: { label: 'Exploded (show pads & sleepers)', type: 'bool', default: false } }, desc: 'Drum riser / booth floor: deck on sleepers on neoprene pads.' }),
   D({ type: 'custom', name: 'Custom Shape', cat: 'Shapes', size: [0.8, 0.8, 0.8], color: '#b0b4b8', finish: 'paint', acoustic: 'wood_hard', build: B.custom, custom: true, params: { op: { label: 'Operation', type: 'hidden', default: 'extrude' }, orient: { label: 'Orientation', type: 'hidden', default: 'floor' }, profile: { type: 'hidden', default: 'polygon' }, sides: { type: 'hidden', default: 6 } }, desc: 'Build any shape: pick or draw a profile, then extrude or revolve it to exact dimensions.' }),
   D({ type: 'customWall', name: 'Custom Wall Panel', cat: 'Shapes', mount: 'wall', size: [0.6, 0.6, 0.05], color: '#3b4a5a', finish: 'fabric', acoustic: 'fabric_50', build: B.custom, custom: true, hidden: true, params: { op: { type: 'hidden', default: 'extrude' }, orient: { type: 'hidden', default: 'wall' }, profile: { type: 'hidden', default: 'polygon' }, sides: { type: 'hidden', default: 6 } } }),
   D({ type: 'customCeiling', name: 'Custom Ceiling Shape', cat: 'Shapes', mount: 'ceiling', drop: 0.25, size: [1.2, 0.08, 1.2], color: '#e9e6df', finish: 'fabric', acoustic: 'fabric_100', area: AREA.top, build: B.custom, custom: true, hidden: true, params: { op: { type: 'hidden', default: 'extrude' }, orient: { type: 'hidden', default: 'floor' }, profile: { type: 'hidden', default: 'circle' } } }),
