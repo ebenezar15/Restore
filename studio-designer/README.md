@@ -71,6 +71,21 @@ The camera needs `https://` or `localhost`. On phones, "Upload photo" also opens
   - Image-source first-reflection points, drawn in 3D and marked green when treated and red when not.
   - SBIR null frequencies, the stereo listening triangle and the 38 % rule.
   - Plain-language recommendations.
+- **Design faster (Design ▾ menu):**
+  - **✨ Design wizard:** answer a short brief (purpose, size, shape, ceiling, isolation level, budget level, colour scheme, lighting) and get a complete starting design — listening position, treatment at the calculated reflection points, tuned bass traps, construction build-ups, colours, lighting and a door.
+  - **🏆 Studio Score:** a live 0–100 score in the status bar. Its breakdown covers bass response at the mix position, reverberation time, first reflections, speaker/listener geometry, room proportions and modes, bass trapping and sound isolation. Each row has a one-click fix, and "Fix everything below 70" applies them all.
+  - **🔀 Design options:** save full snapshots of alternatives and compare them side by side on score, RT60, bass smoothness, weakest isolation, item count and cost, with the best value starred.
+  - **💰 Cost estimate & bill of quantities:** quantities come straight from the model — board and insulation areas with waste, stud and channel lengths, clip, hanger and pad counts, sealant tubes, and every placed item. Unit prices are editable placeholders remembered on the device, with currency, waste, labour, contingency and a budget check. Exports to CSV and a PDF page.
+  - **⇋ Symmetry lock:** anything you add, move, resize, recolour or delete off the centre line is mirrored to the other side automatically.
+  - **Magnetic walls:** wall-mounted items stay flush to the nearest wall as you drag them.
+  - **Editing:** copy/paste (`Ctrl+C` / `Ctrl+V`), group/ungroup (`Ctrl+G` / `Ctrl+Shift+G`), and text notes with a leader pin.
+- **Present & share (Present ▾ menu):**
+  - **Render styles:** Realistic, Clay model, Sketch (line drawing), Blueprint and Night. The chosen style also applies to PNG and PDF exports.
+  - **🌐 360° panorama:** an equirectangular JPG from the listening position, for 360 viewers and VR headsets.
+  - **🎬 Video:** a 12-second turntable or a tour of your saved scenes, recorded in the browser as WebM.
+  - **🔗 Share as one HTML file:** a single file with the design embedded. A client opens it in any browser, offline, and can orbit, walk through and edit — nothing to install.
+  - **🪄 AI render hand-off:** a clay, line or colour reference image of the current view plus a prompt written from your design, for cloud AI renderers when you are online.
+- **CAD interchange:** export the plan as DXF (millimetres, layered: walls, openings, treatment, furniture, lighting, construction, dimensions, text) or SVG; import a room outline from a DXF (closed polyline or connected lines; mm, cm, m, in or ft).
 - **🧱 Construction & sound isolation:**
   - **Studio materials library (84 materials):**
     - **Mass & boards:** drywall types, laminated damped gypsum, cement board, gypsum fibreboard, OSB, plywood, MDF, CLT, mass-loaded vinyl, lead.
@@ -125,7 +140,7 @@ The camera needs `https://` or `localhost`. On phones, "Upload photo" also opens
 
 ## Keyboard
 
-`V` select · `O` edit room outline · `K` room modes · `M` move · `R` rotate · `S` scale · `T` measure · `1–6` views · `7` quad · `8` walk · `F` focus · arrows nudge (Shift ×10) · `[` `]` rotate 15° · `Ctrl+D` duplicate · `Ctrl+Z/Y` undo/redo · `Del` delete · `/` prompt · `?` help
+`V` select · `O` edit room outline · `K` room modes · `Ctrl+C/V` copy/paste · `Ctrl+G` group · `M` move · `R` rotate · `S` scale · `T` measure · `1–6` views · `7` quad · `8` walk · `F` focus · arrows nudge (Shift ×10) · `[` `]` rotate 15° · `Ctrl+D` duplicate · `Ctrl+Z/Y` undo/redo · `Del` delete · `/` prompt · `?` help
 
 ## Code layout
 
@@ -135,6 +150,7 @@ css/app.css           UI theme (responsive; drawers on phones/tablets)
 js/main.js            scene, views, tools, placement, panels, history, I/O
 js/catalog.js         item definitions + procedural 3D builders
 js/acoustics.js       RT60, modes, ratios, reflections, SBIR
+js/pro.js             Studio Score, design wizard, costing, options, DXF/SVG, sharing, AI hand-off
 js/studiomaterials.js studio materials DB, build-up presets, sound-isolation estimator
 js/modes.js           room-mode calculator, modal simulation, trap tuning, tone generator
 js/geometry.js        room outlines, ceiling profiles, areas & volume, shape presets

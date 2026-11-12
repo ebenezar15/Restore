@@ -764,6 +764,16 @@ const B = {
     else g.add(box(w, deck, d, mat('#dcc095', 'plywood', { opacity: 0.35 }), 0, pad + sleeper + deck / 2 + 0.15, 0));
     return g;
   },
+  note(it) {
+    const g = new THREE.Group(), text = it.params.text || 'Note', hgt = it.size[1];
+    const key = `note:${text}:${it.color}`;
+    const tex = drawnTexture(key, Math.min(1024, 60 + text.length * 30), 72, (c, W, H) => { c.fillStyle = it.color; c.fillRect(0, 0, W, H); c.strokeStyle = 'rgba(0,0,0,.5)'; c.lineWidth = 4; c.strokeRect(2, 2, W - 4, H - 4); c.fillStyle = '#111'; c.font = '600 40px system-ui, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(text, W / 2, H / 2 + 2); });
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false }));
+    const asp = tex.image.width / tex.image.height, sh = it.params.size || 0.18;
+    sp.scale.set(sh * asp, sh, 1); sp.position.y = hgt + sh / 2; sp.renderOrder = 990; g.add(sp);
+    g.add(cyl(0.006, 0.006, hgt, mat('#222', 'plastic'), 0, hgt / 2, 0, 6), sphere(0.035, mat(it.color, 'plastic'), 0, 0.02, 0, 12, 8));
+    return g;
+  },
   custom(it) { return buildCustom(it); },
   column(it) {
     const [w, h, d] = it.size, g = new THREE.Group();
@@ -1120,6 +1130,7 @@ export const CATALOG = [
   D({ type: 'hangerItem', name: 'Ceiling Isolation Hanger', cat: 'Construction & Isolation', mount: 'ceiling', drop: 0.3, size: [0.07, 0.12, 0.05], color: '#c0c4c8', acoustic: 'none', area: AREA.none, build: B.hangerItem, params: { spring: { label: 'Spring (instead of neoprene)', type: 'bool', default: true } } }),
   D({ type: 'isoPadItem', name: 'Isolation Pad / Spring Mount', cat: 'Construction & Isolation', size: [0.09, 0.025, 0.09], color: '#2b2c2e', acoustic: 'none', area: AREA.none, build: B.isoPadItem, params: { spring: { label: 'Steel spring', type: 'bool', default: false } } }),
   D({ type: 'floatingFloor', name: 'Floating Floor Platform', cat: 'Construction & Isolation', size: [2.4, 0.16, 2.4], color: '#b88a5c', finish: 'plank', acoustic: 'wood_floor', area: AREA.top, build: B.floatingFloor, params: { insulation: { label: 'Mineral wool between sleepers', type: 'bool', default: true }, exploded: { label: 'Exploded (show pads & sleepers)', type: 'bool', default: false } }, desc: 'Drum riser / booth floor: deck on sleepers on neoprene pads.' }),
+  D({ type: 'note', name: 'Text Note / Label', cat: 'Annotations', size: [0.1, 0.6, 0.1], color: '#ffd166', acoustic: 'none', area: AREA.none, build: B.note, params: { text: { label: 'Text', type: 'text', default: 'Note' }, size: { label: 'Text height (m)', type: 'number', min: 0.05, max: 1, step: 0.01, default: 0.18 } }, desc: 'A label with a leader pin — shows in every view, render and PDF.' }),
   D({ type: 'custom', name: 'Custom Shape', cat: 'Shapes', size: [0.8, 0.8, 0.8], color: '#b0b4b8', finish: 'paint', acoustic: 'wood_hard', build: B.custom, custom: true, params: { op: { label: 'Operation', type: 'hidden', default: 'extrude' }, orient: { label: 'Orientation', type: 'hidden', default: 'floor' }, profile: { type: 'hidden', default: 'polygon' }, sides: { type: 'hidden', default: 6 } }, desc: 'Build any shape: pick or draw a profile, then extrude or revolve it to exact dimensions.' }),
   D({ type: 'customWall', name: 'Custom Wall Panel', cat: 'Shapes', mount: 'wall', size: [0.6, 0.6, 0.05], color: '#3b4a5a', finish: 'fabric', acoustic: 'fabric_50', build: B.custom, custom: true, hidden: true, params: { op: { type: 'hidden', default: 'extrude' }, orient: { type: 'hidden', default: 'wall' }, profile: { type: 'hidden', default: 'polygon' }, sides: { type: 'hidden', default: 6 } } }),
   D({ type: 'customCeiling', name: 'Custom Ceiling Shape', cat: 'Shapes', mount: 'ceiling', drop: 0.25, size: [1.2, 0.08, 1.2], color: '#e9e6df', finish: 'fabric', acoustic: 'fabric_100', area: AREA.top, build: B.custom, custom: true, hidden: true, params: { op: { type: 'hidden', default: 'extrude' }, orient: { type: 'hidden', default: 'floor' }, profile: { type: 'hidden', default: 'circle' } } }),

@@ -9,8 +9,9 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
 import { CATALOG, CATEGORIES, BY_TYPE, buildItem, areaOf, defaultParams, PROFILES, LATHES } from './catalog.js';
 import { openShapeBuilder } from './shapebuilder.js';
+import * as PRO from './pro.js';
 import { STUDIO_MATERIALS, SMAT, MAT_CATS, ASSEMBLIES, LAYER_GROUP, estimateIsolation, openingRw, compositeRw, layerMass, TL_BANDS } from './studiomaterials.js';
-import { openModeCalculator, modeReport, computeModes, speedOfSound, psi, divergeColor, treatmentFor, modalResponse, logFreqs, describeMode, noteOf } from './modes.js';
+import { openModeCalculator, modeReport, computeModes, speedOfSound, t60At, psi, divergeColor, treatmentFor, modalResponse, logFreqs, describeMode, noteOf } from './modes.js';
 import { mat, FINISHES, FINISH_CATS, FABRIC_COLORS, finishSwatch, isGlass, imageTexture, COLOR_NAMES } from './materials.js';
 import * as AC from './acoustics.js';
 import * as G from './geometry.js';
@@ -18,6 +19,7 @@ import { runPrompt, PROMPT_EXAMPLES } from './prompt.js';
 import { openScanner } from './scan.js';
 import { openPdfDialog } from './export.js';
 
+const PRISTINE_HTML = document.documentElement.outerHTML; // captured before the app touches the DOM (used for single-file sharing)
 const DEG = Math.PI / 180;
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -393,6 +395,8 @@ function applyAmbient() {
   sun.intensity = R().daylight === false ? 0 : 0.4 + a * 1.4;
   scene.environmentIntensity = 0.15 + a * 0.55;
   sun.castShadow = S.shadows;
+  if (S.style === 'night') { hemi.intensity = 0.05; sun.intensity = 0; scene.environmentIntensity = 0.06; }
+  if (S.style === 'clay') { hemi.intensity = 0.9; scene.environmentIntensity = 0.6; }
 }
 
 function buildUnderlay() {
@@ -815,6 +819,7 @@ function select(ids, additive = false) {
   S.surfaceSel = null;
   if (additive) { for (const id of ids) S.sel = S.sel.includes(id) ? S.sel.filter((x) => x !== id) : [...S.sel, id]; }
   else S.sel = ids.slice();
+  if (!S._noGroup) { const groups = new Set(S.sel.map((id) => itemById(id)?.group).filter(Boolean)); if (groups.size) for (const it of P().items) if (groups.has(it.group) && !S.sel.includes(it.id)) S.sel.push(it.id); }
   attachGizmo();
   updateHelpers();
   renderProps(); renderLayers();
@@ -855,6 +860,10 @@ tc.addEventListener('objectChange', () => {
     const before = dragStart?.find((x) => x.id === it.id)?.pos || it.pos;
     const delta = [obj.position.x - before[0], obj.position.y - before[1], obj.position.z - before[2]];
     it.pos = [obj.position.x, obj.position.y, obj.position.z];
+    if (S.snap && S.magnet !== false && defOf(it.type).mount === 'wall' && S.sel.length === 1 && tc.axis !== 'Y') {
+      const e = nearestEdge(it.pos[0], it.pos[2]);
+      if (e && G.distToSegment(it.pos[0], it.pos[2], e.a, e.b).d < 0.6) { placeOnWallAt(it, e, it.pos[0], it.pos[2], it.pos[1]); obj.position.set(...it.pos); obj.rotation.set(it.rot[0] * DEG, it.rot[1] * DEG, it.rot[2] * DEG, 'YXZ'); }
+    }
     for (const other of selectedItems().slice(1)) {
       const b = dragStart?.find((x) => x.id === other.id)?.pos; if (!b || other.locked) continue;
       other.pos = [b[0] + delta[0], Math.max(0, b[1] + delta[1]), b[2] + delta[2]]; syncTransform(other);
@@ -890,6 +899,7 @@ function updateItem(it, patch, rebuild = true) {
 
 function removeItems(list) {
   const ids = new Set(list.map((i) => i.id));
+  if (S.symmetry) for (const i of list) if (i.twin) ids.add(i.twin);
   if (!ids.size) return 0;
   P().items = P().items.filter((i) => !ids.has(i.id));
   for (const id of ids) { const o = objMap.get(id); if (o) { if (tc.object === o) tc.detach(); itemsGroup.remove(o); disposeTree(o); objMap.delete(id); } }
@@ -901,7 +911,7 @@ function removeItems(list) {
 function duplicate(list = selectedItems(), times = 1) {
   const made = [];
   for (const src of list) for (let k = 1; k <= times; k++) {
-    const it = JSON.parse(JSON.stringify(src)); it.id = uid(); delete it.auto;
+    const it = JSON.parse(JSON.stringify(src)); it.id = uid(); delete it.auto; delete it.twin; delete it.group;
     // offset along the item's own width axis so copies sit side by side
     const a = src.rot[1] * DEG, step = src.size[0] + 0.05;
     it.pos = [src.pos[0] + Math.cos(a) * step * k, src.pos[1], src.pos[2] - Math.sin(a) * step * k];
@@ -911,15 +921,40 @@ function duplicate(list = selectedItems(), times = 1) {
   if (made.length) { select(made.map((i) => i.id)); commit(); }
   return made.length;
 }
+function mirroredState(src) {
+  const it = JSON.parse(JSON.stringify(src)); delete it.auto; delete it.twin;
+  it.pos = [-src.pos[0], src.pos[1], src.pos[2]];
+  it.rot = [src.rot[0], (360 - src.rot[1]) % 360, -src.rot[2]];
+  const def = defOf(src.type);
+  if (def.origin === 'corner') it.rot[1] = ({ 0: -90, 270: 0, 180: 90, 90: 180 })[Math.round(((src.rot[1] % 360) + 360) % 360)] ?? it.rot[1];
+  if (it.wall) { const e = nearestEdge(it.pos[0], it.pos[2]); if (e) it.wall = e.id; }
+  if (/ L$/.test(src.name)) it.name = src.name.replace(/ L$/, ' R'); else if (/ R$/.test(src.name)) it.name = src.name.replace(/ R$/, ' L');
+  return it;
+}
+/** Symmetry lock: whatever you do to an item off the centre line is mirrored onto its twin. */
+function syncTwins() {
+  for (const it of selectedItems()) {
+    const def = defOf(it.type);
+    if (def.listener || it.locked || def.cat === 'Annotations') continue;
+    let tw = it.twin && itemById(it.twin);
+    if (Math.abs(it.pos[0]) < 0.06) { if (tw) { delete tw.twin; delete it.twin; } continue; }
+    if (tw && S.sel.includes(tw.id)) continue;
+    if (!tw) {
+      tw = P().items.find((o) => o !== it && o.type === it.type && !o.twin && Math.hypot(o.pos[0] + it.pos[0], o.pos[1] - it.pos[1], o.pos[2] - it.pos[2]) < 0.3);
+      if (!tw) { tw = { id: uid() }; P().items.push(tw); }
+    }
+    const id = tw.id;
+    for (const k of Object.keys(tw)) delete tw[k];
+    Object.assign(tw, mirroredState(it), { id, twin: it.id });
+    it.twin = id;
+    rebuildItem(tw);
+  }
+  limitLights();
+}
 function mirror(list = selectedItems()) {
   const made = [];
   for (const src of list) {
-    const it = JSON.parse(JSON.stringify(src)); it.id = uid(); delete it.auto;
-    it.pos = [-src.pos[0], src.pos[1], src.pos[2]];
-    it.rot = [src.rot[0], (360 - src.rot[1]) % 360, -src.rot[2]];
-    const def = defOf(src.type);
-    if (def.origin === 'corner') it.rot[1] = ({ 0: -90, 270: 0, 180: 90, 90: 180 })[((src.rot[1] % 360) + 360) % 360] ?? it.rot[1];
-    if (/ L$/.test(src.name)) it.name = src.name.replace(/ L$/, ' R'); else if (/ R$/.test(src.name)) it.name = src.name.replace(/ R$/, ' L');
+    const it = mirroredState(src); it.id = uid();
     P().items.push(it); rebuildItem(it); made.push(it);
   }
   if (made.length) { select(made.map((i) => i.id)); commit(); }
@@ -1092,6 +1127,7 @@ function renderSectionCtl() {
 }
 
 function renderOnce(cam, view, vp) {
+  applyRenderStyle();
   cutaway(cam, view);
   renderer.clippingPlanes = clipFor(view);
   const showTags = view === 'top';
@@ -1270,9 +1306,11 @@ function dropItem(type, e) {
 }
 
 // ===================================================================== history & persistence
-function serialize() { const { assets, ...rest } = P(); return JSON.stringify(rest); }
+function serialize() { const { assets, options, ...rest } = P(); return JSON.stringify(rest); }
 function openingSig() { return JSON.stringify(P().items.filter((i) => defOf(i.type).opening).map((i) => [i.pos, i.rot, i.size, i.hidden, i.params?.cutWall])); }
 function commit(reset = false) {
+  if (S.symmetry && !reset) syncTwins();
+  scheduleScore();
   const sig = openingSig();
   if (sig !== S._openSig) { S._openSig = sig; buildRoom(); }
   const snap = serialize();
@@ -1285,8 +1323,8 @@ function commit(reset = false) {
   renderPanels(true);
 }
 function restore(snap) {
-  const assets = P().assets;
-  S.project = { ...JSON.parse(snap), assets };
+  const assets = P().assets, options = P().options;
+  S.project = { ...JSON.parse(snap), assets, options };
   G.ensureRoom(R());
   S.sel = S.sel.filter((id) => itemById(id));
   buildRoom(); rebuildAllItems(); updateHelpers(); renderPanels();
@@ -1305,7 +1343,7 @@ function scheduleSave() {
   clearTimeout(saveTimer);
   $('#save-state').textContent = 'Saving…';
   saveTimer = setTimeout(async () => {
-    try { await DB.set('autosave', JSON.stringify(P())); $('#save-state').textContent = 'Saved offline ✓'; }
+    try { await DB.set(S.saveKey || 'autosave', JSON.stringify(P())); $('#save-state').textContent = 'Saved offline ✓'; }
     catch { $('#save-state').textContent = 'Autosave unavailable'; }
   }, 500);
 }
@@ -1440,6 +1478,7 @@ function renderToDataURL({ view = 'persp', scene: sc = null, width = 1600, heigh
   if (sc && sc.section != null) S.section[v] = sc.section;
   renderer.setViewport(0, 0, width, height);
   const tcVis = tc.getHelper().visible; tc.getHelper().visible = false;
+  applyRenderStyle();
   cutaway(cam, v); renderer.clippingPlanes = clipFor(v); renderer.render(scene, cam);
   const url = renderer.domElement.toDataURL(type, quality);
   tc.getHelper().visible = tcVis;
@@ -2307,6 +2346,7 @@ function promptApi() {
     openPdf: () => openPdfDialog(exportApi()), exportGLB, openModes: () => openModes(), showAcoustics: () => { S.rightTab = 'acoustics'; renderRightTabs(); document.body.classList.add('show-right'); },
     findTemplate: (s) => Object.keys(TEMPLATES).find((k) => s.includes(k.toLowerCase()) || s.includes(k.toLowerCase().split(' ')[0] + ' ' + (k.toLowerCase().split(' ')[1] || ''))),
     applyTemplate,
+    wizard: () => PRO.openWizard(proApi()), score: () => PRO.openScore(proApi()), cost: () => PRO.openCost(proApi()), setStyle, pano: exportPano,
     setLayers: (patch, only = false) => { if (patch === 'all') return setLayers(LAYER_PRESETS['Show everything']()); if (only) { const all = Object.fromEntries(LAYERS.map(([k]) => [k, false])); setLayers({ ...all, ...patch, structure: patch.structure ?? Object.keys(patch).some((k) => CONSTRUCTION_LAYERS.includes(k)) }); } else setLayers(patch); },
     applyConstructionSet,
     setShape: (key) => { changeShape(() => G.applyShape(R(), key)); return G.SHAPES[key]?.label; },
@@ -2381,6 +2421,7 @@ function catLayer(def) {
   if (c === 'Gear & Instruments') return 'gear';
   if (c === 'Lighting') return 'lighting';
   if (c === 'Construction & Isolation') return 'construction';
+  if (c === 'Annotations') return 'annotations';
   return 'shapes';
 }
 function setLayers(patch) {
@@ -2833,7 +2874,194 @@ function modeData() {
   const fs = logFreqs(20, 300, 24), modes = rep.all.filter((m) => m.f < 450);
   const norm = (db) => { const v = db.filter((_, i) => fs[i] >= 40 && fs[i] <= 200).sort((a, b) => a - b), med = v[Math.floor(v.length / 2)]; return db.map((x) => x - med); };
   const resp = norm(modalResponse(rep.R, modes, rep.srcs, rep.ear, fs, true)), bare = norm(modalResponse(rep.R, modes, rep.srcs, rep.ear, fs, false));
-  return { rep, fs, resp, bare, treat: rep.problems.slice(0, 8).map((p) => ({ ...p, t: treatmentFor(p, rep.R, rep.c, fmt), desc: describeMode(p.m), note: noteOf(p.m.f).name })) };
+  return { rep, fs, resp, bare, t63: t60At(63, rep.R), t125: t60At(125, rep.R), treat: rep.problems.slice(0, 8).map((p) => ({ ...p, t: treatmentFor(p, rep.R, rep.c, fmt), desc: describeMode(p.m), note: noteOf(p.m.f).name })) };
+}
+
+// ===================================================================== pro workflow glue
+function snapListening() {
+  const L = getListener(); if (!L) return ensureListening('desk');
+  const [x, z] = defaultListenerSpot();
+  moveListener(x, z);
+  for (const [i, s] of getSpeakers().slice(0, 2).entries()) { placeSpeaker(s, i); }
+  rebuildAllItems(); commit();
+}
+function cornerStats() {
+  const vs = convexCorners();
+  const traps = P().items.filter((i) => ['cornerTrap', 'tubeTrap', 'bassPanel', 'membrane'].includes(i.type) && !i.hidden);
+  return { convex: vs.length, trapped: vs.filter((v) => traps.some((t) => Math.hypot(t.pos[0] - v.x, t.pos[2] - v.z) < 0.7)).length };
+}
+function colorNamer(hex) {
+  const c = new THREE.Color(hex); let best = 'neutral', bd = 9;
+  for (const [n, v] of Object.entries(COLOR_NAMES)) { if (n.includes(' ') || ['warm', 'neon', 'daylight', 'wood', 'concrete'].includes(n)) continue; const k = new THREE.Color(v), dd = Math.hypot(c.r - k.r, c.g - k.g, c.b - k.b); if (dd < bd) { bd = dd; best = n; } }
+  return best;
+}
+// ---- copy / paste / group
+function copySel() { S.clip = JSON.stringify(selectedItems()); if (selectedItems().length) toast(`Copied ${selectedItems().length} item(s)`); }
+function pasteSel() {
+  if (!S.clip) return;
+  const src = JSON.parse(S.clip), gmap = {}, made = [];
+  for (const o of src) { const it = { ...o, id: uid(), pos: [o.pos[0] + 0.3, o.pos[1], o.pos[2] + 0.3] }; delete it.twin; delete it.auto; if (it.group) it.group = gmap[it.group] ||= uid(); P().items.push(it); rebuildItem(it); made.push(it); }
+  limitLights(); S._noGroup = true; select(made.map((i) => i.id)); S._noGroup = false; commit();
+  if (S.tool === 'select') setTool('move');
+}
+function groupSel() { const list = selectedItems(); if (list.length < 2) return toast('Select two or more items to group'); const g = uid(); list.forEach((i) => (i.group = g)); commit(); toast(`Grouped ${list.length} items — click one to select all`, 'ok'); }
+function ungroupSel() { selectedItems().forEach((i) => delete i.group); commit(); toast('Ungrouped'); }
+
+// ---- render styles: realistic / clay / sketch / blueprint / night
+const STYLE = {
+  clay: { mat: new THREE.MeshStandardMaterial({ color: '#e9e7e2', roughness: 0.95, side: THREE.DoubleSide }), bg: '#2a2d33' },
+  sketch: { mat: new THREE.MeshBasicMaterial({ color: '#ffffff', side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 }), bg: '#ffffff', edge: new THREE.LineBasicMaterial({ color: '#1b1d21' }) },
+  blueprint: { mat: new THREE.MeshBasicMaterial({ color: '#1c4a8a', side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 }), bg: '#143a70', edge: new THREE.LineBasicMaterial({ color: '#dfeeff' }) },
+  real: { bg: '#1b1d21' }, night: { bg: '#07080b' },
+};
+function applyRenderStyle() {
+  const st = S.style || 'real';
+  if (st === 'real' && !S._styled) return;
+  const cfg = STYLE[st];
+  for (const grp of [roomGroup, itemsGroup]) grp.traverse((o) => {
+    if (!o.isMesh || o.userData._style === st) return;
+    if (!o.userData._orig) o.userData._orig = o.material;
+    const orig = o.userData._orig, keep = !cfg.mat || (orig.transparent && orig.opacity < 0.9) || orig.isMeshBasicMaterial;
+    o.material = keep ? orig : cfg.mat;
+    if (cfg.edge && !o.isInstancedMesh && !o.userData._edges && o.geometry?.attributes?.position?.count < 30000) { const eg = new THREE.LineSegments(new THREE.EdgesGeometry(o.geometry, 28), cfg.edge); eg.userData.styleEdge = true; o.add(eg); o.userData._edges = eg; }
+    if (o.userData._edges) { o.userData._edges.visible = !!cfg.edge; if (cfg.edge) o.userData._edges.material = cfg.edge; }
+    o.userData._style = st;
+  });
+  S._styled = st !== 'real';
+}
+function setStyle(st) {
+  S.style = st; S._styled = true;
+  scene.background = new THREE.Color(STYLE[st].bg);
+  applyAmbient();
+  $$('[data-style]').forEach((b) => b.classList.toggle('active', b.dataset.style === st));
+}
+// ---- 360° panorama (equirectangular JPG) from the listening position / current walk position
+function exportPano() {
+  const pos = S.view === 'walk' ? persp.position.clone() : new THREE.Vector3(...ear(getListener()));
+  const rt = new THREE.WebGLCubeRenderTarget(1536, { generateMipmaps: false }), cc = new THREE.CubeCamera(0.05, 200, rt);
+  cc.position.copy(pos);
+  const vis = [helpers.visible, tc.getHelper().visible, measureGroup.visible, shapeGroup.visible, modeOverlay.visible];
+  helpers.visible = false; tc.getHelper().visible = false; measureGroup.visible = false; shapeGroup.visible = false; modeOverlay.visible = false;
+  const dimsObj = roomGroup.getObjectByName('dims'); if (dimsObj) dimsObj.visible = false;
+  applyRenderStyle(); cutaway(persp, 'walk'); renderer.clippingPlanes = [];
+  const L = getListener(), lo = L && objMap.get(L.id); if (lo) lo.visible = false;
+  cc.update(renderer, scene);
+  const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({
+    uniforms: { t: { value: rt.texture } },
+    vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }',
+    fragmentShader: 'uniform samplerCube t; varying vec2 vUv; void main(){ float lon = (vUv.x * 2.0 - 1.0) * 3.14159265; float lat = (vUv.y - 0.5) * 3.14159265; vec3 d = vec3(sin(lon) * cos(lat), sin(lat), -cos(lon) * cos(lat)); vec3 c = textureCube(t, vec3(-d.x, d.y, d.z)).rgb; c = (c * (2.51 * c + 0.03)) / (c * (2.43 * c + 0.59) + 0.14); gl_FragColor = vec4(pow(clamp(c, 0.0, 1.0), vec3(1.0 / 2.2)), 1.0); }',
+    depthTest: false,
+  }));
+  const qs = new THREE.Scene(); qs.add(quad);
+  const prev = renderer.getSize(new THREE.Vector2()), pr = renderer.getPixelRatio();
+  renderer.setPixelRatio(1); renderer.setSize(4096, 2048, false);
+  renderer.render(qs, new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1));
+  const url = renderer.domElement.toDataURL('image/jpeg', 0.92);
+  renderer.setPixelRatio(pr); renderer.setSize(prev.x, prev.y, false); onResize();
+  [helpers.visible, , measureGroup.visible, shapeGroup.visible, modeOverlay.visible] = vis;
+  rt.dispose(); quad.geometry.dispose(); quad.material.dispose();
+  download(`${safeName()}-360.jpg`, dataUrlToBlob(url));
+  toast('360° panorama saved — open it in any 360 photo viewer or VR headset', 'ok');
+}
+// ---- video: turntable or tour of saved scenes (WebM, recorded offline in the browser)
+function recordVideo(mode = 'turntable') {
+  if (!window.MediaRecorder || !renderer.domElement.captureStream) return toast('Video recording is not supported in this browser', 'error');
+  const stream = renderer.domElement.captureStream(30), chunks = [];
+  const mime = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm', 'video/mp4'].find((m) => MediaRecorder.isTypeSupported(m));
+  const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 8e6 });
+  rec.ondataavailable = (e) => e.data.size && chunks.push(e.data);
+  const hv = helpers.visible; S.recording = true; select([]); helpers.visible = false;
+  const done = () => { rec.stop(); orbit.autoRotate = false; helpers.visible = hv; S.recording = false; };
+  rec.onstop = () => { download(`${safeName()}-${mode}.${mime.includes('mp4') ? 'mp4' : 'webm'}`, new Blob(chunks, { type: mime })); toast('Video saved', 'ok'); };
+  rec.start(500);
+  if (mode === 'tour' && P().scenes.length) {
+    const sc = P().scenes; let i = 0;
+    const next = () => { if (i >= sc.length) return done(); gotoScene(sc[i++]); setTimeout(next, 2600); };
+    next(); toast(`Recording a tour of ${sc.length} scene(s)…`);
+  } else {
+    setView('persp', true); orbit.autoRotate = true; orbit.autoRotateSpeed = 5;
+    setTimeout(done, 12000); toast('Recording a 12-second turntable…');
+  }
+}
+// ---- design options
+function saveOption(name, id = null) {
+  const sc = PRO.computeScore(proApi()), A = analysis(), D = modeData(), iso = isolationData().filter((r) => r.layers.length);
+  const lfv = D.resp.filter((_, i) => D.fs[i] >= 30 && D.fs[i] <= 150), mean = lfv.reduce((a, b) => a + b, 0) / lfv.length;
+  const m = { score: sc.total, rt: A.rt.mid, lf: Math.sqrt(lfv.reduce((a, b) => a + (b - mean) ** 2, 0) / lfv.length), iso: iso.length ? Math.min(...iso.map((r) => r.comp)) : null, items: P().items.length, cost: PRO.costData(proApi()).total };
+  const opt = { id: id || uid(), name, snap: serialize(), m, thumb: renderToDataURL({ view: 'persp', width: 360, height: 220, quality: 0.75 }) };
+  P().options = [...(P().options || []).filter((o) => o.id !== opt.id), opt];
+  S.curOption = opt.id; scheduleSave();
+  toast(`Saved “${name}” — Studio Score ${m.score}`, 'ok');
+}
+function loadOption(id) { const o = (P().options || []).find((x) => x.id === id); if (!o) return; restore(o.snap); S.curOption = id; commit(); setView('persp', true); toast(`Opened “${o.name}”`, 'ok'); }
+// ---- brief → design
+function buildFromBrief(b) {
+  const keep = { name: P().name === 'Untitled Studio' || P().name === 'Home studio' ? `${b.purpose[0].toUpperCase()}${b.purpose.slice(1)} room` : P().name, designer: P().designer, client: P().client, options: P().options };
+  S.project = newProject({ w: +b.w.toFixed(2), d: +b.d.toFixed(2), h: +b.h.toFixed(2) });
+  Object.assign(S.project, keep);
+  if (b.shape !== 'rect') G.applyShape(R(), b.shape);
+  if (b.ceiling !== 'flat') Object.assign(R().ceiling, { type: b.ceiling, h2: +(b.h + (b.ceiling === 'shed' ? 0.6 : 0.9)).toFixed(2), dir: 'f2b', axis: 'z' });
+  S.sel = []; buildRoom(); rebuildAllItems();
+  const add = (type, f) => { const it = makeItem(type); f(it); P().items.push(it); rebuildItem(it); return it; };
+  const { w, d } = R(), area = G.floorArea(R());
+  if (b.purpose === 'mixing') ensureListening('desk');
+  if (b.purpose === 'mastering') ensureListening('mastering');
+  if (b.purpose === 'theater') { ensureListening('none'); const L = getListener(); L.pos[2] = Math.min(d / 2 - 1.2, L.pos[2] + d * 0.12); for (const [i, sp] of getSpeakers().entries()) { sp.pos = [(i ? 1 : -1) * Math.min(w * 0.3, 1.6), 0.62, -d / 2 + 0.45]; sp.rot = [0, Math.atan2(L.pos[0] - sp.pos[0], L.pos[2] - sp.pos[2]) / DEG, 0]; add('stand', (st) => { st.pos = [sp.pos[0], 0, sp.pos[2]]; st.size = [0.35, 0.62, 0.35]; }); } add('tv', (t) => { t.size = [Math.min(2.2, w * 0.5), 1.2, 0.06]; placeOnWall(t, 'front', 0); }); add('sofa', (so) => { so.pos = [L.pos[0], 0, L.pos[2]]; so.rot = [0, 180, 0]; }); }
+  if (b.purpose === 'booth') add('mic', (m) => { m.pos = [0, 0, 0.1]; m.rot = [0, 180, 0]; });
+  if (b.purpose === 'tracking' && b.furniture) { add('drums', (k) => { k.pos = [0, 0, -d * 0.2]; k.rot = [0, 180, 0]; }); if (area > 18) { add('piano', (pn) => { placeOnWall(pn, 'left', d * 0.15, 0); pn.pos[1] = 0; }); add('amp', (a) => { a.pos = [w * 0.28, 0, d * 0.15]; a.rot = [0, -120, 0]; }); add('mic', (m) => { m.pos = [-w * 0.2, 0, d * 0.1]; }); } }
+  rebuildAllItems();
+  autoTreat(b.purpose === 'booth' ? 'booth' : b.purpose);
+  if (b.level === 'lean') { P().items = P().items.filter((i) => !['qrd', 'skyline', 'bad', 'cornerTrapCeil', 'poly'].includes(i.type)); for (const i of P().items) if (i.type === 'absorber') { i.type = 'absorber50'; i.size[2] = 0.05; i.acoustic = 'fabric_50'; i.name = defOf('absorber50').name; } }
+  if (b.level === 'premium') { addMany('slats', { qty: 2, loc: 'sides', auto: true }); if (['mixing', 'mastering'].includes(b.purpose)) addMany('canopy', { qty: 1, loc: 'ceiling', auto: true }).forEach((c) => { c.pos[2] = d * 0.2; syncTransform(c); }); }
+  if (b.furniture && ['mixing', 'mastering'].includes(b.purpose) && d >= 5 && b.level !== 'lean') add('sofa', (so) => { placeOnWall(so, 'back', 0); so.pos[1] = 0; so.pos[2] -= 0.35; });
+  // door on the right wall toward the back, lighting, colours, construction
+  add('door', (dr) => { const e = edgeFor('right'); placeOnWall(dr, e, (e.len / 2 - 0.75) * (e.dir[1] > 0 ? 1 : -1), 0); dr.params.style = b.isolation === 'none' ? 'flush' : 'acoustic'; });
+  const lc = { warm: '#ffd2a0', cool: '#f3f6ff', rgb: '#ffd2a0' }[b.light];
+  const nL = clamp(Math.round(area / 5), 2, 8);
+  addMany(b.level === 'lean' ? 'ledPanel' : 'downlight', { qty: nL, loc: 'ceiling', params: { lightColor: lc, intensity: b.level === 'lean' ? 3 : 4 } });
+  if (b.light === 'rgb' || b.level === 'premium') addMany('ledStrip', { qty: 1, loc: 'front', params: { lightColor: b.light === 'rgb' ? '#7a4fff' : lc, intensity: 4 } }).forEach((s2) => { s2.pos[1] = 0.25; s2.size[0] = Math.min(3, w * 0.6); });
+  if (b.light === 'rgb') addMany('lightBar', { qty: 2, loc: 'frontCorners', params: { lightColor: '#ff2e88' } });
+  if (SCHEMES[b.scheme]) applyScheme(SCHEMES[b.scheme]);
+  if (b.isolation !== 'none') { const set = b.isolation === 'pro' ? { wall: 'roomInRoom', floor: 'padsDeck', ceiling: 'hangers' } : { wall: 'clipsStud', floor: 'underlay', ceiling: 'clips' }; for (const id of surfaceIds()) { const k = surfKind(id); surf(id).assembly = { preset: set[k], layers: JSON.parse(JSON.stringify(ASSEMBLIES[k][set[k]].layers)) }; } }
+  for (const it of P().items) if (defOf(it.type).mount === 'floor' && !insideRoom(it.pos[0], it.pos[2])) { const [cx, cz] = roomCentroid(); it.pos[0] = cx + (it.pos[0] - cx) * 0.3; it.pos[2] = cz + (it.pos[2] - cz) * 0.3; }
+  S.sel = []; S._openSig = null;
+  buildRoom(); rebuildAllItems(); setView('persp', true); commit(true); renderPanels(); renderLibrary();
+}
+function importDXFFile() { pickFile('.dxf', (txt) => PRO.importDXF(proApi(), txt), true); }
+function setOutline(pts) {
+  let poly = pts.map(([x, z]) => ({ x, z, id: G.newWallId() }));
+  if (G.signedArea(poly) < 0) poly = poly.reverse();
+  const fe = G.edges({ ...R(), poly }).filter((e) => e.n[1] > 0.5).sort((a, b) => a.mid[1] - b.mid[1])[0];
+  if (fe) poly[fe.i].id = 'front';
+  changeShape(() => { R().poly = poly; });
+  setView('top');
+}
+let scoreTimer = null;
+function scheduleScore() {
+  clearTimeout(scoreTimer);
+  scoreTimer = setTimeout(() => { try { showScore(PRO.computeScore(proApi())); } catch (e) { console.warn(e); } }, 700);
+}
+function showScore(sc) {
+  const el = $('#score-chip'); if (!el) return;
+  el.textContent = `Studio Score ${sc.total}`; el.title = `${sc.grade} — click for the breakdown and one-click fixes`;
+  el.className = 'score-chip ' + (sc.total >= 80 ? 'good' : sc.total >= 55 ? 'warn' : 'bad');
+}
+function proApi() {
+  return {
+    h, modal, toast, fmt, download, safeName, selectField, units: () => S.units,
+    project: P, room: R, analysis, modeData, isolationData, scheduleRows, cornerStats, wallEdges, surfaceArea, defOf,
+    edgeOf: (id) => wallEdges().find((e) => e.id === id), outerRing: () => G.offsetRing(R(), R().wallT ?? 0.15), layerOfItem: (it) => catLayer(defOf(it.type)),
+    defByName: (n) => CATALOG.find((d) => d.name === n), finishName: (k) => FINISHES[k]?.label || k, ceilingName: () => G.CEILINGS[R().ceiling?.type || 'flat'], colorNamer: () => colorNamer,
+    schemeNames: () => Object.keys(SCHEMES),
+    autoTreat, addRecommended, applyConstructionSet, setupListening: () => { ensureListening('desk'); rebuildAllItems(); commit(); renderPanels(); },
+    snapListening, treatReflections: () => { addMany('absorber', { qty: 0, loc: 'reflections' }); addMany('cloud', { qty: 0, loc: 'reflections' }); },
+    addCornerTraps: () => addMany('cornerTrap', { qty: Math.min(4, convexCorners().length), loc: 'corners' }),
+    showAcoustics: () => { closeModals(); S.rightTab = 'acoustics'; renderRightTabs(); }, openModes: (t) => { closeModals(); openModes(t); },
+    onScore: showScore, onCost: () => {},
+    buildFromBrief, options: () => P().options || [], currentOption: () => S.curOption, saveOption, loadOption, deleteOption: (id) => { P().options = (P().options || []).filter((o) => o.id !== id); scheduleSave(); },
+    setOutline, pristineHTML: () => { const LT = String.fromCharCode(60), a = PRISTINE_HTML.lastIndexOf(LT + 'script id="embedded-project" type="application/json">'); if (a < 0) return PRISTINE_HTML; const b = PRISTINE_HTML.indexOf(LT + '/script>', a); return PRISTINE_HTML.slice(0, a) + PRISTINE_HTML.slice(b + 9); },
+    downloadView: (style) => { const prev = S.style || 'real'; setStyle(style); const url = renderToDataURL({ scene: S.view === 'quad' ? null : currentSceneState(), width: 1920, height: 1200, type: 'image/png', bg: STYLE[style].bg }); setStyle(prev); download(`${safeName()}-${style}.png`, dataUrlToBlob(url)); },
+  };
 }
 
 // ===================================================================== scanner & export glue
@@ -2857,7 +3085,7 @@ function exportApi() {
   return {
     h, toast, modal, project: P, room: R, analysis, scheduleRows, renderToDataURL, viewNames: VIEW_NAMES,
     fmt, acousticName: (k) => AC.ACOUSTIC_MATERIALS[k]?.name || k, finishName: (k) => FINISHES[k]?.label || k, surfaceList: () => surfaceIds().map((id) => ({ id, label: surfLabel(id), s: surf(id) })), floorArea: () => G.floorArea(R()), wallCount: () => wallEdges().length, ceilingName: () => G.CEILINGS[R().ceiling?.type || 'flat'], hmax: () => S.hmax,
-    safeName, download, closeModals, modeData, isolationData, smat: SMAT, bands: AC.BANDS, noteName, colorNames: COLOR_NAMES, defOf,
+    safeName, download, closeModals, modeData, isolationData, smat: SMAT, costData: () => PRO.costData(proApi()), score: () => PRO.computeScore(proApi()), bands: AC.BANDS, noteName, colorNames: COLOR_NAMES, defOf,
   };
 }
 
@@ -2872,6 +3100,20 @@ const ACTIONS = {
   importPhotoWall: () => openScanner(scannerApi(), { mode: 'upload' }),
   pdf: () => openPdfDialog(exportApi()),
   modes: () => openModes(),
+  wizard: () => PRO.openWizard(proApi()),
+  score: () => PRO.openScore(proApi()),
+  cost: () => PRO.openCost(proApi()),
+  options: () => PRO.openOptions(proApi()),
+  dxf: () => PRO.exportDXF(proApi()),
+  svg: () => PRO.exportSVG(proApi()),
+  importDXF: () => importDXFFile(),
+  pano: () => exportPano(),
+  turntable: () => recordVideo('turntable'),
+  tour: () => (P().scenes.length ? recordVideo('tour') : toast('Save some scenes first (Scenes tab)', 'error')),
+  share: () => PRO.shareHTML(proApi()),
+  airender: () => PRO.openAIRender(proApi()),
+  symmetry: () => { S.symmetry = !S.symmetry; $$('[data-action="symmetry"]').forEach((b) => b.classList.toggle('active', S.symmetry)); toast(S.symmetry ? 'Symmetry lock ON — edits off the centre line are mirrored to the other side' : 'Symmetry lock off'); },
+  group: () => groupSel(), ungroup: () => ungroupSel(), copy: () => copySel(), paste: () => pasteSel(),
   matlib: () => openMaterialsLibrary(),
   layersMenu: () => {},
   units: () => setUnits(S.units === 'm' ? 'ft' : 'm'),
@@ -2886,7 +3128,7 @@ const ACTIONS = {
   toggleRight: () => { document.body.classList.toggle('show-right'); document.body.classList.remove('show-left'); },
 };
 function showHelp() {
-  const keys = [['V', 'Select'], ['M', 'Move'], ['R', 'Rotate'], ['S', 'Scale'], ['T', 'Tape measure'], ['O', 'Edit room outline (drag corners)'], ['K', 'Room mode calculator'], ['1–6', '3D / Top / Front / Back / Left / Right'], ['7 · 8', 'Quad view · Walkthrough'], ['F / double-click', 'Focus selection'], ['Arrows', 'Nudge 1 cm (Shift = 10 cm)'], ['[ ]', 'Rotate 15°'], ['Ctrl+D', 'Duplicate'], ['Ctrl+Z / Ctrl+Y', 'Undo / Redo'], ['Del', 'Delete'], ['/', 'Focus prompt'], ['W A S D Q E', 'Walk (in walkthrough)']];
+  const keys = [['V', 'Select'], ['M', 'Move'], ['R', 'Rotate'], ['S', 'Scale'], ['T', 'Tape measure'], ['O', 'Edit room outline (drag corners)'], ['K', 'Room mode calculator'], ['Ctrl+C / Ctrl+V', 'Copy / paste'], ['Ctrl+G / Ctrl+Shift+G', 'Group / ungroup'], ['1–6', '3D / Top / Front / Back / Left / Right'], ['7 · 8', 'Quad view · Walkthrough'], ['F / double-click', 'Focus selection'], ['Arrows', 'Nudge 1 cm (Shift = 10 cm)'], ['[ ]', 'Rotate 15°'], ['Ctrl+D', 'Duplicate'], ['Ctrl+Z / Ctrl+Y', 'Undo / Redo'], ['Del', 'Delete'], ['/', 'Focus prompt'], ['W A S D Q E', 'Walk (in walkthrough)']];
   modal('How to use RoomTone', h('div', { class: 'help' },
     h('p', {}, 'Design your studio in five steps: 1) set the room size (Room tab or prompt "room 4 x 5 x 2.7"), 2) add a listening position and monitors, 3) add treatment from the Library or press ✨ Auto-treat, 4) check the Acoustics tab, 5) export a PDF.'),
     h('h4', {}, 'Prompt examples (works offline)'), h('div', { class: 'chips' }, PROMPT_EXAMPLES.map((p) => h('code', {}, p))),
@@ -2895,11 +3137,12 @@ function showHelp() {
     h('h4', {}, 'Offline'), h('p', {}, 'Everything — 3D engine, PDF writer, prompts, analysis — runs in your browser. After the first visit the app is cached and works with no connection; projects autosave to this device.')), [], { wide: true });
 }
 document.addEventListener('click', (e) => {
-  const b = e.target.closest('[data-action],[data-view],[data-tool],.tab');
+  const b = e.target.closest('[data-action],[data-view],[data-tool],[data-style],.tab');
   if (!b) { if (!e.target.closest('.menu')) $$('.menu.open').forEach((m) => m.classList.remove('open')); return; }
   if (b.classList.contains('tab')) { if (b.closest('#left')) { S.leftTab = b.dataset.tab; renderLeftTabs(); } else { S.rightTab = b.dataset.tab; renderRightTabs(); } return; }
   if (b.dataset.view) { setView(b.dataset.view); closeDrawers(); }
   if (b.dataset.tool) setTool(b.dataset.tool);
+  if (b.dataset.style) { setStyle(b.dataset.style); b.closest('.menu')?.classList.remove('open'); return; }
   if (b.dataset.action) { const m = b.closest('.menu'); if (b.dataset.action === 'menu') { $$('.menu.open').forEach((x) => x !== m && x.classList.remove('open')); m.classList.toggle('open'); return; } m?.classList.remove('open'); ACTIONS[b.dataset.action]?.(); }
 });
 document.addEventListener('keydown', (e) => {
@@ -2910,6 +3153,9 @@ document.addEventListener('keydown', (e) => {
   if (ctrl && k === 'z') { e.preventDefault(); e.shiftKey ? redo() : undo(); return; }
   if (ctrl && k === 'y') { e.preventDefault(); redo(); return; }
   if (ctrl && k === 'd') { e.preventDefault(); duplicate(); return; }
+  if (ctrl && k === 'c') { copySel(); return; }
+  if (ctrl && k === 'v') { e.preventDefault(); pasteSel(); return; }
+  if (ctrl && k === 'g') { e.preventDefault(); e.shiftKey ? ungroupSel() : groupSel(); return; }
   if (ctrl && k === 's') { e.preventDefault(); ACTIONS.save(); return; }
   if (ctrl && k === 'a') { e.preventDefault(); select(P().items.map((i) => i.id)); return; }
   if (ctrl) return;
@@ -2966,7 +3212,9 @@ if (SR) {
 async function boot() {
   let restored = false;
   try {
-    const saved = await DB.get('autosave');
+    const emb = document.getElementById('embedded-project');
+    if (emb) { S.saveKey = 'shared:' + emb.textContent.length + ':' + (emb.textContent.match(/"name":"([^"]*)"/)?.[1] || ''); S.embedded = true; }
+    const saved = (await DB.get(S.saveKey || 'autosave')) || (emb ? emb.textContent : null);
     if (saved) { const p = JSON.parse(saved); if (p?.room) { S.project = { ...newProject(), ...p }; G.ensureRoom(R()); G.normalizeRoom(R()); restored = true; } }
   } catch { /* first run */ }
   buildRoom();
@@ -2980,6 +3228,7 @@ async function boot() {
   renderPanels();
   loop();
   if (!restored) { applyTemplate('Home studio'); setTimeout(showWelcome, 300); }
+  else if (S.embedded) toast('Opened a shared RoomTone design — orbit, walk through and edit freely', 'ok');
   setTimeout(generateThumbs, 50);
   $('#loading')?.remove();
 }
@@ -3005,5 +3254,5 @@ $('[data-action="units"]').textContent = S.units;
 renderLayerMenu();
 
 // expose for debugging / automation
-window.roomtone = { S, P, openModes, setLayers, applyConstructionSet, openMaterialsLibrary, showOverlay, addMany, autoTreat, setView, runPromptText, analysis, renderToDataURL, applyTemplate, select };
+window.roomtone = { S, P, PRO, proApi, buildFromBrief, setStyle, exportPano, recordVideo, saveOption, openModes, setLayers, applyConstructionSet, openMaterialsLibrary, showOverlay, addMany, autoTreat, setView, runPromptText, analysis, renderToDataURL, applyTemplate, select };
 boot();

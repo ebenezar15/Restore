@@ -230,6 +230,14 @@ function handle(s, verb, api) {
   if (/\b(room modes?|modes?|mode calculator|amroc|bonello|standing waves?|best seat|best listening position|trap tuning)\b/.test(s) && !/\b(add|place)\b/.test(s) && !/\broom\s+\d/.test(s)) { api.openModes(); return { ok: true, msg: 'Opened the Room Mode Calculator' }; }
   if (/\b(analy[sz]e|check|rt60|reverb|room modes?|acoustics?)\b/.test(s) && !/\b(add|place)\b/.test(s)) { api.showAcoustics(); return { ok: true, msg: 'Showing acoustic analysis' }; }
 
+  // ---- pro workflow
+  if (/\b(wizard|design (it|this|the room) for me|brief)\b/.test(s)) { api.wizard(); return { ok: true, msg: 'Opened the design wizard' }; }
+  if (/\b(studio )?score\b|\bhow good\b|\brate (my|the) (room|design|studio)\b/.test(s)) { api.score(); return { ok: true, msg: 'Opened the Studio Score' }; }
+  if (/\b(cost|budget|price|estimate|bill of quantities|boq|shopping list)\b/.test(s) && !/\b(add|place)\b/.test(s)) { api.cost(); return { ok: true, msg: 'Opened the cost estimate' }; }
+  if (/\b(clay|sketch|blueprint|night|realistic)\b.*\b(style|render|mode|look)\b|\b(style|render|mode)\b.*\b(clay|sketch|blueprint|night|realistic)\b/.test(s)) { const st = s.match(/\b(clay|sketch|blueprint|night|realistic)\b/)[1]; api.setStyle(st === 'realistic' ? 'real' : st); return { ok: true, msg: `Render style: ${st}` }; }
+  if (/\b(360|panorama|pano)\b/.test(s)) { api.pano(); return { ok: true, msg: 'Exporting 360° panorama' }; }
+  if (/\b(add|place|put)\b.*\b(note|label)\b/.test(s)) { const m2 = s.match(/["“']([^"”']+)["”']/) || s.match(/\b(?:note|label)\s+(?:saying|that says|:)?\s*(.+)$/); const [it] = api.addMany('note', { params: { text: (m2 ? m2[1] : 'Note').trim().slice(0, 40) } }); return { ok: !!it, msg: 'Added a note' }; }
+
   // ---- visibility layers & construction sets
   const LAYER_WORDS = [['treatment', 'treatment'], ['acoustic', 'treatment'], ['panels', 'treatment'], ['construction', '*construction'], ['build-up', '*construction'], ['framing', 'framing'], ['studs', 'framing'], ['joists', 'framing'], ['insulation', 'insulation'], ['hardware', 'hardware'], ['clips', 'hardware'], ['channels', 'hardware'], ['hangers', 'hardware'], ['boards', 'boards'], ['drywall', 'boards'], ['plywood', 'boards'], ['membranes', 'membranes'], ['mlv', 'membranes'], ['structure', 'structure'], ['surfaces', 'surfaces'], ['plain walls', 'surfaces'], ['finishes', 'surfaces'], ['furniture', 'furniture'], ['gear', 'gear'], ['lighting', 'lighting'], ['doors', 'openings'], ['windows', 'openings'], ['partitions', 'partitions'], ['dimensions', 'annotations'], ['labels', 'annotations']];
   if (/\b(hide|show|solo|only|toggle)\b/.test(s) && !/\b(view|modes?)\b/.test(s)) {

@@ -37,7 +37,36 @@
             <button data-action="importPhotoWall">Photo (walls, colours, art)…</button>
             <button data-action="importModel">3D model / LiDAR room scan (GLB, OBJ)…</button>
             <button data-action="importUnderlay">Floor-plan image (trace)…</button>
+            <button data-action="importDXF">CAD outline (DXF)…</button>
             <button data-action="matlib">📚 Studio materials library…</button>
+          </div>
+        </div>
+        <div class="menu">
+          <button class="btn" data-action="menu">Design ▾</button>
+          <div class="menu-list">
+            <button data-action="wizard">✨ Design wizard — brief to design…</button>
+            <button data-action="score">🏆 Studio Score & one-click fixes…</button>
+            <button data-action="options">🔀 Design options — compare A / B…</button>
+            <button data-action="cost">💰 Cost estimate & bill of quantities…</button>
+            <button data-action="symmetry">⇋ Symmetry lock (mirror edits)</button>
+            <button data-action="group">Group selection <kbd>Ctrl G</kbd></button>
+            <button data-action="ungroup">Ungroup <kbd>Ctrl ⇧ G</kbd></button>
+            <button data-action="copy">Copy <kbd>Ctrl C</kbd></button>
+            <button data-action="paste">Paste <kbd>Ctrl V</kbd></button>
+          </div>
+        </div>
+        <div class="menu">
+          <button class="btn" data-action="menu">Present ▾</button>
+          <div class="menu-list">
+            <div class="menu-title">Render style</div>
+            <div class="style-row">
+              <button class="pal-tab active" data-style="real">Realistic</button><button class="pal-tab" data-style="clay">Clay</button><button class="pal-tab" data-style="sketch">Sketch</button><button class="pal-tab" data-style="blueprint">Blueprint</button><button class="pal-tab" data-style="night">Night</button>
+            </div>
+            <button data-action="pano">🌐 360° panorama (JPG)</button>
+            <button data-action="turntable">🎬 Turntable video (12 s)</button>
+            <button data-action="tour">🎬 Scene tour video</button>
+            <button data-action="airender">🪄 AI render hand-off pack…</button>
+            <button data-action="share">🔗 Share as one HTML file (client viewer)</button>
           </div>
         </div>
         <div class="menu">
@@ -53,6 +82,8 @@
             <button data-action="glb">3D model (GLB)</button>
             <button data-action="obj">3D model (OBJ)</button>
             <button data-action="csv">Item schedule (CSV)</button>
+            <button data-action="dxf">CAD plan (DXF)</button>
+            <button data-action="svg">Plan drawing (SVG)</button>
           </div>
         </div>
       </div>
@@ -146,6 +177,7 @@
     <footer id="statusbar">
       <span id="status-sel"></span>
       <span class="spacer"></span>
+      <button id="score-chip" class="score-chip" data-action="score" title="Studio Score">Studio Score –</button>
       <span id="save-state">Saved offline ✓</span>
       <span id="net"></span>
     </footer>

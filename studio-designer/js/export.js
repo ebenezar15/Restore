@@ -28,6 +28,7 @@ export function openPdfDialog(app) {
     cb('acoustics', 'Acoustic report (RT60, modes, reflections)'),
     cb('modes', 'Room modes & low-frequency treatment zones'),
     cb('construction', 'Construction build-ups & sound isolation'),
+    cb('cost', 'Cost estimate & bill of quantities', false),
     h('div', { class: 'grid2' },
       h('label', { class: 'field' }, h('span', {}, 'Designer'), h('input', { name: 'designer', value: p.designer })),
       h('label', { class: 'field' }, h('span', {}, 'Client'), h('input', { name: 'client', value: p.client }))),
@@ -106,6 +107,7 @@ async function buildPdf(app, o) {
       `Room: ${room.w.toFixed(2)} W x ${room.d.toFixed(2)} L x ${room.h.toFixed(2)}${app.hmax() > room.h + 0.05 ? '-' + app.hmax().toFixed(2) : ''} H m (overall)`, `Shape: ${app.wallCount()} walls, ${app.ceilingName()} ceiling`, `Floor area: ${app.floorArea().toFixed(1)} m2   Volume: ${A.rt.V.toFixed(1)} m3`,
       `RT60 (500 Hz-1 kHz): ${A.rt.mid.toFixed(2)} s  (target ~${A.rt.target.toFixed(2)} s)`, `Schroeder frequency: ${A.rt.schroeder.toFixed(0)} Hz`,
       `Items: ${p.items.length}   Treated surface: ${(A.coverage * 100).toFixed(0)} %`,
+      (() => { try { const sc = app.score(); return `Studio Score: ${sc.total} / 100 (${sc.grade})`; } catch { return ''; } })(),
     ];
     for (const l of lines) { doc.text(txt(l), x, y); y += 6; }
     if (p.notes) { y += 4; doc.setTextColor(20); doc.setFont('helvetica', 'bold'); doc.text('Notes', x, y); y += 5; doc.setFont('helvetica', 'normal'); doc.setTextColor(60); doc.text(doc.splitTextToSize(txt(p.notes), a.w - imgW - 12), x, y); }
@@ -365,6 +367,27 @@ async function buildPdf(app, o) {
       doc.setFontSize(7); doc.setTextColor(120);
       doc.text('Estimates use mass law, mass-air-mass resonance and decoupling factors (ISO 717-style rating). Field results are typically 3-7 dB lower; flanking paths, doors, ducts and penetrations often dominate.', a.x, a.y + a.h - 1);
     }
+  }
+
+  // ---------------------------------------------------------------- cost
+  if (o.cost) {
+    await tick('Cost estimate…');
+    const C = app.costData(), cur = txt(C.set.currency).replace(/[^\x20-\xFF]/g, '') || '$';
+    const fmtM = (v) => `${cur}${v >= 1000 ? Math.round(v).toLocaleString('en-US') : v.toFixed(v < 10 && v % 1 ? 2 : 0)}`;
+    let a = frame('Cost estimate & bill of quantities'), y = a.y + 6;
+    const cw = [0.2, 0.42, 0.08, 0.08, 0.1, 0.12], head = ['Group', 'Item', 'Qty', 'Unit', 'Unit price', 'Total'];
+    const drawHead = () => { doc.setFillColor(235, 238, 242); doc.rect(a.x, y - 4.5, a.w, 7, 'F'); doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(30); let x = a.x + 2; head.forEach((t, i) => { doc.text(t, x, y); x += cw[i] * a.w; }); doc.setFont('helvetica', 'normal'); y += 7; };
+    drawHead();
+    for (const r of C.rows.slice().sort((p1, p2) => p1.group.localeCompare(p2.group) || p2.total - p1.total)) {
+      if (y > a.y + a.h - 30) { a = frame('Cost estimate (cont.)'); y = a.y + 6; drawHead(); }
+      let x = a.x + 2; doc.setFontSize(8); doc.setTextColor(40);
+      [r.group, r.name, String(r.qty), { m2: 'm2', m: 'm', each: 'pcs', tube: 'tubes' }[r.unit] || r.unit, fmtM(r.price), fmtM(r.total)].forEach((t, i) => { doc.text(txt(t).slice(0, Math.floor((cw[i] * a.w) / 1.55)), x, y); x += cw[i] * a.w; });
+      doc.setDrawColor(228); doc.line(a.x, y + 1.8, a.x + a.w, y + 1.8); y += 5.6;
+    }
+    y += 3; doc.setFontSize(9.5);
+    for (const [k, v, bold] of [['Materials & items', C.materials], [`Labour (est. ${C.set.labour}% of construction)`, C.labour], [`Contingency ${C.set.contingency}%`, C.contingency], ['TOTAL', C.total, true]]) { doc.setFont('helvetica', bold ? 'bold' : 'normal'); doc.setTextColor(20); doc.text(txt(k), a.x + a.w * 0.62, y); doc.text(fmtM(v), a.x + a.w - 2, y, { align: 'right' }); y += 5.5; }
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.setTextColor(120);
+    doc.text('Budgetary estimate from model quantities and editable unit prices - obtain supplier quotes before ordering.', a.x, a.y + a.h - 1);
   }
 
   await tick('Saving…');

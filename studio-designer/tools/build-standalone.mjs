@@ -20,7 +20,8 @@ const result = await build({
   }],
 });
 const js = result.outputFiles[0].text;
-const esc = (s) => s.replace(/<\/script/gi, '<\\/script');
+// keep inlined code from confusing the HTML parser
+const esc = (s) => { if (s.includes('<' + '!--')) console.warn('warning: inlined script contains an HTML comment opener, which can break parsing'); return s.replace(/<\/script/gi, '<\\/script'); };
 const iconData = 'data:image/svg+xml;base64,' + Buffer.from(r('icon.svg')).toString('base64');
 
 let html = r('index.html')
