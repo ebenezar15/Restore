@@ -52,4 +52,7 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/roomtone-v')
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" studio-designer/desktop/release/*.dmg studio-designer/desktop/release/*.zip --title "RoomTone $GITHUB_REF_NAME" --notes "Installable macOS app (Apple Silicon + Intel). Open the .dmg and drag RoomTone to Applications. First launch: right-click the app and choose Open."
+        run: |
+          gh release create "$GITHUB_REF_NAME" studio-designer/desktop/release/*.dmg studio-designer/desktop/release/*.zip \
+            --title "RoomTone $GITHUB_REF_NAME" \
+            --notes "Installable macOS app for Apple Silicon and Intel. Open the .dmg and drag RoomTone to Applications. On first launch, right-click the app and choose Open."
